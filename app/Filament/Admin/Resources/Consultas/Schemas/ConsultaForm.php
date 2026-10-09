@@ -52,7 +52,6 @@ class ConsultaForm
                         TextInput::make('whatsapp')->tel()->prefix('+591', isInline: true)->regex('/^[0-9]*$/')->maxLength(20)->disabled($isEditing)->extraInputAttributes(CamposTelefono::atributos()),
                         TextInput::make('correo')->email()->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                         ...CamposDomicilio::region($isEditing),
-                        TextInput::make('direccion')->label('Dirección')->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                     ]),
 
                 Group::make([
