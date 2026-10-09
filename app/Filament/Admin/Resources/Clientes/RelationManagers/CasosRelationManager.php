@@ -2,14 +2,12 @@
 
 namespace App\Filament\Admin\Resources\Clientes\RelationManagers;
 
-use App\Enums\EstadoCaso;
-use App\Filament\Admin\Forms\Components\DelitoSelect;
 use App\Filament\Admin\Resources\Casos\CasoResource;
+use App\Filament\Admin\Support\ClienteCasoWizard;
+use App\Models\Caso;
+use App\Models\Cliente;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -21,14 +19,21 @@ class CasosRelationManager extends RelationManager
 
     protected static ?string $title = 'Casos';
 
+    /**
+     * Mismos campos que los pasos "Proceso" y "Pago y plan de cuotas" del
+     * wizard de Cliente Ejecutivo (ClienteCasoWizard) — aquí en un solo
+     * formulario, sin wizard, porque el cliente ya existe (ver crearCaso()
+     * más abajo, que hace el guardado real).
+     */
     public function form(Schema $schema): Schema
     {
-        return $schema->inlineLabel()->columns(1)->components([
-            ...DelitoSelect::make(areaField: 'especialidad', delitoField: 'delito_id'),
-            TextInput::make('iguala')->numeric()->default(0)->required(),
-            DatePicker::make('fecha_inicio')->required()->default(now()),
-            Select::make('estado')->options(EstadoCaso::class)->default(EstadoCaso::ActivoPendiente)->required(),
-        ]);
+        return $schema
+            ->inlineLabel()
+            ->columns(2)
+            ->components([
+                ...ClienteCasoWizard::camposProceso(),
+                ...ClienteCasoWizard::camposPago(),
+            ]);
     }
 
     public function table(Table $table): Table
@@ -43,7 +48,21 @@ class CasosRelationManager extends RelationManager
                 TextColumn::make('fecha_fin')->date()->label('Vencimiento'),
             ])
             ->headerActions([
-                CreateAction::make()->label('Nuevo proceso'),
+                CreateAction::make()
+                    ->label('Nuevo proceso')
+                    ->modalSubmitActionLabel('Guardar')
+                    ->createAnother(false)
+                    // El guardado real no es un simple $relationship->create():
+                    // replica la misma lógica financiera (Iguala Netley, pago
+                    // del anticipo, plan de cuotas) que ClienteCasoWizard usa
+                    // al dar de alta un cliente nuevo, pero sobre el cliente
+                    // ya existente de esta ficha.
+                    ->using(function (array $data): Caso {
+                        /** @var Cliente $cliente */
+                        $cliente = $this->getOwnerRecord();
+
+                        return ClienteCasoWizard::crearCaso($cliente, $data);
+                    }),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
