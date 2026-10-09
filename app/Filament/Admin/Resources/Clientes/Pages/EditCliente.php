@@ -18,4 +18,14 @@ class EditCliente extends EditRecord
             DeleteAction::make()->visible(fn () => auth()->user()?->puede('eliminar')),
         ];
     }
+
+    /**
+     * La ficha del cliente queda de solo lectura (ver ClienteForm): todos
+     * los campos están siempre deshabilitados en esta vista, así que no hay
+     * nada que "Guardar" ni de qué "Cancelar".
+     */
+    protected function getFormActions(): array
+    {
+        return [];
+    }
 }
