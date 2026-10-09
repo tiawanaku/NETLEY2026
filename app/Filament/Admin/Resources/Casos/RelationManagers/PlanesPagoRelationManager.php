@@ -5,10 +5,11 @@ namespace App\Filament\Admin\Resources\Casos\RelationManagers;
 use App\Enums\EstadoCuota;
 use App\Filament\Admin\Support\CamposPago;
 use App\Filament\Admin\Support\PlanPagoRecalculo;
+use App\Models\Caso;
 use App\Models\Pago;
 use App\Models\PlanPago;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
@@ -50,7 +51,22 @@ class PlanesPagoRelationManager extends RelationManager
             ])
             ->defaultSort('numero')
             ->headerActions([
-                CreateAction::make(),
+                Action::make('imprimirPlanPago')
+                    ->label('Imprimir plan de pago')
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->action(function (): mixed {
+                        /** @var Caso $caso */
+                        $caso = $this->getOwnerRecord()->load('cliente');
+
+                        return response()->streamDownload(
+                            fn () => print (Pdf::loadView('pdf.plan-pago-caso', [
+                                'caso' => $caso,
+                                'planes' => $caso->planesPago()->orderBy('numero')->get(),
+                            ])->output()),
+                            "plan-pago-caso-{$caso->id}.pdf"
+                        );
+                    }),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
