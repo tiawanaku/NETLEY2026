@@ -95,10 +95,7 @@
                     </table>
 
                     <table>
-                        <tr><td class="etiqueta-monto" style="width: 55%; padding-bottom: 5px;">Iguala Profesional:</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $tipo === 'iguala' ? $monto : '' }}</div></td></tr>
-                        <tr><td class="etiqueta-monto" style="padding-bottom: 5px;">Anticipo Cliente:</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $tipo === 'anticipo' ? $monto : '' }}</div></td></tr>
-                        <tr><td class="etiqueta-monto" style="padding-bottom: 5px;">Pago delegado (HIH):</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $tipo === 'delegado' ? $monto : '' }}</div></td></tr>
-                        <tr><td class="etiqueta-monto" style="padding-bottom: 5px;">A Cuenta:</td><td style="padding-bottom: 5px;"><div class="caja-monto" style="font-weight: bold;">{{ $tipo === 'a_cuenta' ? $monto : '' }}</div></td></tr>
+                        <tr><td class="etiqueta-monto" style="width: 55%; padding-bottom: 5px;">Anticipo Cliente:</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $tipo === 'anticipo' ? $monto : '' }}</div></td></tr>
                         <tr><td class="etiqueta-monto" style="padding-bottom: 5px;">Saldo a Pagar Cliente:</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $pago->caso ? $bs($pago->caso->saldo) : '' }}</div></td></tr>
                         <tr><td class="etiqueta-monto">ID Cliente:</td><td><div class="caja-monto">{{ $pago->cliente_id }}</div></td></tr>
                     </table>
@@ -162,7 +159,7 @@
                                     <tr><td style="height: 12px;"></td><td></td></tr>
                                     <tr>
                                         <td class="firma-etiqueta">C.I.:</td>
-                                        <td class="firma-linea"></td>
+                                        <td class="firma-linea">{{ $pago->registrado_por_ci ?? '' }}</td>
                                     </tr>
                                 </table>
                             </td>
