@@ -82,10 +82,14 @@ class ConsultaForm
                             Textarea::make('nota_interna')->label('Nota interna')->rows(2)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                         ]),
 
+                    // El switch solo tiene sentido al crear (decidir si se
+                    // responde de una vez); al editar una consulta que ya
+                    // tiene respuesta, el cuadro se muestra directo, sin
+                    // switch, con lo que ya se guardó.
                     Toggle::make('tiene_respuesta')
                         ->label('Respuesta')
                         ->live()
-                        ->disabled($isEditing)
+                        ->visible(fn (string $operation) => $operation === 'create')
                         ->columnSpanFull(),
 
                     Section::make('Respuesta')
@@ -115,7 +119,6 @@ class ConsultaForm
                                 ->required()
                                 ->datalist(self::$origenes)
                                 ->regex('/^[^0-9]*$/')
-                                ->helperText('Elige una sugerencia o escribe un origen libre (ej. "taller colegio: San Calixto").')
                                 ->disabled($isEditing)
                                 ->extraInputAttributes(self::atributosSoloLetras()),
                         ]),

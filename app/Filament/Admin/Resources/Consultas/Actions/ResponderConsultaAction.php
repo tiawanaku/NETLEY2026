@@ -6,6 +6,7 @@ use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Support\RespuestaFields;
 use App\Models\Consulta;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 
 /**
@@ -24,11 +25,23 @@ class ResponderConsultaAction
             ->icon('heroicon-o-chat-bubble-left-right')
             ->color('primary')
             ->visible(fn (Consulta $record) => $record->estado === EstadoConsulta::Pendiente)
-            ->schema(RespuestaFields::schema())
+            ->schema([
+                // La consulta original va primero, solo de lectura: para
+                // responder hay que ver primero qué se preguntó.
+                Textarea::make('consulta_original')
+                    ->label('Consulta')
+                    ->default(fn (Consulta $record) => $record->consulta)
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->rows(3)
+                    ->columnSpanFull(),
+                ...RespuestaFields::schema(),
+            ])
             ->modalFooterActions(fn (Action $action): array => array_filter([
-                $action->getModalCancelAction(),
                 $action->getModalSubmitAction(),
+                $action->getModalCancelAction(),
             ]))
+            ->modalSubmitActionLabel('Guardar')
             ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))
             ->action(function (Consulta $record, array $data): void {
                 // "Respondido por" es siempre el usuario que está registrando la

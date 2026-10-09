@@ -96,12 +96,6 @@ class CreateConsulta extends CreateRecord
             ->label('Guardar')
             ->submit(null)
             ->action(fn () => $this->create())
-            ->requiresConfirmation()
-            ->modalHeading('¿Crear la consulta?')
-            ->modalDescription('Revisa los datos antes de confirmar. Puedes presionar Enter para crearla.')
-            ->modalSubmitActionLabel('Crear consulta')
-            ->modalCancelActionLabel('Revisar')
-            ->extraModalWindowAttributes(['data-enter-confirm' => 'true'])
             ->extraAttributes(['data-enter-submit' => 'true']);
     }
 
