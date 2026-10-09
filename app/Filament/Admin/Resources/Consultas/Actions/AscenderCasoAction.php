@@ -72,7 +72,6 @@ class AscenderCasoAction
                     ...$record->only(CamposDomicilio::COLUMNAS),
                     'fecha_inicio' => now()->toDateString(),
                     'fecha_primera_cuota' => now()->addMonth()->toDateString(),
-                    'modalidad_pago' => ClienteCasoWizard::PAGO_PLAN,
                     'patrocinio_hih' => false,
                     'anticipo' => 0,
                     // Si la respuesta usó materia "Otro" (escrita a mano), se

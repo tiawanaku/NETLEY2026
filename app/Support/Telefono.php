@@ -18,7 +18,7 @@ class Telefono
     public const REGION_POR_DEFECTO = 'BO';
 
     /**
-     * @return array{region: ?string, codigo: int, e164: string, internacional: string}|null
+     * @return array{region: ?string, codigo: int, e164: string, internacional: string, nacional: string}|null
      */
     public static function analizar(?string $numero): ?array
     {
@@ -47,6 +47,9 @@ class Telefono
             'codigo' => (int) $telefono->getCountryCode(),
             'e164' => $util->format($telefono, PhoneNumberFormat::E164),
             'internacional' => $util->format($telefono, PhoneNumberFormat::INTERNATIONAL),
+            // Sin el código de país: la bandera ya lo indica, no hace falta
+            // repetirlo al lado en la columna de la tabla.
+            'nacional' => $util->format($telefono, PhoneNumberFormat::NATIONAL),
         ];
     }
 
