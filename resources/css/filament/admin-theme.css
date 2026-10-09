@@ -135,3 +135,49 @@
     background-color: transparent;
 }
 
+
+/*
+ * Plugin afsakar/filament-leaflet-map-picker: su vista usa utilidades de
+ * Tailwind que este panel no compila (no hay tema propio con Vite). Sin
+ * esto, el ícono del resumen de coordenadas se dibuja a ancho completo y
+ * tapa el mapa. Se acotan al contenedor del plugin.
+ */
+[x-data^="leafletMapPicker"] .relative { position: relative; }
+[x-data^="leafletMapPicker"] .w-full { width: 100%; }
+[x-data^="leafletMapPicker"] .overflow-hidden { overflow: hidden; }
+[x-data^="leafletMapPicker"] .rounded-lg { border-radius: .5rem; }
+[x-data^="leafletMapPicker"] .shadow { box-shadow: 0 1px 3px rgb(0 0 0 / .1), 0 1px 2px rgb(0 0 0 / .06); }
+[x-data^="leafletMapPicker"] .border { border: 1px solid rgb(229 231 235); }
+[x-data^="leafletMapPicker"] .border-t { border-top: 1px solid rgb(229 231 235); }
+[x-data^="leafletMapPicker"] .bg-gray-50 { background-color: rgb(249 250 251); }
+[x-data^="leafletMapPicker"] .p-4 { padding: 1rem; }
+[x-data^="leafletMapPicker"] .px-4 { padding-inline: 1rem; }
+[x-data^="leafletMapPicker"] .py-3 { padding-block: .75rem; }
+[x-data^="leafletMapPicker"] .py-4 { padding-block: 1rem; }
+[x-data^="leafletMapPicker"] .mt-1 { margin-top: .25rem; }
+[x-data^="leafletMapPicker"] .mt-2 { margin-top: .5rem; }
+[x-data^="leafletMapPicker"] .mr-2 { margin-right: .5rem; }
+[x-data^="leafletMapPicker"] .mx-auto { margin-inline: auto; }
+[x-data^="leafletMapPicker"] .flex { display: flex; }
+[x-data^="leafletMapPicker"] .grid { display: grid; }
+[x-data^="leafletMapPicker"] .items-center { align-items: center; }
+[x-data^="leafletMapPicker"] .items-start { align-items: flex-start; }
+[x-data^="leafletMapPicker"] .justify-center { justify-content: center; }
+[x-data^="leafletMapPicker"] .gap-3 { gap: .75rem; }
+[x-data^="leafletMapPicker"] .gap-4 { gap: 1rem; }
+[x-data^="leafletMapPicker"] .space-y-4 > * + * { margin-top: 1rem; }
+[x-data^="leafletMapPicker"] .flex-shrink-0 { flex-shrink: 0; }
+[x-data^="leafletMapPicker"] .text-left { text-align: left; }
+[x-data^="leafletMapPicker"] .text-center { text-align: center; }
+[x-data^="leafletMapPicker"] .text-sm { font-size: .875rem; line-height: 1.25rem; }
+[x-data^="leafletMapPicker"] .font-medium { font-weight: 500; }
+[x-data^="leafletMapPicker"] .text-gray-500 { color: rgb(107 114 128); }
+[x-data^="leafletMapPicker"] .text-gray-700 { color: rgb(55 65 81); }
+[x-data^="leafletMapPicker"] .h-5 { height: 1.25rem; }
+[x-data^="leafletMapPicker"] .w-5 { width: 1.25rem; }
+[x-data^="leafletMapPicker"] .h-6 { height: 1.5rem; }
+[x-data^="leafletMapPicker"] .w-6 { width: 1.5rem; }
+.dark [x-data^="leafletMapPicker"] .border-t { border-top-color: rgb(75 85 99); }
+.dark [x-data^="leafletMapPicker"] .bg-gray-50 { background-color: rgb(55 65 81); }
+.dark [x-data^="leafletMapPicker"] .text-gray-700,
+.dark [x-data^="leafletMapPicker"] .text-gray-500 { color: rgb(229 231 235); }

@@ -32,6 +32,11 @@ class Cliente extends Model implements AuthenticatableContract
         'extension',
         'sucursal',
         'direccion',
+        'zona',
+        'calles',
+        'numero_domicilio',
+        'indicaciones_domicilio',
+        'ubicacion',
         'nro_casos',
     ];
 
@@ -44,6 +49,7 @@ class Cliente extends Model implements AuthenticatableContract
         return [
             'fecha_nacimiento' => 'date',
             'password' => 'hashed',
+            'ubicacion' => 'array',
         ];
     }
 

@@ -2,7 +2,10 @@
 
 namespace App\Filament\Admin\Resources\Clientes\Schemas;
 
+use Afsakar\LeafletMapPicker\LeafletMapPicker;
+use App\Filament\Admin\Support\ClienteCasoWizard;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -39,6 +42,21 @@ class ClienteForm
                         TextInput::make('whatsapp')->tel()->disabled($isEditing),
                         TextInput::make('correo')->email()->disabled($isEditing),
                         TextInput::make('direccion')->disabled($isEditing),
+                    ]),
+
+                Section::make('Ubicación del domicilio')
+                    ->schema([
+                        TextInput::make('zona')->label('Zona / barrio')->disabled($isEditing),
+                        TextInput::make('calles')->label('Calle(s)')->disabled($isEditing),
+                        TextInput::make('numero_domicilio')->label('N° casa / depto.')->disabled($isEditing),
+                        Textarea::make('indicaciones_domicilio')->label('Indicaciones')->rows(2)->disabled($isEditing),
+                        LeafletMapPicker::make('ubicacion')
+                            ->hiddenLabel()
+                            ->defaultLocation(ClienteCasoWizard::CENTRO_MAPA)
+                            ->defaultZoom(16)
+                            ->height('320px')
+                            ->customMarker(ClienteCasoWizard::marcadorMapa())
+                            ->readOnly(),
                     ]),
             ]);
     }
