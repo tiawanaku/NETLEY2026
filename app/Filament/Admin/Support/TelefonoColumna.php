@@ -7,8 +7,9 @@ use Illuminate\Support\HtmlString;
 
 /**
  * Contenido HTML de una celda de teléfono: bandera del país según el código
- * (imagen de flagcdn.com), el número en formato internacional y el logo de
- * WhatsApp (Simple Icons, CC0) que abre el chat en https://wa.me/.
+ * (imagen de flagcdn.com), el número en formato nacional (sin repetir el
+ * código de país al lado — ya lo indica la bandera) y el logo de WhatsApp
+ * (Simple Icons, CC0) que abre el chat en https://wa.me/.
  *
  * La fila de la tabla ya es un enlace a la consulta, así que el logo no
  * puede ser otro <a> (enlaces anidados): es un <span role="link"> que abre
@@ -53,7 +54,7 @@ class TelefonoColumna
         return new HtmlString(sprintf(
             '<span style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap;">%s<span>%s</span>%s</span>',
             $bandera,
-            e($datos['internacional']),
+            e($datos['nacional']),
             $whatsapp,
         ));
     }
