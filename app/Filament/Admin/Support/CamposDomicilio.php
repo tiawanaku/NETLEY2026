@@ -97,7 +97,17 @@ class CamposDomicilio
             ? fn (LeafletMapPicker $component) => ! $component->evaluate($bloqueado)
             : ! $bloqueado;
 
-        return LeafletMapPicker::make('ubicacion')
+        $mapa = LeafletMapPicker::make('ubicacion');
+
+        // El plugin arma su config una sola vez (wire:ignore): al pasar de
+        // lectura a edición (botón "Editar" de la consulta) seguía sin
+        // permitir clic. Una clave distinta por modo hace que Livewire lo
+        // vuelva a dibujar con la config nueva.
+        if ($bloqueado instanceof Closure) {
+            $mapa->key(fn (LeafletMapPicker $component) => 'ubicacion-'.($component->evaluate($bloqueado) ? 'lectura' : 'edicion'));
+        }
+
+        return $mapa
             ->label('Ubicación del domicilio')
             ->helperText('Haz clic en el mapa (o arrastra el marcador) para marcar el domicilio.')
             ->defaultLocation(self::CENTRO_MAPA)
