@@ -32,7 +32,7 @@ class ConsultasTable
                 TextColumn::make('origen')
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('fecha_consulta')
-                    ->dateTime()
+                    ->date('d/m/Y')
                     ->sortable(),
             ])
             ->defaultSort('fecha_consulta', 'desc')
