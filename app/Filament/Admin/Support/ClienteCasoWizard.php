@@ -114,156 +114,179 @@ class ClienteCasoWizard
                 ->inlineLabel(),
 
             Step::make('Proceso')
-                ->schema([
-                    ...DelitoSelect::make(areaLabel: 'Materia legal', conOtros: true),
-                    Select::make('apersonamiento')
-                        ->options(array_combine(self::APERSONAMIENTOS, self::APERSONAMIENTOS))
-                        ->native(false)
-                        ->live()
-                        ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
-                    TextInput::make('apersonamiento_otro')
-                        ->label('Apersonamiento (especificar)')
-                        ->maxLength(60)
-                        ->required(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
-                        ->visible(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-                    Textarea::make('descripcion')->label('Descripción')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
-                    Select::make('personal')
-                        ->label('Abogado(s) asignado(s)')
-                        // Con materia "Otros" no hay especialidad que filtrar:
-                        // se listan todos los abogados.
-                        ->options(fn (Get $get) => PersonalEspecialidades::personalOptionsPlain(
-                            $get('especialidad') === DelitoSelect::OTROS ? null : $get('especialidad'),
-                            (array) ($get('personal') ?? []),
-                            'Abogado'
-                        ))
-                        ->multiple()
-                        ->required()
-                        ->searchable()
-                        ->helperText('Puede asignar uno o varios abogados.')
-                        ->extraAttributes(['data-enter-nav-field' => 'true']),
-                    DatePicker::make('fecha_inicio')->default(now())->required()->live()->extraInputAttributes(['data-enter-nav' => 'true']),
-                    TextInput::make('duracion_meses')
-                        ->label('Duración del proceso (meses)')
-                        ->numeric()
-                        ->integer()
-                        ->minValue(1)
-                        ->required()
-                        ->live(onBlur: true)
-                        // El plan de pagos (paso 3) arranca con una cuota por mes.
-                        ->afterStateUpdated(fn ($set, $state) => $set('numero_cuotas', filled($state) ? max((int) $state, 1) : null))
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-                    Placeholder::make('fecha_fin_preview')
-                        ->label('Fecha estimada de fin (aprox.)')
-                        ->content(function (Get $get): string {
-                            $fin = self::fechaFinEstimada($get('duracion_meses'));
-
-                            return $fin ? $fin->translatedFormat('d/m/Y').' (desde hoy)' : '—';
-                        }),
-                ])
+                ->schema(self::camposProceso())
                 ->columns(2)
                 ->inlineLabel(),
 
             Step::make('Pago y plan de cuotas')
-                ->schema([
-                    TextInput::make('iguala')
-                        ->label('Iguala profesional')
-                        ->numeric()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-
-                    Toggle::make('patrocinio_hih')
-                        ->label('Patrocinio Hand in Hand (HIH)')
-                        ->default(false)
-                        ->live(),
-                    TextInput::make('porcentaje_patrocinio')
-                        ->label('Porcentaje de patrocinio')
-                        ->helperText('Parte de la iguala profesional que cubre Hand in Hand (ej. 40, 30).')
-                        ->numeric()
-                        ->minValue(1)
-                        ->maxValue(100)
-                        ->suffix('%')
-                        ->datalist(['10', '20', '30', '40', '50', '60', '70', '80', '90'])
-                        ->required(fn (Get $get) => (bool) $get('patrocinio_hih'))
-                        ->visible(fn (Get $get) => (bool) $get('patrocinio_hih'))
-                        ->live(onBlur: true)
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-
-                    // Iguala Netley = iguala profesional menos el descuento que
-                    // cubre HIH: es el monto real que el cliente le debe a
-                    // Netley, y la base de todo lo que sigue (anticipo, saldo,
-                    // cuotas) — por eso también es lo que se guarda como
-                    // Caso.iguala/saldo, no la iguala profesional completa.
-                    Placeholder::make('iguala_netley_preview')
-                        ->label('Iguala Netley')
-                        ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['monto_cliente'], 2)),
-
-                    TextInput::make('anticipo')
-                        ->label('Anticipo')
-                        ->numeric()
-                        ->prefix('Bs.')
-                        ->default(0)
-                        ->minValue(0)
-                        ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
-                        ->live(onBlur: true)
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-
-                    // Saldo = Iguala Netley menos el anticipo; es lo que se
-                    // reparte en las cuotas de abajo.
-                    Placeholder::make('saldo_netley_preview')
-                        ->label('Saldo')
-                        ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['saldo_cliente'], 2)),
-
-                    // Comisión por un pago extra ocasional (ej. referido): dos
-                    // campos sueltos, sin relación entre sí ni con el resto —
-                    // solo se guardan tal cual se cargan.
-                    TextInput::make('comision_porcentaje')
-                        ->label('Comisión (%)')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(100)
-                        ->suffix('%')
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-                    TextInput::make('comision_monto')
-                        ->label('Comisión (Bs.)')
-                        ->numeric()
-                        ->minValue(0)
-                        ->prefix('Bs.')
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-
-                    TextInput::make('numero_cuotas')
-                        ->label('N° de cuotas mensuales')
-                        ->helperText(fn (Get $get) => filled($get('duracion_meses'))
-                            ? 'Según la duración del proceso: '.(int) $get('duracion_meses').' mes(es).'
-                            : null)
-                        ->numeric()
-                        ->integer()
-                        ->minValue(1)
-                        ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
-                        ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
-                        ->live(onBlur: true)
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-                    DatePicker::make('fecha_primera_cuota')
-                        ->label('Fecha de la primera cuota')
-                        ->default(now()->addMonth())
-                        ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
-                        ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
-                        ->live()
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
-
-                    // Datos del cobro de hoy (si hay anticipo).
-                    Group::make(CamposPago::components(conTipo: false))
-                        ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['pago_hoy'] > 0)
-                        ->columns(2)
-                        ->columnSpanFull(),
-
-                    Placeholder::make('plan_preview')
-                        ->label('Resumen')
-                        ->content(fn (Get $get) => self::resumenPlanHtml(self::plan(self::datosPlan($get))))
-                        ->columnSpanFull()
-                        ->inlineLabel(false),
-                ])
+                ->schema(self::camposPago())
                 ->columns(2)
                 ->inlineLabel(),
+        ];
+    }
+
+    /**
+     * Campos del paso "Proceso" (materia/delito, apersonamiento, descripción,
+     * abogados asignados, fechas) — compartidos entre el wizard y el
+     * formulario rápido de "Nuevo proceso" en la ficha del cliente
+     * (CasosRelationManager), que crea un caso para un cliente ya existente.
+     *
+     * @return array<int, \Filament\Schemas\Components\Component>
+     */
+    public static function camposProceso(): array
+    {
+        return [
+            ...DelitoSelect::make(areaLabel: 'Materia legal', conOtros: true),
+            Select::make('apersonamiento')
+                ->options(array_combine(self::APERSONAMIENTOS, self::APERSONAMIENTOS))
+                ->native(false)
+                ->live()
+                ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
+            TextInput::make('apersonamiento_otro')
+                ->label('Apersonamiento (especificar)')
+                ->maxLength(60)
+                ->required(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
+                ->visible(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+            Textarea::make('descripcion')->label('Descripción')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
+            Select::make('personal')
+                ->label('Abogado(s) asignado(s)')
+                // Con materia "Otros" no hay especialidad que filtrar:
+                // se listan todos los abogados.
+                ->options(fn (Get $get) => PersonalEspecialidades::personalOptionsPlain(
+                    $get('especialidad') === DelitoSelect::OTROS ? null : $get('especialidad'),
+                    (array) ($get('personal') ?? []),
+                    'Abogado'
+                ))
+                ->multiple()
+                ->required()
+                ->searchable()
+                ->helperText('Puede asignar uno o varios abogados.')
+                ->extraAttributes(['data-enter-nav-field' => 'true']),
+            DatePicker::make('fecha_inicio')->default(now())->required()->live()->extraInputAttributes(['data-enter-nav' => 'true']),
+            TextInput::make('duracion_meses')
+                ->label('Duración del proceso (meses)')
+                ->numeric()
+                ->integer()
+                ->minValue(1)
+                ->required()
+                ->live(onBlur: true)
+                // El plan de pagos (paso 3) arranca con una cuota por mes.
+                ->afterStateUpdated(fn ($set, $state) => $set('numero_cuotas', filled($state) ? max((int) $state, 1) : null))
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+            Placeholder::make('fecha_fin_preview')
+                ->label('Fecha estimada de fin (aprox.)')
+                ->content(function (Get $get): string {
+                    $fin = self::fechaFinEstimada($get('duracion_meses'));
+
+                    return $fin ? $fin->translatedFormat('d/m/Y').' (desde hoy)' : '—';
+                }),
+        ];
+    }
+
+    /**
+     * Campos del paso "Pago y plan de cuotas" — ver camposProceso().
+     *
+     * @return array<int, \Filament\Schemas\Components\Component>
+     */
+    public static function camposPago(): array
+    {
+        return [
+            TextInput::make('iguala')
+                ->label('Iguala profesional')
+                ->numeric()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+
+            Toggle::make('patrocinio_hih')
+                ->label('Patrocinio Hand in Hand (HIH)')
+                ->default(false)
+                ->live(),
+            TextInput::make('porcentaje_patrocinio')
+                ->label('Porcentaje de patrocinio')
+                ->helperText('Parte de la iguala profesional que cubre Hand in Hand (ej. 40, 30).')
+                ->numeric()
+                ->minValue(1)
+                ->maxValue(100)
+                ->suffix('%')
+                ->datalist(['10', '20', '30', '40', '50', '60', '70', '80', '90'])
+                ->required(fn (Get $get) => (bool) $get('patrocinio_hih'))
+                ->visible(fn (Get $get) => (bool) $get('patrocinio_hih'))
+                ->live(onBlur: true)
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+
+            // Iguala Netley = iguala profesional menos el descuento que
+            // cubre HIH: es el monto real que el cliente le debe a
+            // Netley, y la base de todo lo que sigue (anticipo, saldo,
+            // cuotas) — por eso también es lo que se guarda como
+            // Caso.iguala/saldo, no la iguala profesional completa.
+            Placeholder::make('iguala_netley_preview')
+                ->label('Iguala Netley')
+                ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['monto_cliente'], 2)),
+
+            TextInput::make('anticipo')
+                ->label('Anticipo')
+                ->numeric()
+                ->prefix('Bs.')
+                ->default(0)
+                ->minValue(0)
+                ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
+                ->live(onBlur: true)
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+
+            // Saldo = Iguala Netley menos el anticipo; es lo que se
+            // reparte en las cuotas de abajo.
+            Placeholder::make('saldo_netley_preview')
+                ->label('Saldo')
+                ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['saldo_cliente'], 2)),
+
+            // Comisión por un pago extra ocasional (ej. referido): dos
+            // campos sueltos, sin relación entre sí ni con el resto —
+            // solo se guardan tal cual se cargan.
+            TextInput::make('comision_porcentaje')
+                ->label('Comisión (%)')
+                ->numeric()
+                ->minValue(0)
+                ->maxValue(100)
+                ->suffix('%')
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+            TextInput::make('comision_monto')
+                ->label('Comisión (Bs.)')
+                ->numeric()
+                ->minValue(0)
+                ->prefix('Bs.')
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+
+            TextInput::make('numero_cuotas')
+                ->label('N° de cuotas mensuales')
+                ->helperText(fn (Get $get) => filled($get('duracion_meses'))
+                    ? 'Según la duración del proceso: '.(int) $get('duracion_meses').' mes(es).'
+                    : null)
+                ->numeric()
+                ->integer()
+                ->minValue(1)
+                ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
+                ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
+                ->live(onBlur: true)
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+            DatePicker::make('fecha_primera_cuota')
+                ->label('Fecha de la primera cuota')
+                ->default(now()->addMonth())
+                ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
+                ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
+                ->live()
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+
+            // Datos del cobro de hoy (si hay anticipo).
+            Group::make(CamposPago::components(conTipo: false))
+                ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['pago_hoy'] > 0)
+                ->columns(2)
+                ->columnSpanFull(),
+
+            Placeholder::make('plan_preview')
+                ->label('Resumen')
+                ->content(fn (Get $get) => self::resumenPlanHtml(self::plan(self::datosPlan($get))))
+                ->columnSpanFull()
+                ->inlineLabel(false),
         ];
     }
 
@@ -278,14 +301,6 @@ class ClienteCasoWizard
     public static function crear(array $data): array
     {
         return DB::transaction(function () use ($data): array {
-            $plan = self::plan($data);
-            // Caso.iguala/saldo son la Iguala Netley (lo que el cliente
-            // realmente le debe a Netley), no la iguala profesional completa
-            // — la iguala profesional siempre se puede reconstruir sumando
-            // monto_patrocinio.
-            $iguala = $plan['monto_cliente'];
-            $esOtraMateria = ($data['especialidad'] ?? null) === DelitoSelect::OTROS;
-            $esOtroDelito = ($data['delito_id'] ?? null) === DelitoSelect::OTROS;
             // Si ya existe un cliente con esa CI (consulta recurrente), se
             // actualizan sus datos en vez de crear un duplicado.
             $cliente = Cliente::updateOrCreate(
@@ -312,6 +327,33 @@ class ClienteCasoWizard
                         : ($data['extension'] ?? null),
                 ]
             );
+
+            $caso = self::crearCaso($cliente, $data);
+
+            return ['cliente' => $cliente, 'caso' => $caso];
+        });
+    }
+
+    /**
+     * Crea un caso (+ pago del anticipo y plan de cuotas, si corresponde)
+     * para un cliente ya existente, a partir de los datos de los pasos
+     * "Proceso" y "Pago y plan de cuotas" (camposProceso()/camposPago()).
+     * Lo usa crear() (cliente nuevo) y CasosRelationManager (cliente ya
+     * existente, acción "Nuevo proceso" en su ficha).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function crearCaso(Cliente $cliente, array $data): Caso
+    {
+        return DB::transaction(function () use ($cliente, $data): Caso {
+            $plan = self::plan($data);
+            // Caso.iguala/saldo son la Iguala Netley (lo que el cliente
+            // realmente le debe a Netley), no la iguala profesional completa
+            // — la iguala profesional siempre se puede reconstruir sumando
+            // monto_patrocinio.
+            $iguala = $plan['monto_cliente'];
+            $esOtraMateria = ($data['especialidad'] ?? null) === DelitoSelect::OTROS;
+            $esOtroDelito = ($data['delito_id'] ?? null) === DelitoSelect::OTROS;
 
             $duracionMeses = filled($data['duracion_meses'] ?? null) ? (int) $data['duracion_meses'] : null;
             $fechaFin = self::fechaFinEstimada($duracionMeses)?->toDateString();
@@ -387,7 +429,7 @@ class ClienteCasoWizard
                 ]);
             }
 
-            return ['cliente' => $cliente, 'caso' => $caso];
+            return $caso;
         });
     }
 
