@@ -34,6 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(asset('images/netley-logo.png'))
             ->brandLogoHeight('3rem')
             ->favicon(asset('images/netley-mark.png'))
+            ->sidebarCollapsibleOnDesktop()
             ->colors([
                 // Paleta del panel interno legacy (dashboard.php): sidebar azul marino, acento celeste.
                 'primary' => Color::hex('#1a2537'),
