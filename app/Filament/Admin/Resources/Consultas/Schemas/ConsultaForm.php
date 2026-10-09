@@ -109,7 +109,8 @@ class ConsultaForm
                         CamposDomicilio::mapa($isEditing),
                     ])
                     ->columns(2)
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->visible(false),
             ]);
     }
 
