@@ -10,8 +10,6 @@ use App\Models\Pago;
 use App\Models\PlanPago;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -120,8 +118,27 @@ class PlanesPagoRelationManager extends RelationManager
 
                         Notification::make()->title('Pago registrado')->success()->send();
                     }),
-                EditAction::make()->visible(fn () => auth()->user()?->puede('editar')),
-                DeleteAction::make()->visible(fn () => auth()->user()?->puede('eliminar')),
+                Action::make('imprimirRecibo')
+                    ->label('Imprimir recibo')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->visible(fn (PlanPago $record) => $record->estado === EstadoCuota::Pagado)
+                    ->action(function (PlanPago $record) {
+                        $pago = Pago::where('caso_id', $record->caso_id)
+                            ->where('nro_cuota', $record->numero)
+                            ->latest('id')
+                            ->first();
+
+                        if (! $pago) {
+                            Notification::make()->title('No se encontró el pago de esta cuota')->danger()->send();
+
+                            return null;
+                        }
+
+                        return response()->streamDownload(
+                            fn () => print (Pdf::loadView('pdf.recibo-pago', ['pago' => $pago->load(['cliente', 'caso'])])->output()),
+                            "recibo-{$pago->nro_recibo}.pdf"
+                        );
+                    }),
             ]);
     }
 }
