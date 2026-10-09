@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Consultas\Tables;
 use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Resources\Consultas\Actions\AscenderCasoAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReactivarConsultaAction;
+use App\Filament\Admin\Support\TelefonoColumna;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -26,6 +27,9 @@ class ConsultasTable
                     ->label('Nombre')
                     ->searchable(['nombres', 'ap_paterno', 'ap_materno']),
                 TextColumn::make('telefono')
+                    ->label('Teléfono')
+                    ->formatStateUsing(fn (?string $state) => TelefonoColumna::html($state))
+                    ->html()
                     ->searchable(),
                 TextColumn::make('estado')
                     ->badge(),
