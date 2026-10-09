@@ -1,0 +1,137 @@
+/* Réplica de la identidad visual del panel interno legacy de NETLEY
+   (dashboard.php / styles.css): sidebar azul marino, acento celeste,
+   fondo gris claro, tarjetas blancas con sombra suave. */
+:root {
+    --netley-navy: #1a2537;
+    --netley-navy-light: #22325a;
+    --netley-cyan: #4fc3f7;
+    --netley-bg: #f4f6f8;
+}
+
+.fi-sidebar,
+.fi-sidebar-header-ctn,
+.fi-sidebar-header {
+    background-color: var(--netley-navy) !important;
+    border-color: var(--netley-navy-light) !important;
+}
+
+.fi-sidebar .fi-logo {
+    color: #fff !important;
+    font-weight: 700;
+    letter-spacing: .5px;
+}
+
+/* El logo trae texto en azul marino: le damos un chip blanco para que se
+   lea sobre el sidebar navy, igual de legible que en el sistema viejo. */
+.fi-sidebar .fi-logo img {
+    background-color: #fff;
+    padding: .5rem .85rem;
+    border-radius: .6rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.fi-simple-layout .fi-logo img {
+    margin-inline: auto;
+}
+
+.fi-sidebar-nav {
+    background-color: var(--netley-navy);
+}
+
+.fi-sidebar-group-label,
+.fi-sidebar-item-label,
+.fi-sidebar-item-icon {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.fi-sidebar-item-btn:hover .fi-sidebar-item-label,
+.fi-sidebar-item-btn:hover .fi-sidebar-item-icon,
+.fi-sidebar-item.fi-active .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: var(--netley-cyan) !important;
+}
+
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn,
+.fi-sidebar-item-btn:hover {
+    background-color: var(--netley-navy-light) !important;
+    border-radius: .5rem;
+}
+
+.fi-sidebar-group-items {
+    background-color: transparent;
+}
+
+/* Fondo del contenido y tarjetas, igual que .main-content / .contenedor-tabla legacy */
+.fi-main {
+    background-color: var(--netley-bg);
+}
+
+.fi-section,
+.fi-ta-ctn,
+.fi-in-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Encabezados de tabla azul marino con texto blanco, igual que .tabla-casos
+   thead del dashboard legacy. */
+.fi-ta-header-cell {
+    background-color: var(--netley-navy) !important;
+    color: #fff !important;
+}
+
+.fi-ta-header-cell-label,
+.fi-ta-header-cell-sort-btn,
+.fi-ta-header-cell .fi-icon,
+.fi-ta-header-cell .fi-ta-header-cell-tooltip {
+    color: #fff !important;
+}
+
+.fi-ta-header-cell-sort-btn:hover {
+    color: var(--netley-cyan) !important;
+}
+
+/* Filas de tabla: hover suave igual que .tabla-casos tbody tr:hover */
+.fi-ta-row:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* Widgets del dashboard con el mismo aire de tarjeta que .contenedor-tabla */
+.fi-wi-table {
+    border-radius: .75rem;
+    overflow: hidden;
+}
+
+/* Barra de scroll horizontal duplicada arriba de la tabla (la nativa ya
+   queda abajo, al final del contenedor con overflow-x), para que las
+   tablas anchas se puedan navegar sin bajar primero hasta el final.
+   Se posiciona por coordenadas (ver dual-scrollbar.js) y vive fuera del
+   árbol que gestiona Livewire, para no interferir con sus re-renders. */
+.netley-ta-top-scroll {
+    display: none;
+    position: absolute;
+    z-index: 30;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 14px;
+    border-bottom: 1px solid rgb(0 0 0 / 0.06);
+    background-color: #fff;
+    scrollbar-width: thin;
+}
+
+.netley-ta-top-scroll > div {
+    height: 1px;
+}
+
+.netley-ta-top-scroll::-webkit-scrollbar {
+    height: 10px;
+}
+
+.netley-ta-top-scroll::-webkit-scrollbar-thumb {
+    background-color: rgb(0 0 0 / 0.25);
+    border-radius: 9999px;
+}
+
+.netley-ta-top-scroll::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
