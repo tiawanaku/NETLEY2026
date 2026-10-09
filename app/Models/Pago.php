@@ -33,6 +33,22 @@ class Pago extends Model
         ];
     }
 
+    /**
+     * Nombre completo del personal que registró el pago (registrado_por
+     * guarda el username de la cuenta, no el nombre) — para mostrar en el
+     * recibo en vez de las credenciales de acceso.
+     */
+    public function getRegistradoPorNombreAttribute(): ?string
+    {
+        if (blank($this->registrado_por)) {
+            return null;
+        }
+
+        $nombre = User::where('username', $this->registrado_por)->first()?->personal?->nombre_completo;
+
+        return $nombre ?? $this->registrado_por;
+    }
+
     public function montoEnLetras(): string
     {
         $entero = (int) floor((float) $this->monto);
