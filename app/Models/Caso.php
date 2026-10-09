@@ -30,6 +30,8 @@ class Caso extends Model
         'patrocinio_hih',
         'porcentaje_patrocinio',
         'monto_patrocinio',
+        'comision_porcentaje',
+        'comision_monto',
         'fecha_inicio',
         'duracion_meses',
         'fecha_fin',
@@ -48,6 +50,8 @@ class Caso extends Model
             'patrocinio_hih' => 'boolean',
             'porcentaje_patrocinio' => 'decimal:2',
             'monto_patrocinio' => 'decimal:2',
+            'comision_porcentaje' => 'decimal:2',
+            'comision_monto' => 'decimal:2',
             'fecha_inicio' => 'date',
             'fecha_fin' => 'date',
         ];
