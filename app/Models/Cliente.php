@@ -7,6 +7,7 @@ use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Además de ser el registro de un cliente del despacho, este modelo es
@@ -72,6 +73,12 @@ class Cliente extends Model implements AuthenticatableContract
     public function getNombreCompletoAttribute(): string
     {
         return trim("{$this->nombres} {$this->ap_paterno} {$this->ap_materno}");
+    }
+
+    /** Caso más reciente: de él salen abogado y fechas del proceso en la tabla de Clientes. */
+    public function ultimoCaso(): HasOne
+    {
+        return $this->hasOne(Caso::class)->latestOfMany();
     }
 
     public function casos(): HasMany
