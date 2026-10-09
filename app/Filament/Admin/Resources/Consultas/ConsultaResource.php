@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class ConsultaResource extends Resource
 {
@@ -31,6 +32,12 @@ class ConsultaResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('consultas') ?? false;
+    }
+
+    /** La migaja de pan ("Consultas > ...") muestra el N° de consulta, no el nombre. */
+    public static function getRecordTitle(?Model $record): string|null
+    {
+        return $record ? 'N° '.$record->getKey() : null;
     }
 
     public static function form(Schema $schema): Schema
