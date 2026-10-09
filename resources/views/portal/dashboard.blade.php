@@ -48,7 +48,7 @@
                         @php $colorTab = $coloresEstado[$caso->estado->getColor()] ?? ['bg' => '#e5e7eb', 'fg' => '#374151']; @endphp
                         <button type="button" class="tab-caso" data-tab="caso-{{ $caso->id }}" role="tab">
                             <span class="dot" style="background:{{ $colorTab['fg'] }};"></span>
-                            Caso #{{ $caso->id }} — {{ $caso->especialidad?->getLabel() ?? 'Sin materia' }}
+                            Caso #{{ $caso->id }} — {{ $caso->materia_legal }}
                         </button>
                     @endforeach
                 </div>
@@ -60,7 +60,7 @@
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
                         <div>
                             <h2 style="font-size:17px;color:#1a2537;margin:0 0 4px;">
-                                Caso #{{ $caso->id }} — {{ $caso->especialidad?->getLabel() ?? 'Sin materia' }}
+                                Caso #{{ $caso->id }} — {{ $caso->materia_legal }}
                             </h2>
                             <p style="font-size:13px;color:#6b7280;margin:0;">
                                 {{ $caso->delito?->delito ?? $caso->delito_texto ?? 'Sin detalle registrado' }}

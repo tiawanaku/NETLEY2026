@@ -35,7 +35,7 @@
             </div>
             <div class="caso-cuerpo">
                 <div class="caso-meta">
-                    {{ $seguimiento->caso?->especialidad?->getLabel() ?? '' }}
+                    {{ $seguimiento->caso?->materia_legal ?? '' }}
                     @if ($seguimiento->caso?->estado)
                         &middot; {{ $seguimiento->caso->estado->getLabel() }}
                     @endif

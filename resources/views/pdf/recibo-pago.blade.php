@@ -117,7 +117,7 @@
             </tr>
             <tr>
                 <td class="campo-etiqueta" style="padding-bottom: 8px;">Por concepto de:</td>
-                <td class="campo-valor" style="padding-bottom: 8px;">Cuota N° {{ $pago->nro_cuota }} — Caso N° {{ $pago->caso_id }} ({{ $pago->caso->especialidad->getLabel() }})</td>
+                <td class="campo-valor" style="padding-bottom: 8px;">Cuota N° {{ $pago->nro_cuota }} — Caso N° {{ $pago->caso_id }} ({{ $pago->caso->materia_legal }})</td>
             </tr>
         </table>
 

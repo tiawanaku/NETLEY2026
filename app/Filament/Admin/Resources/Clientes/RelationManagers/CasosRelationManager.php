@@ -36,8 +36,8 @@ class CasosRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('id')
             ->columns([
-                TextColumn::make('especialidad')->badge(),
-                TextColumn::make('delito.delito')->label('Delito')->limit(40),
+                TextColumn::make('especialidad')->label('Materia legal')->badge()->state(fn ($record) => $record->especialidad ?? $record->materia_texto),
+                TextColumn::make('delito.delito')->label('Delito')->limit(40)->placeholder(fn ($record) => $record->delito_texto ?: '-'),
                 TextColumn::make('estado')->badge(),
                 TextColumn::make('saldo')->money('BOB'),
                 TextColumn::make('fecha_fin')->date()->label('Vencimiento'),

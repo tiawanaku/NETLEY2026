@@ -18,6 +18,7 @@ class Caso extends Model
     protected $fillable = [
         'cliente_id',
         'especialidad',
+        'materia_texto',
         'delito_id',
         'delito_texto',
         'descripcion',
@@ -25,6 +26,10 @@ class Caso extends Model
         'iguala',
         'saldo',
         'pagado',
+        'modalidad_pago',
+        'patrocinio_hih',
+        'porcentaje_patrocinio',
+        'monto_patrocinio',
         'fecha_inicio',
         'duracion_meses',
         'fecha_fin',
@@ -40,9 +45,21 @@ class Caso extends Model
             'iguala' => 'decimal:2',
             'saldo' => 'decimal:2',
             'pagado' => 'decimal:2',
+            'patrocinio_hih' => 'boolean',
+            'porcentaje_patrocinio' => 'decimal:2',
+            'monto_patrocinio' => 'decimal:2',
             'fecha_inicio' => 'date',
             'fecha_fin' => 'date',
         ];
+    }
+
+    /**
+     * Materia legal para mostrar: la del catálogo o, si se eligió "Otros",
+     * la escrita a mano.
+     */
+    public function getMateriaLegalAttribute(): string
+    {
+        return $this->especialidad?->getLabel() ?? $this->materia_texto ?? '—';
     }
 
     public function cliente(): BelongsTo

@@ -28,7 +28,7 @@
     <table class="datos">
         <tr><td class="label">Nombre</td><td>{{ $caso->cliente->nombre_completo ?? '-' }}</td></tr>
         <tr><td class="label">Carnet de identidad</td><td>{{ $caso->cliente->ci ?? '-' }}</td></tr>
-        <tr><td class="label">Materia legal</td><td>{{ $caso->especialidad?->getLabel() ?? '-' }}</td></tr>
+        <tr><td class="label">Materia legal</td><td>{{ $caso->materia_legal }}</td></tr>
         <tr><td class="label">Iguala</td><td>Bs. {{ number_format($caso->iguala, 2) }}</td></tr>
         <tr><td class="label">Saldo actual</td><td>Bs. {{ number_format($caso->saldo, 2) }}</td></tr>
     </table>

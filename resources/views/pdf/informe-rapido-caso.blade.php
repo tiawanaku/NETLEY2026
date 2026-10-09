@@ -33,7 +33,7 @@
 
     <div class="seccion">Ficha del caso</div>
     <table class="datos">
-        <tr><td class="label">Materia legal</td><td>{{ $caso->especialidad?->getLabel() ?? '-' }}</td></tr>
+        <tr><td class="label">Materia legal</td><td>{{ $caso->materia_legal }}</td></tr>
         <tr><td class="label">Delito</td><td>{{ $caso->delito->delito ?? ($caso->delito_texto ?: '-') }}</td></tr>
         <tr><td class="label">Apersonamiento</td><td>{{ $caso->apersonamiento ?: '-' }}</td></tr>
         <tr><td class="label">Ciudad</td><td>{{ $caso->ciudad ?: '-' }}</td></tr>

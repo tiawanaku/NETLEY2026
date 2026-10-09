@@ -11,13 +11,17 @@ use App\Models\Pago;
 use App\Support\PersonalEspecialidades;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
 
 /**
  * Los 3 pasos "Validación de datos" / "Proceso" / "Pago y plan de cuotas" y
@@ -30,6 +34,16 @@ class ClienteCasoWizard
 {
     /** Valor de "extension" que habilita el campo manual "extension_texto". */
     public const EXTENSION_OTRO = 'OTRO';
+
+    /** Opciones de "Apersonamiento"; "Otros" habilita "apersonamiento_otro". */
+    public const APERSONAMIENTOS = ['Demandado', 'Demandante', 'Testigo', self::APERSONAMIENTO_OTROS];
+
+    public const APERSONAMIENTO_OTROS = 'Otros';
+
+    /** Modalidades de cobro del paso 3. */
+    public const PAGO_TOTAL = 'total';
+
+    public const PAGO_PLAN = 'plan';
 
     /**
      * @return array<int, Step>
@@ -107,37 +121,50 @@ class ClienteCasoWizard
 
             Step::make('Proceso')
                 ->schema([
-                    ...DelitoSelect::make(areaLabel: 'Materia legal'),
-                    Textarea::make('descripcion')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
-                    TextInput::make('apersonamiento')->datalist(['Demandante', 'Demandado', 'Solicitante'])->extraInputAttributes(['data-enter-nav' => 'true']),
+                    ...DelitoSelect::make(areaLabel: 'Materia legal', conOtros: true),
+                    Select::make('apersonamiento')
+                        ->options(array_combine(self::APERSONAMIENTOS, self::APERSONAMIENTOS))
+                        ->native(false)
+                        ->live()
+                        ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
+                    TextInput::make('apersonamiento_otro')
+                        ->label('Apersonamiento (especificar)')
+                        ->maxLength(60)
+                        ->required(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
+                        ->visible(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
+                    Textarea::make('descripcion')->label('Descripción')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
                     Select::make('personal')
                         ->label('Abogado(s) asignado(s)')
+                        // Con materia "Otros" no hay especialidad que filtrar:
+                        // se listan todos los abogados.
                         ->options(fn (Get $get) => PersonalEspecialidades::personalOptionsPlain(
-                            $get('especialidad'),
+                            $get('especialidad') === DelitoSelect::OTROS ? null : $get('especialidad'),
                             (array) ($get('personal') ?? []),
                             'Abogado'
                         ))
                         ->multiple()
+                        ->required()
                         ->searchable()
+                        ->helperText('Puede asignar uno o varios abogados.')
                         ->extraAttributes(['data-enter-nav-field' => 'true']),
                     DatePicker::make('fecha_inicio')->default(now())->required()->live()->extraInputAttributes(['data-enter-nav' => 'true']),
                     TextInput::make('duracion_meses')
                         ->label('Duración del proceso (meses)')
                         ->numeric()
+                        ->integer()
                         ->minValue(1)
-                        ->live()
+                        ->required()
+                        ->live(onBlur: true)
+                        // El plan de pagos (paso 3) arranca con una cuota por mes.
+                        ->afterStateUpdated(fn ($set, $state) => $set('numero_cuotas', filled($state) ? max((int) $state, 1) : null))
                         ->extraInputAttributes(['data-enter-nav' => 'true']),
                     Placeholder::make('fecha_fin_preview')
-                        ->label('Fecha estimada de fin')
+                        ->label('Fecha estimada de fin (aprox.)')
                         ->content(function (Get $get): string {
-                            $inicio = $get('fecha_inicio');
-                            $meses = $get('duracion_meses');
+                            $fin = self::fechaFinEstimada($get('duracion_meses'));
 
-                            if (blank($inicio) || blank($meses)) {
-                                return '—';
-                            }
-
-                            return Carbon::parse($inicio)->addMonthsNoOverflow((int) $meses)->translatedFormat('d/m/Y');
+                            return $fin ? $fin->translatedFormat('d/m/Y').' (desde hoy)' : '—';
                         }),
                 ])
                 ->columns(2)
@@ -145,28 +172,87 @@ class ClienteCasoWizard
 
             Step::make('Pago y plan de cuotas')
                 ->schema([
-                    TextInput::make('iguala')->label('Monto total (iguala)')->numeric()->prefix('Bs.')->required()->live()->extraInputAttributes(['data-enter-nav' => 'true']),
-                    TextInput::make('anticipo')->label('Anticipo / primer pago')->numeric()->prefix('Bs.')->default(0)->live()->extraInputAttributes(['data-enter-nav' => 'true']),
-                    ...CamposPago::components(conTipo: false),
-                    TextInput::make('numero_cuotas')->label('N° de cuotas restantes')->numeric()->default(0)->minValue(0)->live()->extraInputAttributes(['data-enter-nav' => 'true']),
-                    DatePicker::make('fecha_primera_cuota')->default(now()->addMonth())->extraInputAttributes(['data-enter-nav' => 'true']),
-                    Placeholder::make('saldo_preview')
-                        ->label('Saldo y plan resultante')
+                    TextInput::make('iguala')->label('Monto total (iguala)')->numeric()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)->extraInputAttributes(['data-enter-nav' => 'true']),
+
+                    Toggle::make('patrocinio_hih')
+                        ->label('Patrocinio Hand in Hand (HIH)')
+                        ->default(false)
+                        ->live(),
+                    TextInput::make('porcentaje_patrocinio')
+                        ->label('Porcentaje de patrocinio')
+                        ->helperText('Parte de la iguala que cubre Hand in Hand (ej. 40, 30).')
+                        ->numeric()
+                        ->minValue(1)
+                        ->maxValue(100)
+                        ->suffix('%')
+                        ->datalist(['10', '20', '30', '40', '50', '60', '70', '80', '90'])
+                        ->required(fn (Get $get) => (bool) $get('patrocinio_hih'))
+                        ->visible(fn (Get $get) => (bool) $get('patrocinio_hih'))
+                        ->live(onBlur: true)
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
+                    Placeholder::make('reparto_preview')
+                        ->label('Reparto')
+                        ->visible(fn (Get $get) => (bool) $get('patrocinio_hih'))
                         ->content(function (Get $get): string {
-                            $iguala = (float) ($get('iguala') ?? 0);
-                            $anticipo = (float) ($get('anticipo') ?? 0);
-                            $cuotas = (int) ($get('numero_cuotas') ?? 0);
-                            $saldo = max($iguala - $anticipo, 0);
+                            $plan = self::plan(self::datosPlan($get));
 
-                            $texto = 'Saldo pendiente: Bs. '.number_format($saldo, 2);
-
-                            if ($cuotas > 0) {
-                                $texto .= ' — '.$cuotas.' cuota(s) de Bs. '.number_format($saldo / $cuotas, 2).' c/u';
-                            }
-
-                            return $texto;
+                            return 'Hand in Hand cubre Bs. '.number_format($plan['monto_patrocinio'], 2)
+                                .' — el cliente paga Bs. '.number_format($plan['monto_cliente'], 2);
                         })
                         ->columnSpanFull(),
+
+                    Radio::make('modalidad_pago')
+                        ->label('Forma de cobro')
+                        ->options([
+                            self::PAGO_TOTAL => 'Pago total (el cliente paga todo hoy)',
+                            self::PAGO_PLAN => 'Plan de pagos (anticipo + cuotas mensuales)',
+                        ])
+                        ->default(self::PAGO_PLAN)
+                        ->required()
+                        ->live()
+                        ->columnSpanFull(),
+
+                    TextInput::make('anticipo')
+                        ->label('Anticipo / primer pago')
+                        ->numeric()
+                        ->prefix('Bs.')
+                        ->default(0)
+                        ->minValue(0)
+                        ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
+                        ->visible(fn (Get $get) => $get('modalidad_pago') !== self::PAGO_TOTAL)
+                        ->live(onBlur: true)
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
+                    TextInput::make('numero_cuotas')
+                        ->label('N° de cuotas mensuales')
+                        ->helperText(fn (Get $get) => filled($get('duracion_meses'))
+                            ? 'Según la duración del proceso: '.(int) $get('duracion_meses').' mes(es).'
+                            : null)
+                        ->numeric()
+                        ->integer()
+                        ->minValue(1)
+                        ->required(fn (Get $get) => $get('modalidad_pago') !== self::PAGO_TOTAL)
+                        ->visible(fn (Get $get) => $get('modalidad_pago') !== self::PAGO_TOTAL)
+                        ->live(onBlur: true)
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
+                    DatePicker::make('fecha_primera_cuota')
+                        ->label('Fecha de la primera cuota')
+                        ->default(now()->addMonth())
+                        ->required(fn (Get $get) => $get('modalidad_pago') !== self::PAGO_TOTAL)
+                        ->visible(fn (Get $get) => $get('modalidad_pago') !== self::PAGO_TOTAL)
+                        ->live()
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
+
+                    // Datos del cobro de hoy (pago total o anticipo).
+                    Group::make(CamposPago::components(conTipo: false))
+                        ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['pago_hoy'] > 0)
+                        ->columns(2)
+                        ->columnSpanFull(),
+
+                    Placeholder::make('plan_preview')
+                        ->label('Resumen')
+                        ->content(fn (Get $get) => self::resumenPlanHtml(self::plan(self::datosPlan($get))))
+                        ->columnSpanFull()
+                        ->inlineLabel(false),
                 ])
                 ->columns(2)
                 ->inlineLabel(),
@@ -184,11 +270,10 @@ class ClienteCasoWizard
     public static function crear(array $data): array
     {
         return DB::transaction(function () use ($data): array {
-            $iguala = (float) $data['iguala'];
-            $anticipo = (float) ($data['anticipo'] ?? 0);
-            $numeroCuotas = (int) ($data['numero_cuotas'] ?? 0);
-            $saldo = max($iguala - $anticipo, 0);
-
+            $plan = self::plan($data);
+            $iguala = $plan['iguala'];
+            $esOtraMateria = ($data['especialidad'] ?? null) === DelitoSelect::OTROS;
+            $esOtroDelito = ($data['delito_id'] ?? null) === DelitoSelect::OTROS;
             // Si ya existe un cliente con esa CI (consulta recurrente), se
             // actualizan sus datos en vez de crear un duplicado.
             $cliente = Cliente::updateOrCreate(
@@ -217,21 +302,27 @@ class ClienteCasoWizard
             );
 
             $duracionMeses = filled($data['duracion_meses'] ?? null) ? (int) $data['duracion_meses'] : null;
-            $fechaFin = $duracionMeses
-                ? Carbon::parse($data['fecha_inicio'])->addMonthsNoOverflow($duracionMeses)->toDateString()
-                : null;
+            $fechaFin = self::fechaFinEstimada($duracionMeses)?->toDateString();
 
             // saldo/pagado arrancan en el monto total; el pago del anticipo (si existe)
             // los ajusta automáticamente vía PagoObserver al crearse más abajo.
             $caso = Caso::create([
                 'cliente_id' => $cliente->id,
-                'especialidad' => $data['especialidad'],
-                'delito_id' => $data['delito_id'] ?? null,
+                'especialidad' => $esOtraMateria ? null : $data['especialidad'],
+                'materia_texto' => $esOtraMateria ? ($data['materia_texto'] ?? null) : null,
+                'delito_id' => $esOtraMateria || $esOtroDelito ? null : ($data['delito_id'] ?? null),
+                'delito_texto' => $esOtraMateria || $esOtroDelito ? ($data['delito_texto'] ?? null) : null,
                 'descripcion' => $data['descripcion'] ?? null,
-                'apersonamiento' => $data['apersonamiento'] ?? null,
+                'apersonamiento' => ($data['apersonamiento'] ?? null) === self::APERSONAMIENTO_OTROS
+                    ? ($data['apersonamiento_otro'] ?? null)
+                    : ($data['apersonamiento'] ?? null),
                 'iguala' => $iguala,
                 'saldo' => $iguala,
                 'pagado' => 0,
+                'modalidad_pago' => $plan['modalidad'],
+                'patrocinio_hih' => $plan['patrocinio'],
+                'porcentaje_patrocinio' => $plan['patrocinio'] ? $plan['porcentaje'] : null,
+                'monto_patrocinio' => $plan['monto_patrocinio'],
                 'fecha_inicio' => $data['fecha_inicio'],
                 'duracion_meses' => $duracionMeses,
                 'fecha_fin' => $fechaFin,
@@ -244,53 +335,185 @@ class ClienteCasoWizard
                 $caso->personal()->sync($data['personal']);
             }
 
-            if ($anticipo > 0) {
+            // Cobro de hoy: el total (modalidad "total") o el anticipo.
+            if ($plan['pago_hoy'] > 0) {
                 $siguienteRecibo = ((int) Pago::max('nro_recibo')) + 1;
 
                 Pago::create([
                     'caso_id' => $caso->id,
                     'cliente_id' => $cliente->id,
-                    'monto' => $anticipo,
-                    ...CamposPago::datos($data, tipoFijo: 'anticipo'),
+                    'monto' => $plan['pago_hoy'],
+                    ...CamposPago::datos($data, tipoFijo: $plan['modalidad'] === self::PAGO_TOTAL ? 'iguala' : 'anticipo'),
                     'fecha_pago' => now()->toDateString(),
                     'nro_cuota' => 0,
                     'nro_recibo' => $siguienteRecibo,
                     'registrado_por' => auth()->user()?->username,
                 ]);
 
-                // Cuota 0 del plan de pagos = el anticipo, ya pagado, para
-                // que aparezca junto con el resto de las cuotas.
+                // Cuota 0 del plan = lo cobrado hoy, ya pagado, para que
+                // aparezca junto con el resto de las cuotas.
                 $caso->planesPago()->create([
                     'numero' => 0,
                     'fecha' => now()->toDateString(),
-                    'monto' => $anticipo,
-                    'nuevo_saldo' => $saldo,
+                    'monto' => $plan['pago_hoy'],
+                    'nuevo_saldo' => $plan['saldo_cliente'],
                     'estado' => 'pagado',
                     'creado_por' => auth()->user()?->username,
                 ]);
             }
 
-            if ($numeroCuotas > 0) {
-                $montoCuota = round($saldo / $numeroCuotas, 2);
-                $fecha = Carbon::parse($data['fecha_primera_cuota'] ?? now()->addMonth());
-                $saldoRestante = $saldo;
-
-                for ($i = 1; $i <= $numeroCuotas; $i++) {
-                    $saldoRestante = round($saldoRestante - $montoCuota, 2);
-
-                    $caso->planesPago()->create([
-                        'numero' => $i,
-                        'fecha' => $fecha->copy()->addMonthsNoOverflow($i - 1)->toDateString(),
-                        'monto' => $montoCuota,
-                        'nuevo_saldo' => max($saldoRestante, 0),
-                        'estado' => 'pendiente',
-                        'creado_por' => auth()->user()?->username,
-                    ]);
-                }
+            foreach ($plan['cuotas'] as $cuota) {
+                $caso->planesPago()->create([
+                    'numero' => $cuota['numero'],
+                    'fecha' => $cuota['fecha']->toDateString(),
+                    'monto' => $cuota['monto'],
+                    'nuevo_saldo' => $cuota['nuevo_saldo'],
+                    'estado' => 'pendiente',
+                    'creado_por' => auth()->user()?->username,
+                ]);
             }
 
             return ['cliente' => $cliente, 'caso' => $caso];
         });
+    }
+
+    /**
+     * Reparto y plan de pagos a partir de los datos del paso 3. Lo usan la
+     * vista previa y crear(), así lo que se ve es exactamente lo que se
+     * guarda.
+     *
+     * - Con patrocinio HIH, Hand in Hand cubre el porcentaje indicado de la
+     *   iguala y el cliente paga el resto.
+     * - "total": el cliente paga hoy toda su parte; no hay cuotas.
+     * - "plan": anticipo opcional hoy y el saldo del cliente en N cuotas
+     *   mensuales (por defecto, una por mes de duración del proceso); la
+     *   última cuota absorbe el redondeo para que la suma cuadre.
+     *
+     * @param  array<string, mixed>  $datos
+     * @return array{iguala: float, modalidad: string, patrocinio: bool, porcentaje: float, monto_patrocinio: float, monto_cliente: float, pago_hoy: float, saldo_cliente: float, cuotas: array<int, array{numero: int, fecha: Carbon, monto: float, nuevo_saldo: float}>}
+     */
+    public static function plan(array $datos): array
+    {
+        $iguala = round(max((float) ($datos['iguala'] ?? 0), 0), 2);
+        $modalidad = ($datos['modalidad_pago'] ?? self::PAGO_PLAN) === self::PAGO_TOTAL ? self::PAGO_TOTAL : self::PAGO_PLAN;
+        $patrocinio = (bool) ($datos['patrocinio_hih'] ?? false);
+        $porcentaje = $patrocinio ? min(max((float) ($datos['porcentaje_patrocinio'] ?? 0), 0), 100) : 0.0;
+
+        $montoPatrocinio = round($iguala * $porcentaje / 100, 2);
+        $montoCliente = round($iguala - $montoPatrocinio, 2);
+
+        $pagoHoy = $modalidad === self::PAGO_TOTAL
+            ? $montoCliente
+            : round(min(max((float) ($datos['anticipo'] ?? 0), 0), $montoCliente), 2);
+
+        $saldoCliente = round($montoCliente - $pagoHoy, 2);
+        $numeroCuotas = $modalidad === self::PAGO_PLAN ? max((int) ($datos['numero_cuotas'] ?? 0), 0) : 0;
+
+        $cuotas = [];
+
+        if ($numeroCuotas > 0 && $saldoCliente > 0) {
+            $montoCuota = round($saldoCliente / $numeroCuotas, 2);
+            $primera = filled($datos['fecha_primera_cuota'] ?? null)
+                ? Carbon::parse($datos['fecha_primera_cuota'])
+                : now()->addMonth();
+            $restante = $saldoCliente;
+
+            for ($i = 1; $i <= $numeroCuotas; $i++) {
+                $monto = $i === $numeroCuotas ? $restante : $montoCuota;
+                $restante = round($restante - $monto, 2);
+
+                $cuotas[] = [
+                    'numero' => $i,
+                    'fecha' => $primera->copy()->addMonthsNoOverflow($i - 1),
+                    'monto' => $monto,
+                    'nuevo_saldo' => max($restante, 0),
+                ];
+            }
+        }
+
+        return [
+            'iguala' => $iguala,
+            'modalidad' => $modalidad,
+            'patrocinio' => $patrocinio,
+            'porcentaje' => $porcentaje,
+            'monto_patrocinio' => $montoPatrocinio,
+            'monto_cliente' => $montoCliente,
+            'pago_hoy' => $pagoHoy,
+            'saldo_cliente' => $saldoCliente,
+            'cuotas' => $cuotas,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected static function datosPlan(Get $get): array
+    {
+        return collect(['iguala', 'modalidad_pago', 'patrocinio_hih', 'porcentaje_patrocinio', 'anticipo', 'numero_cuotas', 'fecha_primera_cuota'])
+            ->mapWithKeys(fn (string $campo) => [$campo => $get($campo)])
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     */
+    protected static function resumenPlanHtml(array $plan): HtmlString
+    {
+        $bs = fn (float $monto): string => 'Bs. '.number_format($monto, 2);
+        $fila = fn (string $a, string $b, string $c, string $d): string => '<tr>'
+            .'<td style="padding:4px 8px;">'.e($a).'</td>'
+            .'<td style="padding:4px 8px;">'.e($b).'</td>'
+            .'<td style="padding:4px 8px;text-align:right;">'.e($c).'</td>'
+            .'<td style="padding:4px 8px;text-align:right;">'.e($d).'</td></tr>';
+
+        $lineas = ['Monto total (iguala): <strong>'.e($bs($plan['iguala'])).'</strong>'];
+
+        if ($plan['patrocinio']) {
+            $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
+            $lineas[] = 'Hand in Hand ('.e($porcentaje).'%): '.e($bs($plan['monto_patrocinio']));
+        }
+
+        $lineas[] = 'A cargo del cliente: <strong>'.e($bs($plan['monto_cliente'])).'</strong>';
+
+        if ($plan['modalidad'] === self::PAGO_TOTAL) {
+            $lineas[] = 'Pago total hoy: <strong>'.e($bs($plan['pago_hoy'])).'</strong> — sin cuotas.';
+
+            return new HtmlString('<div style="line-height:1.7;">'.implode('<br>', $lineas).'</div>');
+        }
+
+        $lineas[] = 'Saldo del cliente en cuotas: '.e($bs($plan['saldo_cliente']));
+
+        $tabla = '';
+
+        if ($plan['pago_hoy'] > 0 || $plan['cuotas'] !== []) {
+            $tabla = '<table style="margin-top:.5rem;border-collapse:collapse;font-size:.875rem;">'
+                .'<thead><tr style="text-align:left;border-bottom:1px solid rgb(128 128 128 / .3);">'
+                .'<th style="padding:4px 8px;">Cuota</th><th style="padding:4px 8px;">Fecha</th>'
+                .'<th style="padding:4px 8px;text-align:right;">Monto</th><th style="padding:4px 8px;text-align:right;">Saldo</th></tr></thead><tbody>';
+
+            if ($plan['pago_hoy'] > 0) {
+                $tabla .= $fila('0 (anticipo, hoy)', now()->format('d/m/Y'), $bs($plan['pago_hoy']), $bs($plan['saldo_cliente']));
+            }
+
+            foreach ($plan['cuotas'] as $cuota) {
+                $tabla .= $fila((string) $cuota['numero'], $cuota['fecha']->format('d/m/Y'), $bs($cuota['monto']), $bs($cuota['nuevo_saldo']));
+            }
+
+            $tabla .= '</tbody></table>';
+        }
+
+        return new HtmlString('<div style="line-height:1.7;">'.implode('<br>', $lineas).'</div>'.$tabla);
+    }
+
+    /**
+     * Estimado aproximado del fin del proceso: fecha actual + duración en
+     * meses (no la fecha de inicio, que puede ser anterior a hoy).
+     */
+    public static function fechaFinEstimada(mixed $meses): ?Carbon
+    {
+        return filled($meses) && (int) $meses > 0
+            ? now()->startOfDay()->addMonthsNoOverflow((int) $meses)
+            : null;
     }
 
     /**

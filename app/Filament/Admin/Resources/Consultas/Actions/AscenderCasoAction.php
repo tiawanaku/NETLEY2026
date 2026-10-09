@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Consultas\Actions;
 
 use App\Enums\EstadoConsulta;
 use App\Enums\Rol;
+use App\Filament\Admin\Forms\Components\DelitoSelect;
 use App\Filament\Admin\Support\CamposDomicilio;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Consulta;
@@ -71,8 +72,17 @@ class AscenderCasoAction
                     ...$record->only(CamposDomicilio::COLUMNAS),
                     'fecha_inicio' => now()->toDateString(),
                     'fecha_primera_cuota' => now()->addMonth()->toDateString(),
-                    'especialidad' => $ultimaRespuesta?->designacion?->value,
-                    'delito_id' => $ultimaRespuesta?->delito_id,
+                    'modalidad_pago' => ClienteCasoWizard::PAGO_PLAN,
+                    'patrocinio_hih' => false,
+                    'anticipo' => 0,
+                    // Si la respuesta usó materia "Otro" (escrita a mano), se
+                    // precarga como "Otros" con ese mismo texto.
+                    'especialidad' => $ultimaRespuesta?->designacion?->value
+                        ?? ($ultimaRespuesta?->materia_texto ? DelitoSelect::OTROS : null),
+                    'materia_texto' => $ultimaRespuesta?->designacion ? null : $ultimaRespuesta?->materia_texto,
+                    'delito_id' => $ultimaRespuesta?->delito_id
+                        ?? ($ultimaRespuesta?->delito_texto ? DelitoSelect::OTROS : null),
+                    'delito_texto' => $ultimaRespuesta?->delito_id ? null : $ultimaRespuesta?->delito_texto,
                     'personal' => $personalIds->unique()->values()->all(),
                 ];
             })
