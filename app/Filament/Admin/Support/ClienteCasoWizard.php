@@ -4,7 +4,6 @@ namespace App\Filament\Admin\Support;
 
 use App\Enums\EstadoCaso;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
-use Afsakar\LeafletMapPicker\LeafletMapPicker;
 use App\Filament\Admin\Support\CamposPago;
 use App\Models\Caso;
 use App\Models\Cliente;
@@ -29,9 +28,6 @@ use Illuminate\Support\Facades\DB;
  */
 class ClienteCasoWizard
 {
-    /** Centro inicial del mapa de domicilio cuando aún no hay punto: La Paz. */
-    public const CENTRO_MAPA = ['lat' => -16.4955, 'lng' => -68.1336];
-
     /**
      * @return array<int, Step>
      */
@@ -91,28 +87,10 @@ class ClienteCasoWizard
                         ->native(false)
                         ->extraAttributes(['data-enter-nav-field' => 'true']),
                     DatePicker::make('fecha_nacimiento')->label('Fecha de nacimiento')->maxDate(now())->extraInputAttributes(['data-enter-nav' => 'true']),
+                    ...CamposDomicilio::region(),
                     TextInput::make('direccion')->label('Dirección')->columnSpanFull()->extraInputAttributes(['data-enter-nav' => 'true']),
-                    TextInput::make('zona')->label('Zona / barrio')->maxLength(100)->extraInputAttributes(['data-enter-nav' => 'true']),
-                    TextInput::make('calles')->label('Calle(s)')->maxLength(200)->placeholder('Ej. Av. Arce esq. Calle 2')->extraInputAttributes(['data-enter-nav' => 'true']),
-                    TextInput::make('numero_domicilio')->label('N° casa / depto.')->maxLength(50)->placeholder('Ej. 1234, Edif. Sol, Piso 3, Dpto. B')->extraInputAttributes(['data-enter-nav' => 'true']),
-                    Textarea::make('indicaciones_domicilio')
-                        ->label('Indicaciones')
-                        ->placeholder('Referencias para llegar: color de la fachada, a lado de…, portón negro, etc.')
-                        ->maxLength(500)
-                        ->rows(2)
-                        ->columnSpanFull(),
-                    LeafletMapPicker::make('ubicacion')
-                        ->label('Ubicación del domicilio')
-                        ->helperText('Haz clic en el mapa (o arrastra el marcador) para marcar el domicilio.')
-                        ->defaultLocation(self::CENTRO_MAPA)
-                        ->defaultZoom(13)
-                        ->height('320px')
-                        ->draggable()
-                        ->clickable()
-                        ->myLocationButtonLabel('Mi ubicación')
-                        ->customMarker(self::marcadorMapa())
-                        ->columnSpanFull()
-                        ->inlineLabel(false),
+                    ...CamposDomicilio::detalle(),
+                    CamposDomicilio::mapa(),
                 ])
                 ->columns(2)
                 ->inlineLabel(),
@@ -214,11 +192,14 @@ class ClienteCasoWizard
                     'correo' => $data['correo'] ?? null,
                     'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
                     'direccion' => $data['direccion'] ?? null,
+                    'pais' => $data['pais'] ?? null,
+                    'provincia' => $data['provincia'] ?? null,
+                    'ciudad' => $data['ciudad'] ?? null,
                     'zona' => $data['zona'] ?? null,
                     'calles' => $data['calles'] ?? null,
                     'numero_domicilio' => $data['numero_domicilio'] ?? null,
                     'indicaciones_domicilio' => $data['indicaciones_domicilio'] ?? null,
-                    'ubicacion' => self::ubicacionValida($data['ubicacion'] ?? null),
+                    'ubicacion' => CamposDomicilio::ubicacionValida($data['ubicacion'] ?? null),
                     'extension' => $data['extension'] ?? null,
                 ]
             );
@@ -298,47 +279,6 @@ class ClienteCasoWizard
 
             return ['cliente' => $cliente, 'caso' => $caso];
         });
-    }
-
-    /**
-     * Marcador del mapa de domicilio: el ícono heroicon-s-map-pin de
-     * Filament como imagen SVG (Leaflet necesita una URL de imagen).
-     *
-     * @return array<string, mixed>
-     */
-    public static function marcadorMapa(): array
-    {
-        $svg = str_replace(
-            'fill="currentColor"',
-            'fill="#dc2626" stroke="#ffffff" stroke-width="1" width="40" height="40"',
-            svg('heroicon-s-map-pin')->toHtml(),
-        );
-
-        return [
-            'iconUrl' => 'data:image/svg+xml;base64,'.base64_encode($svg),
-            'iconSize' => [40, 40],
-            'iconAnchor' => [20, 38],
-            'popupAnchor' => [0, -38],
-        ];
-    }
-
-    /**
-     * Solo se guarda un punto marcado de verdad; si el usuario no tocó el
-     * mapa (o llega algo inválido) el cliente queda sin ubicación.
-     *
-     * @return array{lat: float, lng: float}|null
-     */
-    protected static function ubicacionValida(mixed $ubicacion): ?array
-    {
-        $lat = $ubicacion['lat'] ?? null;
-        $lng = $ubicacion['lng'] ?? null;
-
-        if (! is_numeric($lat) || ! is_numeric($lng)
-            || abs((float) $lat) > 90 || abs((float) $lng) > 180) {
-            return null;
-        }
-
-        return ['lat' => (float) $lat, 'lng' => (float) $lng];
     }
 
     /**

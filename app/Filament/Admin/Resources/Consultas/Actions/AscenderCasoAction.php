@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Consultas\Actions;
 
 use App\Enums\EstadoConsulta;
 use App\Enums\Rol;
+use App\Filament\Admin\Support\CamposDomicilio;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Consulta;
 use App\Models\Personal;
@@ -64,7 +65,10 @@ class AscenderCasoAction
                     'telefono' => $record->telefono,
                     'whatsapp' => $record->whatsapp,
                     'correo' => $record->correo,
-                    'direccion' => $record->direccion,
+                    // País, provincia, ciudad, dirección, zona, calles, N°,
+                    // indicaciones y punto del mapa, tal como se capturaron
+                    // en la consulta.
+                    ...$record->only(CamposDomicilio::COLUMNAS),
                     'fecha_inicio' => now()->toDateString(),
                     'fecha_primera_cuota' => now()->addMonth()->toDateString(),
                     'especialidad' => $ultimaRespuesta?->designacion?->value,

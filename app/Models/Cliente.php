@@ -32,6 +32,9 @@ class Cliente extends Model implements AuthenticatableContract
         'extension',
         'sucursal',
         'direccion',
+        'pais',
+        'provincia',
+        'ciudad',
         'zona',
         'calles',
         'numero_domicilio',
@@ -51,6 +54,19 @@ class Cliente extends Model implements AuthenticatableContract
             'password' => 'hashed',
             'ubicacion' => 'array',
         ];
+    }
+
+    /**
+     * N° de cliente correlativo (1, 2, 3…), asignado al darlo de alta por
+     * cualquier vía (wizard, importación legacy, etc.). A diferencia del id
+     * interno, no salta números por guardados que fallan y se revierten. El
+     * índice único evita duplicados si dos altas coinciden.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Cliente $cliente): void {
+            $cliente->nro_cliente ??= ((int) static::query()->lockForUpdate()->max('nro_cliente')) + 1;
+        });
     }
 
     public function getNombreCompletoAttribute(): string
