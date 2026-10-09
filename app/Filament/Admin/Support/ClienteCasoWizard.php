@@ -32,6 +32,9 @@ class ClienteCasoWizard
     /** Centro inicial del mapa de domicilio cuando aún no hay punto: La Paz. */
     public const CENTRO_MAPA = ['lat' => -16.4955, 'lng' => -68.1336];
 
+    /** Valor de "extension" que habilita el campo manual "extension_texto". */
+    public const EXTENSION_OTRO = 'OTRO';
+
     /**
      * @return array<int, Step>
      */
@@ -87,9 +90,16 @@ class ClienteCasoWizard
                             'BE' => 'Beni',
                             'PD' => 'Pando',
                             'QR' => 'QR',
+                            self::EXTENSION_OTRO => 'Otro',
                         ])
                         ->native(false)
-                        ->extraAttributes(['data-enter-nav-field' => 'true']),
+                        ->live()
+                        ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
+                    TextInput::make('extension_texto')
+                        ->label('Expedido en (manual)')
+                        ->maxLength(20)
+                        ->visible(fn (Get $get) => $get('extension') === self::EXTENSION_OTRO)
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
                     DatePicker::make('fecha_nacimiento')->label('Fecha de nacimiento')->maxDate(now())->extraInputAttributes(['data-enter-nav' => 'true']),
                     TextInput::make('direccion')->label('Dirección')->columnSpanFull()->extraInputAttributes(['data-enter-nav' => 'true']),
                     TextInput::make('zona')->label('Zona / barrio')->maxLength(100)->extraInputAttributes(['data-enter-nav' => 'true']),
@@ -219,7 +229,9 @@ class ClienteCasoWizard
                     'numero_domicilio' => $data['numero_domicilio'] ?? null,
                     'indicaciones_domicilio' => $data['indicaciones_domicilio'] ?? null,
                     'ubicacion' => self::ubicacionValida($data['ubicacion'] ?? null),
-                    'extension' => $data['extension'] ?? null,
+                    'extension' => ($data['extension'] ?? null) === self::EXTENSION_OTRO
+                        ? ($data['extension_texto'] ?? null)
+                        : ($data['extension'] ?? null),
                 ]
             );
 
