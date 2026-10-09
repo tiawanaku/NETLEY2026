@@ -4,11 +4,13 @@ namespace App\Filament\Admin\Resources\Consultas\Schemas;
 
 use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Support\CamposTelefono;
+use App\Filament\Admin\Support\RespuestaFields;
 use App\Support\PaisesCiudades;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -80,13 +82,32 @@ class ConsultaForm
                             Textarea::make('nota_interna')->label('Nota interna')->rows(2)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                         ]),
 
+                    Toggle::make('tiene_respuesta')
+                        ->label('Respuesta')
+                        ->live()
+                        ->disabled($isEditing)
+                        ->columnSpanFull(),
+
+                    Section::make('Respuesta')
+                        ->schema(RespuestaFields::schema())
+                        ->visible(fn (Get $get) => (bool) $get('tiene_respuesta'))
+                        ->disabled($isEditing)
+                        ->columns(2),
+
                     Section::make('Seguimiento')
                         ->schema([
                             // Solo se pide la fecha; la hora se registra sola por dentro (ver
                             // CreateConsulta), no se le pregunta al usuario.
                             DatePicker::make('fecha_consulta')->required()->default(now())->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                             Select::make('estado')
-                                ->options(EstadoConsulta::class)
+                                ->options(collect([
+                                    EstadoConsulta::Pendiente,
+                                    EstadoConsulta::NoContesta,
+                                    EstadoConsulta::Respondido,
+                                    EstadoConsulta::SoloConsulta,
+                                    EstadoConsulta::RemitirPsicologia,
+                                    EstadoConsulta::RemitirSocial,
+                                ])->mapWithKeys(fn (EstadoConsulta $e) => [$e->value => $e->getLabel()]))
                                 ->required()
                                 ->disabled($isEditing)
                                 ->extraInputAttributes(['data-enter-nav' => 'true']),

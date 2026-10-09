@@ -4,10 +4,13 @@ namespace App\Filament\Admin\Resources\Consultas\Pages;
 
 use App\Filament\Admin\Resources\Consultas\ConsultaResource;
 use App\Filament\Admin\Resources\Consultas\Schemas\ConsultaForm;
+use App\Filament\Admin\Support\RespuestaFields;
+use App\Models\Consulta;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
@@ -40,6 +43,28 @@ class CreateConsulta extends CreateRecord
         }
 
         return $data;
+    }
+
+    /**
+     * Si se activó el switch "Respuesta", además de crear la consulta se
+     * registra de una vez la respuesta (materia legal, delito y texto) con
+     * los mismos campos que usa el botón "Responder".
+     */
+    protected function handleRecordCreation(array $data): Model
+    {
+        /** @var Consulta $consulta */
+        $consulta = static::getModel()::create($data);
+
+        if (($data['tiene_respuesta'] ?? false) && filled($data['respuesta'] ?? null)) {
+            $consulta->respuestas()->create([
+                ...RespuestaFields::datosParaGuardar($data),
+                'personal_id' => auth()->user()?->personal_id,
+                'fecha_respuesta' => now(),
+                'paso' => 'respondido',
+            ]);
+        }
+
+        return $consulta;
     }
 
     /** Después de guardar, volver al listado de Consultas en vez de abrir la edición. */
