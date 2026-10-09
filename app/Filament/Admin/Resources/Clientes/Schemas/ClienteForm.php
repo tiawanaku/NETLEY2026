@@ -48,7 +48,9 @@ class ClienteForm
                     ->schema([
                         ...CamposDomicilio::detalle($isEditing),
                         CamposDomicilio::mapa($isEditing)->helperText(null)->defaultZoom(16),
-                    ]),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull(),
             ]);
     }
 }
