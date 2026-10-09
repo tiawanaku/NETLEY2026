@@ -22,7 +22,7 @@ class PersonalsTable
         return $table
             ->columns([
                 TextColumn::make('id')
-                    ->label('ID Cliente')
+                    ->label('ID Personal')
                     ->sortable(),
                 ImageColumn::make('foto')
                     ->label('')
@@ -36,10 +36,12 @@ class PersonalsTable
                     ->label('CI')
                     ->searchable(),
                 TextColumn::make('cargo')
+                    ->label('Profesión')
                     ->formatStateUsing(fn ($state) => \Illuminate\Support\Str::limit(is_array($state) ? implode(', ', $state) : (string) $state, 25))
                     ->searchable()
                     ->tooltip(fn ($state) => is_array($state) ? implode(', ', $state) : $state),
                 TextColumn::make('rol')
+                    ->label('Cargo')
                     ->badge()
                     ->sortable(),
                 TextColumn::make('especialidades')
@@ -63,11 +65,11 @@ class PersonalsTable
             ])
             ->defaultSort('id', 'desc')
             ->filters([
-                SelectFilter::make('rol')->options(Rol::class),
+                SelectFilter::make('rol')->label('Cargo')->options(Rol::class),
                 SelectFilter::make('estado')->options(EstadoPersonal::class),
                 SelectFilter::make('especialidades')
                     ->label('Especialidad')
-                    ->options(PersonalEspecialidades::grouped())
+                    ->options(PersonalEspecialidades::flat())
                     ->query(fn ($query, $data) => $data['value']
                         ? $query->whereJsonContains('especialidades', $data['value'])
                         : $query),

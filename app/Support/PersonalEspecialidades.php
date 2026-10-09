@@ -165,6 +165,7 @@ class PersonalEspecialidades
             'Administrativo',
             'Contador',
             'Secretaria',
+            'Otros',
         ];
     }
 
@@ -178,7 +179,7 @@ class PersonalEspecialidades
         return collect([
             'Directora', 'Gerente', 'Coordinadora', 'Representante legal',
             'Administrativo', 'Abogado', 'Psicologo', 'Trabajador Social',
-            'Medico', 'Contador', 'Secretaria', 'Limpieza', 'Pasante', 'Procurador',
+            'Medico', 'Contador', 'Secretaria', 'Limpieza', 'Pasante', 'Procurador', 'Otros',
         ])->mapWithKeys(fn ($v) => [$v => $v])->all();
     }
 

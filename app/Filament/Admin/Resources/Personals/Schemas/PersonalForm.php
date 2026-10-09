@@ -45,6 +45,7 @@ class PersonalForm
                                     'TJ' => 'Tarija',
                                     'BN' => 'Beni',
                                     'PD' => 'Pando',
+                                    'OTROS' => 'Otros',
                                 ])
                                 ->searchable()
                                 // Select ->searchable() no renderiza un <select> nativo, sino un botón +
@@ -87,7 +88,7 @@ class PersonalForm
                     Section::make('Datos laborales')
                         ->schema([
                         Select::make('rol')
-                            ->label('Rol')
+                            ->label('Cargo')
                             ->options(Rol::class)
                             ->required()
                             ->extraInputAttributes(['data-enter-nav' => 'true']),
@@ -114,13 +115,13 @@ class PersonalForm
                         Select::make('especialidades')
                             ->label('Especialidades')
                             ->multiple()
-                            ->options(fn (Get $get) => PersonalEspecialidades::groupedForProfesiones($get('cargo')))
+                            ->options(fn (Get $get) => collect(PersonalEspecialidades::groupedForProfesiones($get('cargo')))->collapse()->all())
                             ->visible(fn (Get $get) => filled(PersonalEspecialidades::groupedForProfesiones($get('cargo'))))
                             ->helperText('Depende de la(s) profesión(es) seleccionada(s) arriba.')
                             ->searchable()
                             ->extraAttributes(['data-enter-nav-field' => 'true']),
                         Select::make('profesion')
-                            ->label('Cargo')
+                            ->label('Cargo principal')
                             ->options(PersonalEspecialidades::profesiones())
                             ->searchable()
                             ->extraAttributes(['data-enter-nav-field' => 'true']),
