@@ -22,7 +22,7 @@
 
     <table class="datos">
         <tr><td class="label">Cliente</td><td>{{ $informe->caso->cliente->nombre_completo }}</td></tr>
-        <tr><td class="label">Materia</td><td>{{ $informe->caso->especialidad->getLabel() }}</td></tr>
+        <tr><td class="label">Materia</td><td>{{ $informe->caso->materia_legal }}</td></tr>
         <tr><td class="label">Resultado</td><td>{{ $informe->resultado }}</td></tr>
         <tr><td class="label">Fecha de cierre</td><td>{{ optional($informe->fecha_cierre)->format('d/m/Y') }}</td></tr>
         <tr><td class="label">Saldo pendiente</td><td>Bs. {{ number_format($informe->saldo, 2) }}</td></tr>

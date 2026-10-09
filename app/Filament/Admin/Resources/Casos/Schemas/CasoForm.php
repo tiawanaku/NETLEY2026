@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Casos\Schemas;
 
 use App\Enums\EstadoCaso;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
+use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Caso;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -88,8 +89,27 @@ class CasoForm
                             ->preload()
                             ->disabled($isEditing),
                         ...array_map(fn ($field) => $field->disabled($isEditing), DelitoSelect::make()),
-                        TextInput::make('apersonamiento')
-                            ->datalist(['Demandante', 'Demandado', 'Solicitante'])
+                        // Casos creados con materia "Otros" desde el wizard.
+                        TextInput::make('materia_texto')
+                            ->label('Materia legal (especificar)')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->visible(fn (?string $state) => filled($state)),
+                        TextInput::make('delito_texto')
+                            ->label('Delito (especificar)')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->visible(fn (?string $state) => filled($state)),
+                        // Mismas opciones que el wizard; un valor fuera de la lista
+                        // (casos legacy, o "Otros" especificado a mano) se agrega
+                        // para que se siga viendo en la ficha.
+                        Select::make('apersonamiento')
+                            ->options(fn (?string $state) => collect(ClienteCasoWizard::APERSONAMIENTOS)
+                                ->when(filled($state), fn ($opciones) => $opciones->push($state))
+                                ->unique()
+                                ->mapWithKeys(fn ($v) => [$v => $v])
+                                ->all())
+                            ->native(false)
                             ->disabled($isEditing),
                         TextInput::make('ciudad')->disabled($isEditing),
                         Select::make('estado')

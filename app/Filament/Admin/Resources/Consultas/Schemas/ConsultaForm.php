@@ -3,9 +3,9 @@
 namespace App\Filament\Admin\Resources\Consultas\Schemas;
 
 use App\Enums\EstadoConsulta;
+use App\Filament\Admin\Support\CamposDomicilio;
 use App\Filament\Admin\Support\CamposTelefono;
 use App\Filament\Admin\Support\RespuestaFields;
-use App\Support\PaisesCiudades;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -51,28 +51,8 @@ class ConsultaForm
                         TextInput::make('telefono')->tel()->prefix('+591', isInline: true)->regex('/^[0-9]*$/')->maxLength(20)->disabled($isEditing)->extraInputAttributes(CamposTelefono::atributos()),
                         TextInput::make('whatsapp')->tel()->prefix('+591', isInline: true)->regex('/^[0-9]*$/')->maxLength(20)->disabled($isEditing)->extraInputAttributes(CamposTelefono::atributos()),
                         TextInput::make('correo')->email()->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
-                        // País/Provincia/Ciudad usan la API pública countriesnow.space
-                        // como sugerencias (datalist), en cascada; siguen siendo texto
-                        // libre porque esa API no cubre poblaciones pequeñas de Bolivia.
-                        TextInput::make('pais')
-                            ->default('Bolivia')
-                            ->live(onBlur: true)
-                            ->datalist(fn () => PaisesCiudades::paises())
-                            ->regex('/^[^0-9]*$/')
-                            ->disabled($isEditing)
-                            ->extraInputAttributes(self::atributosSoloLetras()),
-                        TextInput::make('provincia')
-                            ->live(onBlur: true)
-                            ->datalist(fn (Get $get) => PaisesCiudades::provincias($get('pais')))
-                            ->regex('/^[^0-9]*$/')
-                            ->disabled($isEditing)
-                            ->extraInputAttributes(self::atributosSoloLetras()),
-                        TextInput::make('ciudad')
-                            ->datalist(fn (Get $get) => PaisesCiudades::ciudades($get('pais'), $get('provincia')))
-                            ->regex('/^[^0-9]*$/')
-                            ->disabled($isEditing)
-                            ->extraInputAttributes(self::atributosSoloLetras()),
-                        TextInput::make('direccion')->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
+                        ...CamposDomicilio::region($isEditing),
+                        TextInput::make('direccion')->label('Dirección')->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                     ]),
 
                 Group::make([
@@ -123,6 +103,14 @@ class ConsultaForm
                                 ->extraInputAttributes(self::atributosSoloLetras()),
                         ]),
                 ]),
+
+                Section::make('Domicilio')
+                    ->schema([
+                        ...CamposDomicilio::detalle($isEditing),
+                        CamposDomicilio::mapa($isEditing),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull(),
             ]);
     }
 

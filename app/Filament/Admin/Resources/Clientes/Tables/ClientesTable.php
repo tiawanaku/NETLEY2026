@@ -15,6 +15,10 @@ class ClientesTable
     {
         return $table
             ->columns([
+                TextColumn::make('nro_cliente')
+                    ->label('N° de cliente')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('nombre_completo')
                     ->label('Nombre')
                     ->searchable(['nombres', 'ap_paterno', 'ap_materno'])

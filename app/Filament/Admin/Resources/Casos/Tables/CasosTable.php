@@ -23,7 +23,7 @@ class CasosTable
                 TextColumn::make('cliente.nombre_completo')
                     ->label('Cliente')
                     ->searchable(['nombres', 'ap_paterno']),
-                TextColumn::make('especialidad')->badge(),
+                TextColumn::make('especialidad')->label('Materia legal')->badge()->state(fn ($record) => $record->especialidad ?? $record->materia_texto),
                 TextColumn::make('delito.delito')
                     ->label('Delito')
                     ->limit(35)

@@ -51,7 +51,7 @@
                             </td>
                             <td style="padding:10px 14px;font-weight:600;color:#1a2537;">#{{ $caso->id }}</td>
                             <td style="padding:10px 14px;">{{ $caso->cliente?->nombre_completo ?? 'Sin cliente' }}</td>
-                            <td style="padding:10px 14px;">{{ $caso->especialidad?->getLabel() ?? '—' }}</td>
+                            <td style="padding:10px 14px;">{{ $caso->materia_legal }}</td>
                             <td style="padding:10px 14px;">
                                 <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;">
                                     {{ $caso->estado->getLabel() }}

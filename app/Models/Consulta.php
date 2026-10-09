@@ -27,6 +27,11 @@ class Consulta extends Model
         'ciudad',
         'provincia',
         'direccion',
+        'zona',
+        'calles',
+        'numero_domicilio',
+        'indicaciones_domicilio',
+        'ubicacion',
         'estado',
         'fecha_contacto',
         'origen',
@@ -38,6 +43,7 @@ class Consulta extends Model
             'estado' => EstadoConsulta::class,
             'fecha_consulta' => 'datetime',
             'fecha_contacto' => 'date',
+            'ubicacion' => 'array',
         ];
     }
 

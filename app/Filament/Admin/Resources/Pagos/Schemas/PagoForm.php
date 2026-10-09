@@ -41,7 +41,7 @@ class PagoForm
                             ->where('estado', '!=', 'cerrado')
                             ->where('saldo', '>', 0)
                             ->get()
-                            ->mapWithKeys(fn (Caso $c) => [$c->id => "Caso #{$c->id} — {$c->especialidad->getLabel()} — saldo Bs. {$c->saldo}"]);
+                            ->mapWithKeys(fn (Caso $c) => [$c->id => "Caso #{$c->id} — {$c->materia_legal} — saldo Bs. {$c->saldo}"]);
                     })
                     ->disabled(fn (Get $get) => blank($get('cliente_id')))
                     ->required(),
