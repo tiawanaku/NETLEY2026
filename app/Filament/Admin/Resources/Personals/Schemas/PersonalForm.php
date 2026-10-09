@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Personals\Schemas;
 
 use App\Enums\EstadoPersonal;
 use App\Enums\Rol;
+use App\Filament\Admin\Support\CampoConOtro;
 use App\Filament\Admin\Support\CamposTelefono;
 use App\Support\PersonalEspecialidades;
 use Filament\Forms\Components\DatePicker;
@@ -33,9 +34,16 @@ class PersonalForm
                             TextInput::make('ap_paterno')->label('Apellido paterno')->required()->maxLength(40)->regex('/^[^0-9]*$/')->extraInputAttributes(self::atributosSoloLetras()),
                             TextInput::make('ap_materno')->label('Apellido materno')->maxLength(40)->regex('/^[^0-9]*$/')->extraInputAttributes(self::atributosSoloLetras()),
                             TextInput::make('ci')->label('Carnet de identidad')->required()->unique(ignoreRecord: true)->regex('/^[0-9]*$/')->extraInputAttributes(self::atributosSoloNumeros())->validationMessages(['unique' => 'Ya existe una persona registrada con este carnet de identidad. Revisa el dato.']),
-                            Select::make('ci_expedido')
-                                ->label('Expedido en')
-                                ->options([
+                            ...CampoConOtro::simple(
+                                Select::make('ci_expedido')
+                                    ->label('Expedido en')
+                                    ->searchable()
+                                    // Select ->searchable() no renderiza un <select> nativo, sino un botón +
+                                    // panel de Alpine cargado por JS aparte; extraInputAttributes() no llega
+                                    // a ese botón (solo aplica al <select> nativo), así que se marca el
+                                    // contenedor del campo y el JS resuelve el botón real dentro de él.
+                                    ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
+                                opciones: [
                                     'LP' => 'La Paz',
                                     'CB' => 'Cochabamba',
                                     'SC' => 'Santa Cruz',
@@ -46,13 +54,11 @@ class PersonalForm
                                     'BN' => 'Beni',
                                     'PD' => 'Pando',
                                     'OTROS' => 'Otros',
-                                ])
-                                ->searchable()
-                                // Select ->searchable() no renderiza un <select> nativo, sino un botón +
-                                // panel de Alpine cargado por JS aparte; extraInputAttributes() no llega
-                                // a ese botón (solo aplica al <select> nativo), así que se marca el
-                                // contenedor del campo y el JS resuelve el botón real dentro de él.
-                                ->extraAttributes(['data-enter-nav-field' => 'true']),
+                                ],
+                                valorOtro: 'OTROS',
+                                etiquetaTexto: 'Expedido en (especificar)',
+                                maxLength: 60,
+                            ),
                             DatePicker::make('fecha_nacimiento')->label('Fecha de nacimiento')->required()->extraInputAttributes(['data-enter-nav' => 'true']),
                             Select::make('genero')
                                 ->options(['Masculino' => 'Masculino', 'Femenino' => 'Femenino', 'Otro' => 'Otro'])
@@ -97,16 +103,20 @@ class PersonalForm
                             ->live()
                             ->required()
                             ->extraInputAttributes(['data-enter-nav' => 'true', 'data-enter-nav-live' => 'true']),
-                        Select::make('cargo')
-                            ->label('Profesión')
-                            ->multiple()
-                            ->options(collect(PersonalEspecialidades::cargos())->mapWithKeys(fn ($v) => [$v => $v]))
-                            // La columna `cargo` es un varchar comma-joined (igual que en el
-                            // sistema legacy, no un JSON array); App\Casts\CsvArray la
-                            // convierte de/a arreglo de forma transparente para el modelo.
-                            ->live()
-                            ->searchable()
-                            ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
+                        // La columna `cargo` es un varchar comma-joined (igual que en el
+                        // sistema legacy, no un JSON array); App\Casts\CsvArray la
+                        // convierte de/a arreglo de forma transparente para el modelo.
+                        ...CampoConOtro::multiple(
+                            Select::make('cargo')
+                                ->label('Profesión')
+                                ->multiple()
+                                ->searchable()
+                                ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
+                            opciones: collect(PersonalEspecialidades::cargos())->mapWithKeys(fn ($v) => [$v => $v])->all(),
+                            valorOtro: 'Otros',
+                            etiquetaTexto: 'Profesión (especificar)',
+                            maxLength: 150,
+                        ),
                         // Especialidades depende de las profesiones marcadas arriba (campo
                         // "cargo"): se muestra la unión de los grupos de especialidad de
                         // todas las que se hayan marcado (Abogado→Legales, Psicologo/
@@ -120,11 +130,16 @@ class PersonalForm
                             ->helperText('Depende de la(s) profesión(es) seleccionada(s) arriba.')
                             ->searchable()
                             ->extraAttributes(['data-enter-nav-field' => 'true']),
-                        Select::make('profesion')
-                            ->label('Cargo principal')
-                            ->options(PersonalEspecialidades::profesiones())
-                            ->searchable()
-                            ->extraAttributes(['data-enter-nav-field' => 'true']),
+                        ...CampoConOtro::simple(
+                            Select::make('profesion')
+                                ->label('Cargo principal')
+                                ->searchable()
+                                ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
+                            opciones: PersonalEspecialidades::profesiones(),
+                            valorOtro: 'Otros',
+                            etiquetaTexto: 'Cargo principal (especificar)',
+                            maxLength: 200,
+                        ),
                         Toggle::make('tiene_contrato')->label('Tiene contrato vigente')->default(true),
                         // Solo se pide la fecha; la hora se registra sola por dentro (ver
                         // CreatePersonal/EditPersonal), no se le pregunta al usuario.
