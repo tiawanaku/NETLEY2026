@@ -12,7 +12,6 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -130,17 +129,11 @@ class PersonalForm
                             ->helperText('Depende de la(s) profesión(es) seleccionada(s) arriba.')
                             ->searchable()
                             ->extraAttributes(['data-enter-nav-field' => 'true']),
-                        ...CampoConOtro::simple(
-                            Select::make('profesion')
-                                ->label('Cargo principal')
-                                ->searchable()
-                                ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
-                            opciones: PersonalEspecialidades::profesiones(),
-                            valorOtro: 'Otros',
-                            etiquetaTexto: 'Cargo principal (especificar)',
-                            maxLength: 200,
-                        ),
-                        Toggle::make('tiene_contrato')->label('Tiene contrato vigente')->default(true),
+                        // "Cargo principal" (`profesion`) y "Tiene contrato vigente"
+                        // (`tiene_contrato`) no se piden en el formulario: `profesion`
+                        // se deriva de "Profesión" al guardar (ver
+                        // PersonalEspecialidades::profesionPrincipal()) y
+                        // `tiene_contrato` queda con el default de la BD / su valor.
                         // Solo se pide la fecha; la hora se registra sola por dentro (ver
                         // CreatePersonal/EditPersonal), no se le pregunta al usuario.
                         DatePicker::make('fecha_inicio')->label('Fecha de inicio')->default(now())->extraInputAttributes(['data-enter-nav' => 'true']),

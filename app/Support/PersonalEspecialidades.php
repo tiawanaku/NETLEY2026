@@ -184,6 +184,27 @@ class PersonalEspecialidades
     }
 
     /**
+     * "Cargo principal" (`profesion`) derivado de las profesiones marcadas
+     * (campo `cargo`); no se pide en el formulario de Personal. Abogado tiene
+     * prioridad porque Casos, Agenda y Ascender caso listan abogados por
+     * `profesion = 'Abogado'`. Null si ninguna profesión marcada está en
+     * profesiones() ("Otros" y textos libres se descartan).
+     *
+     * @param  array<int, string>|string|null  $cargos
+     */
+    public static function profesionPrincipal(array|string|null $cargos): ?string
+    {
+        $equivalencias = ['Psicologia' => 'Psicologo', 'Trabajo Social' => 'Trabajador Social'];
+
+        $candidatas = collect(is_array($cargos) ? $cargos : explode(',', (string) $cargos))
+            ->map(fn ($cargo) => trim((string) $cargo))
+            ->map(fn ($cargo) => $equivalencias[$cargo] ?? $cargo)
+            ->filter(fn ($cargo) => $cargo !== 'Otros' && array_key_exists($cargo, self::profesiones()));
+
+        return $candidatas->contains('Abogado') ? 'Abogado' : $candidatas->first();
+    }
+
+    /**
      * Opciones de personal para selects (Agendar / Agendar llamada, Casos, etc.):
      * nombre completo + su(s) especialidad(es) en paréntesis semitransparente.
      * Requiere ->allowHtml() en el Select que las use.

@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Personals\Pages;
 
 use App\Filament\Admin\Resources\Personals\PersonalResource;
+use App\Support\PersonalEspecialidades;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Carbon;
@@ -22,6 +23,9 @@ class CreatePersonal extends CreateRecord
         if (filled($data['fecha_inicio'] ?? null)) {
             $data['fecha_inicio'] = Carbon::parse($data['fecha_inicio'])->setTimeFrom(now());
         }
+
+        // "Cargo principal" no se pide en el formulario: se deriva de "Profesión".
+        $data['profesion'] = PersonalEspecialidades::profesionPrincipal($data['cargo'] ?? []);
 
         return $data;
     }

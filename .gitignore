@@ -27,3 +27,4 @@ Homestead.yaml
 Thumbs.db
 /public/css/afsakar
 /public/js/afsakar
+/.playwright-mcp
