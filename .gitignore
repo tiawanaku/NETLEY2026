@@ -28,3 +28,5 @@ Thumbs.db
 /public/css/afsakar
 /public/js/afsakar
 /.playwright-mcp
+/tests/e2e/reporte
+/tests/e2e/resultados
