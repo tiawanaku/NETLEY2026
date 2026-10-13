@@ -52,6 +52,8 @@
             font-size: 14px; font-family: inherit;
         }
         .campo { margin-bottom: 16px; }
+        .fila-campos { display: flex; gap: 12px; flex-wrap: wrap; }
+        .fila-campos .campo { flex: 1; min-width: 200px; }
         .campo .error { color: #b91c1c; font-size: 12px; margin-top: 4px; }
 
         .estrellas {
@@ -78,7 +80,7 @@
         .hero-slide { min-width: 100%; position: relative; display: flex; align-items: center; background: linear-gradient(135deg,#1a2537,#243352); min-height: 460px; }
         .hero-slide.con-imagen { aspect-ratio: 16 / 9; background-size: contain; background-repeat: no-repeat; background-position: center; background-color: var(--navy); min-height: 0; }
         .hero-slide.con-texto.con-imagen::before { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(15,23,42,.82),rgba(15,23,42,.35)); }
-        .hero-slide .hero-contenido { position: relative; z-index: 1; }
+        .hero-slide .hero-contenido { position: relative; z-index: 1; width: 100%; }
         .hero-cta-bar { background: var(--navy); padding: 18px 0 44px; }
         .hero-flechas button {
             position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
@@ -326,22 +328,22 @@
 
                 <form method="POST" action="{{ route('frontpage.consulta.store') }}">
                     @csrf
-                    <div style="display:flex;gap:12px;">
-                        <div class="campo" style="flex:1;">
+                    <div class="fila-campos">
+                        <div class="campo">
                             <label for="c-nombres">Nombres</label>
                             <input type="text" id="c-nombres" name="nombres" value="{{ old('nombres') }}" required>
                         </div>
-                        <div class="campo" style="flex:1;">
+                        <div class="campo">
                             <label for="c-apellido">Apellido</label>
                             <input type="text" id="c-apellido" name="ap_paterno" value="{{ old('ap_paterno') }}">
                         </div>
                     </div>
-                    <div style="display:flex;gap:12px;">
-                        <div class="campo" style="flex:1;">
+                    <div class="fila-campos">
+                        <div class="campo">
                             <label for="c-telefono">Teléfono / WhatsApp</label>
                             <input type="text" id="c-telefono" name="telefono" value="{{ old('telefono') }}" required>
                         </div>
-                        <div class="campo" style="flex:1;">
+                        <div class="campo">
                             <label for="c-correo">Correo (opcional)</label>
                             <input type="email" id="c-correo" name="correo" value="{{ old('correo') }}">
                         </div>

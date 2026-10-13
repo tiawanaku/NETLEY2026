@@ -1,0 +1,139 @@
+- generic [active] [ref=f2e1]:
+  - banner [ref=f2e2]:
+    - generic [ref=f2e3]:
+      - link [ref=f2e4] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000
+        - img "NETLEY" [ref=f2e5]
+      - navigation [ref=f2e6]:
+        - link "Áreas" [ref=f2e7] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000#areas
+        - link "Opiniones" [ref=f2e8] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000#opiniones
+        - link "Consulta" [ref=f2e9] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000#consulta
+        - link "Contacto" [ref=f2e10] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000#contacto
+        - link "Ingreso Personal" [ref=f2e11] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/admin/login
+        - link "Ingreso Clientes" [ref=f2e12] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/portal/login
+  - main [ref=f2e13]:
+    - generic [ref=f2e14]:
+      - generic [ref=f2e18]:
+        - generic [ref=f2e19]: ASESORÍA LEGAL EN BOLIVIA
+        - heading "Asesoría legal seria, cercana y con resultados." [level=1] [ref=f2e20]
+        - paragraph [ref=f2e21]: NETLEY acompaña a personas y empresas en procesos civiles, penales, familiares y laborales, con seguimiento cercano de cada caso.
+      - generic [ref=f2e23]:
+        - generic [ref=f2e24]: NETLEY — asesoría legal seria, cercana y con resultados.
+        - link "Solicitar consulta gratuita" [ref=f2e25] [cursor=pointer]:
+          - /url: "#consulta"
+        - link "Ver el avance de mi proceso" [ref=f2e26] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/portal/login
+    - generic [ref=f2e28]:
+      - generic [ref=f2e29]:
+        - generic [ref=f2e30]: 1+
+        - generic [ref=f2e31]: Casos gestionados
+      - generic [ref=f2e32]:
+        - generic [ref=f2e33]: 0+
+        - generic [ref=f2e34]: Casos resueltos
+      - generic [ref=f2e35]:
+        - generic [ref=f2e36]: 1+
+        - generic [ref=f2e37]: Clientes atendidos
+      - generic [ref=f2e38]:
+        - generic [ref=f2e39]: 1+
+        - generic [ref=f2e40]: Abogados en el equipo
+    - generic [ref=f2e42]:
+      - heading "Áreas de práctica" [level=2] [ref=f2e43]
+      - paragraph [ref=f2e44]: Cobertura legal integral en las principales materias.
+      - generic [ref=f2e45]:
+        - generic [ref=f2e46]:
+          - generic [ref=f2e47]: C
+          - heading "Derecho Civil" [level=3] [ref=f2e48]
+          - paragraph [ref=f2e49]: Asesoría y representación en materia civil.
+        - generic [ref=f2e50]:
+          - generic [ref=f2e51]: P
+          - heading "Derecho Penal" [level=3] [ref=f2e52]
+          - paragraph [ref=f2e53]: Asesoría y representación en materia penal.
+        - generic [ref=f2e54]:
+          - generic [ref=f2e55]: F
+          - heading "Derecho Familia" [level=3] [ref=f2e56]
+          - paragraph [ref=f2e57]: Asesoría y representación en materia familia.
+        - generic [ref=f2e58]:
+          - generic [ref=f2e59]: L
+          - heading "Derecho Laboral" [level=3] [ref=f2e60]
+          - paragraph [ref=f2e61]: Asesoría y representación en materia laboral.
+    - generic [ref=f2e63]:
+      - heading "Lo que dicen nuestros clientes" [level=2] [ref=f2e64]
+      - paragraph [ref=f2e65]: Opiniones reales de personas que confiaron su proceso a nuestro equipo.
+      - paragraph [ref=f2e66]: Todavía no hay opiniones publicadas. ¡Sé el primero en compartir tu experiencia!
+      - generic [ref=f2e67]:
+        - heading "Comparte tu experiencia" [level=3] [ref=f2e68]
+        - paragraph [ref=f2e69]: Tu comentario será revisado antes de publicarse.
+        - generic [ref=f2e70]:
+          - generic [ref=f2e71]:
+            - radio "★" [checked]
+            - generic [ref=f2e72] [cursor=pointer]: ★
+            - radio "★"
+            - generic [ref=f2e73] [cursor=pointer]: ★
+            - radio "★"
+            - generic [ref=f2e74] [cursor=pointer]: ★
+            - radio "★"
+            - generic [ref=f2e75] [cursor=pointer]: ★
+            - radio "★"
+            - generic [ref=f2e76] [cursor=pointer]: ★
+          - generic [ref=f2e77]:
+            - generic [ref=f2e78]: Nombre
+            - textbox "Nombre" [ref=f2e79]
+          - generic [ref=f2e80]:
+            - generic [ref=f2e81]: Correo (opcional)
+            - textbox "Correo (opcional)" [ref=f2e82]
+          - generic [ref=f2e83]:
+            - generic [ref=f2e84]: Tu opinión
+            - textbox "Tu opinión" [ref=f2e85]
+          - button "Enviar opinión" [ref=f2e86] [cursor=pointer]
+    - generic [ref=f2e88]:
+      - generic [ref=f2e89]:
+        - heading "Solicita tu consulta" [level=2] [ref=f2e90]
+        - paragraph [ref=f2e91]: Cuéntanos brevemente tu caso. Un miembro de nuestro equipo se pondrá en contacto contigo para programar tu consulta inicial.
+        - paragraph [ref=f2e92]:
+          - strong [ref=f2e93]: "Teléfono:"
+          - text: (591) 2-2000000
+        - paragraph [ref=f2e94]:
+          - strong [ref=f2e95]: "WhatsApp:"
+          - text: +591 70000000
+        - paragraph [ref=f2e96]:
+          - strong [ref=f2e97]: "Correo:"
+          - text: contacto@netley.bo
+      - generic [ref=f2e99]:
+        - generic [ref=f2e100]:
+          - generic [ref=f2e101]:
+            - generic [ref=f2e102]: Nombres
+            - textbox "Nombres" [ref=f2e103]
+          - generic [ref=f2e104]:
+            - generic [ref=f2e105]: Apellido
+            - textbox "Apellido" [ref=f2e106]
+        - generic [ref=f2e107]:
+          - generic [ref=f2e108]:
+            - generic [ref=f2e109]: Teléfono / WhatsApp
+            - textbox "Teléfono / WhatsApp" [ref=f2e110]
+          - generic [ref=f2e111]:
+            - generic [ref=f2e112]: Correo (opcional)
+            - textbox "Correo (opcional)" [ref=f2e113]
+        - generic [ref=f2e114]:
+          - generic [ref=f2e115]: Ciudad
+          - textbox "Ciudad" [ref=f2e116]
+        - generic [ref=f2e117]:
+          - generic [ref=f2e118]: Cuéntanos tu caso
+          - textbox "Cuéntanos tu caso" [ref=f2e119]
+        - generic [ref=f2e120]:
+          - generic [ref=f2e121]: "Verificación: ¿cuánto es 5 + 5?"
+          - 'textbox "Verificación: ¿cuánto es 5 + 5?" [ref=f2e122]'
+        - button "Enviar consulta" [ref=f2e123] [cursor=pointer]
+    - generic [ref=f2e125]:
+      - generic [ref=f2e126]:
+        - heading "¿Ya eres cliente?" [level=3] [ref=f2e127]
+        - paragraph [ref=f2e128]: Ingresa al portal para ver el estado y avance de tu proceso.
+      - link "Ingresar al portal" [ref=f2e129] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/portal/login
+  - contentinfo [ref=f2e130]:
+    - generic [ref=f2e131]: © 2026 NETLEY. Todos los derechos reservados.

@@ -42,7 +42,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 14px 0;
+            padding-top: 14px;
+            padding-bottom: 14px;
             flex-wrap: wrap;
             gap: 12px;
         }
@@ -53,7 +54,20 @@
             font-weight: 700;
             font-size: 18px;
         }
-        header.sitio .marca img { height: 36px; }
+        /* El PNG del logo es oscuro, con fondo transparente y mucho margen interno:
+           se muestra sobre una placa blanca y ampliado para que se lea en la barra azul. */
+        header.sitio .marca {
+            background: #fff;
+            border-radius: 8px;
+            width: 68px;
+            height: 44px;
+            overflow: hidden;
+            justify-content: center;
+        }
+        header.sitio .marca img { height: 76px; flex-shrink: 0; }
+        @media (max-width: 640px) {
+            header.sitio { position: static; }
+        }
         header.sitio nav {
             display: flex;
             gap: 10px;
