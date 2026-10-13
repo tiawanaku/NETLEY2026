@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Clientes\Tables;
 
+use App\Filament\Admin\Support\FiltrosContacto;
 use App\Filament\Admin\Support\TelefonoColumna;
 use App\Models\Cliente;
 use Filament\Actions\BulkActionGroup;
@@ -70,6 +71,7 @@ class ClientesTable
             ->filters([
                 SelectFilter::make('sucursal')
                     ->options(['LA PAZ' => 'La Paz', 'SANTA CRUZ' => 'Santa Cruz', 'COCHABAMBA' => 'Cochabamba']),
+                ...FiltrosContacto::make(),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([

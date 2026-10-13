@@ -181,3 +181,41 @@
 .dark [x-data^="leafletMapPicker"] .bg-gray-50 { background-color: rgb(55 65 81); }
 .dark [x-data^="leafletMapPicker"] .text-gray-700,
 .dark [x-data^="leafletMapPicker"] .text-gray-500 { color: rgb(229 231 235); }
+
+/* Teléfono (App\Filament\Admin\Support\CamposTelefono): selector de código
+   de país + número. El selector toma el ancho de lo elegido ("+591
+   (Bolivia)", "+1 (EE. UU. / Canadá)"…) y el número ocupa el resto,
+   con un mínimo para que siempre se pueda escribir; si no alcanza el
+   espacio (móvil), el país se recorta con "…" en vez de montarse sobre el
+   número. */
+.campo-telefono > .fi-grid {
+    grid-template-columns: minmax(0, max-content) minmax(5.5rem, 1fr) !important;
+}
+
+.campo-telefono > .fi-grid > .fi-grid-col {
+    grid-column: auto !important;
+    min-width: 0;
+}
+
+.campo-telefono .fi-fo-select,
+.campo-telefono .fi-fo-select .fi-input-wrp-content-ctn {
+    min-width: 0;
+}
+
+.campo-telefono .fi-select-input-value-ctn {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.campo-telefono .fi-select-input-value-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* La lista de códigos se abre al menos de 18rem para que se lea el país
+   completo aunque el selector sea angosto. */
+.campo-telefono .fi-select-input-ctn .fi-dropdown-panel {
+    min-width: min(18rem, calc(100vw - 3rem));
+}

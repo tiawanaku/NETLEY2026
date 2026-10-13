@@ -46,6 +46,7 @@ class AgendarLlamadaAction
                     'ciudad' => $record->ciudad,
                     'numero_consulta' => (string) $record->id,
                     'origen' => $record->origen,
+                    'origen_detalle' => $record->origen_detalle,
                     'fecha' => $data['fecha'],
                     'hora' => $data['hora'],
                     'accion' => $data['accion'] ?? null,

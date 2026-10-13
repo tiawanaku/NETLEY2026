@@ -22,7 +22,7 @@
 
     <table class="datos">
         <tr><td class="label">Nombres</td><td>{{ $informe->nombres }} {{ $informe->apellidos }}</td></tr>
-        <tr><td class="label">Teléfono</td><td>{{ $informe->telefono }}</td></tr>
+        <tr><td class="label">Teléfono</td><td>{{ \App\Support\Telefono::formatear($informe->telefono) }}</td></tr>
         <tr><td class="label">Forma de ingreso</td><td>{{ $informe->forma_ingreso ?: '-' }}</td></tr>
         <tr><td class="label">Colegio (si aplica)</td><td>{{ $informe->nombre_colegio ?: '-' }}</td></tr>
         <tr><td class="label">Responsable</td><td>{{ $informe->responsable ?: '-' }}</td></tr>

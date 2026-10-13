@@ -53,6 +53,21 @@ enum EstadoConsulta: string implements HasColor, HasLabel
         };
     }
 
+    /**
+     * Estado con el que nace una consulta según por dónde ingresó: si entra
+     * por WhatsApp queda "Agendado"; por la página web (y el resto de
+     * orígenes) queda "Pendiente".
+     */
+    public static function inicialSegunOrigen(?string $origen): self
+    {
+        return self::esOrigenWhatsapp($origen) ? self::Agendado : self::Pendiente;
+    }
+
+    public static function esOrigenWhatsapp(?string $origen): bool
+    {
+        return str_contains(mb_strtolower(trim((string) $origen)), 'whatsapp');
+    }
+
     /** Estados que se consideran "cola abierta" (consultas.php en el sistema viejo). */
     public static function abiertos(): array
     {

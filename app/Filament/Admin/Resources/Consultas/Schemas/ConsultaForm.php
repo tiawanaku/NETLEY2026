@@ -3,9 +3,14 @@
 namespace App\Filament\Admin\Resources\Consultas\Schemas;
 
 use App\Enums\EstadoConsulta;
+use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\CamposDomicilio;
+use App\Filament\Admin\Support\CamposOrigen;
 use App\Filament\Admin\Support\CamposTelefono;
+use App\Filament\Admin\Support\ReglasContacto;
 use App\Filament\Admin\Support\RespuestaFields;
+use App\Models\Consulta;
+use App\Support\Origenes;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -14,21 +19,11 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class ConsultaForm
 {
-    protected static array $origenes = [
-        'Cliente antiguo',
-        'Recomendación',
-        'Espontáneo',
-        'Página Netley',
-        'Facebook',
-        'WhatsApp',
-        'TikTok',
-        'Físico',
-    ];
-
     /**
      * @param  array<int, \Filament\Schemas\Components\Component>  $before  Componentes a mostrar antes del formulario (ej. rótulo de N° de consulta en Crear).
      */
@@ -48,9 +43,10 @@ class ConsultaForm
                         TextInput::make('nombres')->required()->maxLength(40)->regex('/^[^0-9]*$/')->disabled($isEditing)->extraInputAttributes(self::atributosSoloLetras()),
                         TextInput::make('ap_paterno')->label('Apellido paterno')->regex('/^[^0-9]*$/')->disabled($isEditing)->extraInputAttributes(self::atributosSoloLetras()),
                         TextInput::make('ap_materno')->label('Apellido materno')->regex('/^[^0-9]*$/')->disabled($isEditing)->extraInputAttributes(self::atributosSoloLetras()),
-                        TextInput::make('telefono')->tel()->prefix('+591', isInline: true)->regex('/^[0-9]*$/')->maxLength(20)->disabled($isEditing)->extraInputAttributes(CamposTelefono::atributos()),
-                        TextInput::make('whatsapp')->tel()->prefix('+591', isInline: true)->regex('/^[0-9]*$/')->maxLength(20)->disabled($isEditing)->extraInputAttributes(CamposTelefono::atributos()),
-                        TextInput::make('correo')->email()->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
+                        // No repetir con OTRA consulta (ver App\Rules\ContactoUnico).
+                        CamposTelefono::make('telefono', deshabilitado: $isEditing, unicoEn: Consulta::class, entidadUnica: 'otra consulta'),
+                        CamposTelefono::make('whatsapp', deshabilitado: $isEditing, unicoEn: Consulta::class, entidadUnica: 'otra consulta'),
+                        TextInput::make('correo')->email()->disabled($isEditing)->rules([ReglasContacto::correo(Consulta::class, 'otra consulta')])->extraInputAttributes(['data-enter-nav' => 'true']),
                         ...CamposDomicilio::region($isEditing),
                     ]),
 
@@ -59,6 +55,10 @@ class ConsultaForm
                         ->schema([
                             Textarea::make('consulta')->required()->rows(4)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                             Textarea::make('nota_interna')->label('Nota interna')->rows(2)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
+                            // Se cargan con la acción "Agendar"; en la ficha
+                            // se ven (y se editan con "Editar"). No en Crear.
+                            CamposDenuncia::denunciado()->disabled($isEditing)->visibleOn('edit'),
+                            CamposDenuncia::denuncias(conRelacion: true)->disabled($isEditing)->visibleOn('edit'),
                         ]),
 
                     // El switch solo tiene sentido al crear (decidir si se
@@ -83,23 +83,40 @@ class ConsultaForm
                             // CreateConsulta), no se le pregunta al usuario.
                             DatePicker::make('fecha_consulta')->required()->default(now())->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                             Select::make('estado')
-                                ->options(collect([
+                                // "Agendado" solo se ofrece cuando la consulta entra por
+                                // WhatsApp (o ya está agendada), ver EstadoConsulta::inicialSegunOrigen.
+                                ->options(fn (Get $get, $state) => collect([
                                     EstadoConsulta::Pendiente,
                                     EstadoConsulta::NoContesta,
                                     EstadoConsulta::Respondido,
                                     EstadoConsulta::SoloConsulta,
                                     EstadoConsulta::RemitirPsicologia,
                                     EstadoConsulta::RemitirSocial,
-                                ])->mapWithKeys(fn (EstadoConsulta $e) => [$e->value => $e->getLabel()]))
+                                ])
+                                    ->when(
+                                        EstadoConsulta::esOrigenWhatsapp($get('origen'))
+                                            || ($state instanceof EstadoConsulta ? $state : EstadoConsulta::tryFrom((string) $state)) === EstadoConsulta::Agendado,
+                                        fn ($estados) => $estados->prepend(EstadoConsulta::Agendado),
+                                    )
+                                    ->mapWithKeys(fn (EstadoConsulta $e) => [$e->value => $e->getLabel()]))
                                 ->required()
                                 ->disabled($isEditing)
                                 ->extraInputAttributes(['data-enter-nav' => 'true']),
                             TextInput::make('origen')
                                 ->required()
-                                ->datalist(self::$origenes)
+                                ->datalist(Origenes::SUGERENCIAS)
                                 ->regex('/^[^0-9]*$/')
                                 ->disabled($isEditing)
+                                // Si entra por WhatsApp, el estado pasa solo a "Agendado".
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function (?string $state, Set $set): void {
+                                    if (EstadoConsulta::esOrigenWhatsapp($state)) {
+                                        $set('estado', EstadoConsulta::Agendado->value);
+                                    }
+                                })
                                 ->extraInputAttributes(self::atributosSoloLetras()),
+                            // Con origen "Talleres" se pide qué taller.
+                            CamposOrigen::detalle($isEditing),
                         ]),
                 ]),
 

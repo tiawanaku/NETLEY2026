@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Especialidad;
+use App\Support\Origenes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -40,7 +41,19 @@ class Llamada extends Model
         'duracion',
         'intentos',
         'origen',
+        'origen_detalle',
     ];
+
+    /**
+     * El detalle del origen solo se guarda con origen "Talleres" (ver
+     * App\Support\Origenes); con otro origen se descarta.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $model): void {
+            $model->origen_detalle = Origenes::limpiarDetalle($model->origen, $model->origen_detalle);
+        });
+    }
 
     protected function casts(): array
     {

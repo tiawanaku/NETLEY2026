@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Pagos\Tables;
 
 use App\Enums\Especialidad;
+use App\Filament\Admin\Support\FiltrosContacto;
 use App\Models\Pago;
 use App\Models\Personal;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -66,6 +67,8 @@ class PagosTable
                             ->when($data['anio'] ?? null, fn ($q, $anio) => $q->whereYear('fecha_pago', $anio))
                             ->when($data['mes'] ?? null, fn ($q, $mes) => $q->whereMonth('fecha_pago', $mes));
                     }),
+                // Datos de contacto del cliente del pago.
+                ...FiltrosContacto::make(relacion: 'cliente'),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Casos\RelationManagers;
 
+use App\Filament\Admin\Support\CamposTelefono;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -37,13 +38,13 @@ class JuzgadosRelationManager extends RelationManager
             TextInput::make('num_caso')->label('N° de caso')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             TextInput::make('juzgado_num')->label('Juzgado')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             TextInput::make('nombre_juez')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
-            TextInput::make('telefono_juez')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            CamposTelefono::make('telefono_juez', deshabilitado: $lockOthers),
             TextInput::make('secretaria')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
-            TextInput::make('telefono_secretaria')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            CamposTelefono::make('telefono_secretaria', deshabilitado: $lockOthers),
             TextInput::make('auxiliar')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
-            TextInput::make('telefono_auxiliar')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            CamposTelefono::make('telefono_auxiliar', deshabilitado: $lockOthers),
             TextInput::make('oficial')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
-            TextInput::make('telefono_oficial')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            CamposTelefono::make('telefono_oficial', deshabilitado: $lockOthers),
             DatePicker::make('fecha_inicio')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             DatePicker::make('fecha_fin')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
         ];

@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Casos\Tables;
 use App\Enums\Especialidad;
 use App\Enums\EstadoCaso;
 use App\Filament\Admin\Resources\Casos\Actions\CasoActions;
+use App\Filament\Admin\Support\FiltrosContacto;
 use App\Models\Caso;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -47,6 +48,8 @@ class CasosTable
             ->filters([
                 SelectFilter::make('especialidad')->options(Especialidad::class),
                 SelectFilter::make('estado')->options(EstadoCaso::class),
+                // Datos de contacto del cliente del caso.
+                ...FiltrosContacto::make(relacion: 'cliente'),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([

@@ -5,7 +5,10 @@ namespace App\Filament\Admin\Resources\Consultas\Tables;
 use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Resources\Consultas\Actions\AscenderCasoAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReactivarConsultaAction;
+use App\Filament\Admin\Support\FiltrosContacto;
 use App\Filament\Admin\Support\TelefonoColumna;
+use App\Models\Consulta;
+use App\Support\Origenes;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -34,6 +37,9 @@ class ConsultasTable
                 TextColumn::make('estado')
                     ->badge(),
                 TextColumn::make('origen')
+                    // "Talleres — <detalle del taller>".
+                    ->formatStateUsing(fn (?string $state, Consulta $record): ?string => Origenes::texto($state, $record->origen_detalle))
+                    ->wrap()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('fecha_consulta')
                     ->date('d/m/Y')
@@ -42,6 +48,7 @@ class ConsultasTable
             ->defaultSort('fecha_consulta', 'desc')
             ->filters([
                 SelectFilter::make('estado')->options(EstadoConsulta::class),
+                ...FiltrosContacto::make(),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([

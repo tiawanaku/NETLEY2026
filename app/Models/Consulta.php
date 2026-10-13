@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Enums\EstadoConsulta;
+use App\Support\Origenes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Consulta extends Model
@@ -22,6 +24,7 @@ class Consulta extends Model
         'correo',
         'consulta',
         'nota_interna',
+        'denunciado',
         'fecha_consulta',
         'pais',
         'ciudad',
@@ -35,7 +38,19 @@ class Consulta extends Model
         'estado',
         'fecha_contacto',
         'origen',
+        'origen_detalle',
     ];
+
+    /**
+     * El detalle del origen solo se guarda con origen "Talleres" (ver
+     * App\Support\Origenes); con otro origen se descarta.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $model): void {
+            $model->origen_detalle = Origenes::limpiarDetalle($model->origen, $model->origen_detalle);
+        });
+    }
 
     protected function casts(): array
     {
@@ -65,6 +80,15 @@ class Consulta extends Model
     public function citas(): HasMany
     {
         return $this->hasMany(Cita::class);
+    }
+
+    /**
+     * "Denuncias": delitos del catálogo denunciados (varios). Al ascender la
+     * consulta a cliente ejecutivo pasan al caso.
+     */
+    public function delitosDenunciados(): BelongsToMany
+    {
+        return $this->belongsToMany(Delito::class, 'consulta_delito_denunciado')->withTimestamps();
     }
 
     public function llamadas(): HasMany

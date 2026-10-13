@@ -63,18 +63,16 @@ class ClienteCasoWizard
                         ->regex('/^[\pL\s\'-]+$/u')
                         ->validationMessages(['regex' => 'Solo se permiten letras.'])
                         ->extraInputAttributes(self::atributosSoloLetras()),
-                    TextInput::make('telefono')
-                        ->label('Teléfono')
-                        ->tel()
-                        ->regex('/^[0-9+\-\s]+$/')
-                        ->validationMessages(['regex' => 'Solo se permiten números.'])
-                        ->extraInputAttributes(self::atributosSoloNumeros()),
-                    TextInput::make('whatsapp')
-                        ->tel()
-                        ->regex('/^[0-9+\-\s]+$/')
-                        ->validationMessages(['regex' => 'Solo se permiten números.'])
-                        ->extraInputAttributes(self::atributosSoloNumeros()),
-                    TextInput::make('correo')->email()->extraInputAttributes(['data-enter-nav' => 'true']),
+                    // Teléfono, WhatsApp y correo no se pueden repetir con
+                    // OTRO cliente: se valida en este paso, antes de avanzar.
+                    // El cliente con la misma CI no cuenta (crear() lo
+                    // actualiza en vez de duplicarlo).
+                    CamposTelefono::make('telefono', unicoEn: Cliente::class, entidadUnica: 'otro cliente', alcanceUnico: ReglasContacto::excluirMismaCi()),
+                    CamposTelefono::make('whatsapp', unicoEn: Cliente::class, entidadUnica: 'otro cliente', alcanceUnico: ReglasContacto::excluirMismaCi()),
+                    TextInput::make('correo')
+                        ->email()
+                        ->rules([ReglasContacto::correo(Cliente::class, 'otro cliente', ReglasContacto::excluirMismaCi())])
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
                     TextInput::make('ci')
                         ->label('Carnet de identidad')
                         ->required()
@@ -136,7 +134,9 @@ class ClienteCasoWizard
     public static function camposProceso(): array
     {
         return [
-            ...DelitoSelect::make(areaLabel: 'Materia legal', conOtros: true),
+            // "Delitos": se elige el delito y la materia legal sale de su
+            // área (antes eran dos selects, Materia legal -> Delito).
+            ...DelitoSelect::delitos(),
             Select::make('apersonamiento')
                 ->options(array_combine(self::APERSONAMIENTOS, self::APERSONAMIENTOS))
                 ->native(false)
@@ -148,13 +148,16 @@ class ClienteCasoWizard
                 ->required(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
                 ->visible(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
                 ->extraInputAttributes(['data-enter-nav' => 'true']),
+            // Adicionales al delito principal; se guardan en crearCaso().
+            CamposDenuncia::denunciado(),
+            CamposDenuncia::denuncias(),
             Textarea::make('descripcion')->label('Descripción')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
             Select::make('personal')
                 ->label('Abogado(s) asignado(s)')
                 // Con materia "Otros" no hay especialidad que filtrar:
                 // se listan todos los abogados.
                 ->options(fn (Get $get) => PersonalEspecialidades::personalOptionsPlain(
-                    $get('especialidad') === DelitoSelect::OTROS ? null : $get('especialidad'),
+                    DelitoSelect::especialidadDe($get),
                     (array) ($get('personal') ?? []),
                     'Abogado'
                 ))
@@ -352,8 +355,9 @@ class ClienteCasoWizard
             // — la iguala profesional siempre se puede reconstruir sumando
             // monto_patrocinio.
             $iguala = $plan['monto_cliente'];
-            $esOtraMateria = ($data['especialidad'] ?? null) === DelitoSelect::OTROS;
-            $esOtroDelito = ($data['delito_id'] ?? null) === DelitoSelect::OTROS;
+            // Materia legal = área del delito elegido en "Delitos" (o la
+            // escrita a mano con "Otro"), ver DelitoSelect::datosParaGuardar().
+            $delito = DelitoSelect::datosParaGuardar($data);
 
             $duracionMeses = filled($data['duracion_meses'] ?? null) ? (int) $data['duracion_meses'] : null;
             $fechaFin = self::fechaFinEstimada($duracionMeses)?->toDateString();
@@ -362,14 +366,12 @@ class ClienteCasoWizard
             // los ajusta automáticamente vía PagoObserver al crearse más abajo.
             $caso = Caso::create([
                 'cliente_id' => $cliente->id,
-                'especialidad' => $esOtraMateria ? null : $data['especialidad'],
-                'materia_texto' => $esOtraMateria ? ($data['materia_texto'] ?? null) : null,
-                'delito_id' => $esOtraMateria || $esOtroDelito ? null : ($data['delito_id'] ?? null),
-                'delito_texto' => $esOtraMateria || $esOtroDelito ? ($data['delito_texto'] ?? null) : null,
+                ...$delito,
                 'descripcion' => $data['descripcion'] ?? null,
                 'apersonamiento' => ($data['apersonamiento'] ?? null) === self::APERSONAMIENTO_OTROS
                     ? ($data['apersonamiento_otro'] ?? null)
                     : ($data['apersonamiento'] ?? null),
+                'denunciado' => filled($data['denunciado'] ?? null) ? $data['denunciado'] : null,
                 'iguala' => $iguala,
                 'saldo' => $iguala,
                 'pagado' => 0,
@@ -389,6 +391,8 @@ class ClienteCasoWizard
             if (filled($data['personal'] ?? null)) {
                 $caso->personal()->sync($data['personal']);
             }
+
+            CamposDenuncia::sincronizar($caso, $data['denuncias'] ?? []);
 
             // Cobro de hoy: el anticipo (puede ser el total de la Iguala
             // Netley si así se cargó).

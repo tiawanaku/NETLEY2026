@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Contactos\Schemas;
 
+use App\Filament\Admin\Support\CamposTelefono;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -42,9 +43,7 @@ class ContactoForm
                     ->default(null),
                 TextInput::make('correo')
                     ->default(null),
-                TextInput::make('telefono')
-                    ->tel()
-                    ->default(null),
+                CamposTelefono::make('telefono'),
                 TextInput::make('horario_contacto')
                     ->default(null),
                 Textarea::make('nota')

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Casos\RelationManagers;
 
+use App\Filament\Admin\Support\CamposTelefono;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -37,11 +38,11 @@ class FiscaliasRelationManager extends RelationManager
             TextInput::make('num_caso')->label('N° de caso (Ministerio Público)')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             TextInput::make('fiscalia_num')->label('Fiscalía')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             TextInput::make('nombre_fiscal')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
-            TextInput::make('telefono_fiscal')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            CamposTelefono::make('telefono_fiscal', deshabilitado: $lockOthers),
             TextInput::make('investigador')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
-            TextInput::make('telefono_investigador')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            CamposTelefono::make('telefono_investigador', deshabilitado: $lockOthers),
             TextInput::make('auxiliar')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
-            TextInput::make('telefono_auxiliar')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            CamposTelefono::make('telefono_auxiliar', deshabilitado: $lockOthers),
             DatePicker::make('fecha_inicio')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             DatePicker::make('fecha_fin')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
         ];

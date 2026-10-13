@@ -4,6 +4,10 @@ namespace App\Filament\Admin\Resources\Llamadas\Tables;
 
 use App\Enums\Especialidad;
 use App\Filament\Admin\Resources\Llamadas\Actions\CrearConsultaAction;
+use App\Filament\Admin\Support\FiltrosContacto;
+use App\Models\Llamada;
+use App\Support\Origenes;
+use App\Support\Telefono;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -20,9 +24,14 @@ class LlamadasTable
                 TextColumn::make('nombre_completo')
                     ->label('Nombre')
                     ->searchable(['nombres', 'ap_paterno', 'ap_materno']),
-                TextColumn::make('telefono')->searchable(),
+                TextColumn::make('telefono')->label('Teléfono')->searchable()->formatStateUsing(fn (?string $state): ?string => Telefono::formatear($state)),
                 TextColumn::make('materia_legal')->badge(),
                 TextColumn::make('ciudad'),
+                TextColumn::make('origen')
+                    // "Talleres — <detalle del taller>".
+                    ->formatStateUsing(fn (?string $state, Llamada $record): ?string => Origenes::texto($state, $record->origen_detalle))
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('accion')->badge()->placeholder('-'),
                 TextColumn::make('personal.nombres')->label('Asignado a'),
                 TextColumn::make('fecha')->date(),
@@ -42,6 +51,8 @@ class LlamadasTable
                     ->label('Asignado a')
                     ->relationship('personal', 'nombres')
                     ->searchable(),
+                // Llamadas no tiene correo.
+                ...FiltrosContacto::make(['telefono', 'whatsapp']),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([

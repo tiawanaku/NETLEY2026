@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Widgets;
 
 use App\Models\Llamada;
+use App\Support\Telefono;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -27,7 +28,7 @@ class LlamadasHoyWidget extends TableWidget
             ->query(fn () => $this->getLlamadasQuery()->orderBy('hora'))
             ->columns([
                 TextColumn::make('hora')->label('Hora')->time()->badge()->color('info'),
-                TextColumn::make('telefono')->label('Teléfono'),
+                TextColumn::make('telefono')->label('Teléfono')->formatStateUsing(fn (?string $state): ?string => Telefono::formatear($state)),
                 TextColumn::make('nombre_completo')->label('Nombre'),
                 TextColumn::make('motivo')->label('Motivo')->limit(40),
                 TextColumn::make('creado_por')->label('Creado por'),

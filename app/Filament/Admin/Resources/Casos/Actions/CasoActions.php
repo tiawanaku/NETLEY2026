@@ -6,6 +6,7 @@ use App\Enums\EstadoCaso;
 use App\Filament\Admin\Resources\Casos\Schemas\CierreCasoSchema;
 use App\Filament\Admin\Resources\Clientes\ClienteResource;
 use App\Filament\Admin\Support\AgendaPreview;
+use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\CamposPago;
 use App\Filament\Admin\Support\PlanPagoRecalculo;
 use App\Models\Caso;
@@ -22,6 +23,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Acciones de caso compartidas entre la tabla de Casos (fila) y la ficha
@@ -127,17 +129,29 @@ class CasoActions
                 DatePicker::make('fecha')->required()->default(now()),
                 TimePicker::make('hora')->required(),
                 Textarea::make('detalle')->rows(3),
+                // Se guardan en el caso (no en la cita).
+                CamposDenuncia::denunciado()
+                    ->default(fn (Caso $record) => $record->denunciado),
+                CamposDenuncia::denuncias()
+                    ->default(fn (Caso $record) => CamposDenuncia::ids($record)),
             ])
-            ->action(function (Caso $record, array $data): void {
-                $cita = $record->citas()->create([
-                    'fecha' => $data['fecha'],
-                    'hora' => $data['hora'],
-                    'detalle' => $data['detalle'] ?? null,
-                ]);
+            ->action(function (Caso $record, array $data, $livewire): void {
+                DB::transaction(function () use ($record, $data): void {
+                    $cita = $record->citas()->create([
+                        'fecha' => $data['fecha'],
+                        'hora' => $data['hora'],
+                        'detalle' => $data['detalle'] ?? null,
+                    ]);
 
-                if (filled($data['personal'] ?? null)) {
-                    $cita->personal()->sync($data['personal']);
-                }
+                    if (filled($data['personal'] ?? null)) {
+                        $cita->personal()->sync($data['personal']);
+                    }
+
+                    $record->update(['denunciado' => filled($data['denunciado'] ?? null) ? $data['denunciado'] : null]);
+                    CamposDenuncia::sincronizar($record, $data['denuncias'] ?? []);
+                });
+
+                CamposDenuncia::refrescarFicha($livewire, $record);
 
                 Notification::make()->title('Cita agendada')->success()->send();
             });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EstadoAprobacion;
 use App\Enums\EstadoCaso;
+use App\Enums\EstadoConsulta;
 use App\Models\Caso;
 use App\Models\Cliente;
 use App\Models\Consulta;
@@ -13,8 +14,12 @@ use App\Models\Personal;
 use App\Models\RedSocial;
 use App\Models\Testimonio;
 use App\Models\VideoPortada;
+use App\Rules\ContactoUnico;
+use App\Support\CodigosTelefonicos;
+use App\Support\Telefono;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -72,19 +77,45 @@ class FrontpageController extends Controller
     {
         $this->validarCaptcha($request);
 
+        // Ya existe una consulta con este teléfono/WhatsApp o correo: no se
+        // registra otra. Mensaje genérico, sin revelar a quién pertenece
+        // (formulario público).
+        $yaRegistrada = fn (string $dato): string => "Ya existe una consulta registrada con este {$dato}. Nos pondremos en contacto contigo.";
+
         $data = $request->validate([
             'nombres' => ['required', 'string', 'max:40'],
             'ap_paterno' => ['nullable', 'string', 'max:30'],
-            'telefono' => ['required', 'string', 'max:30'],
-            'correo' => ['nullable', 'email', 'max:80'],
+            // Código de país (selector "+591 (Bolivia)"…) y número aparte;
+            // se guardan juntos como "+591 71234567" (ver Telefono::componer).
+            'telefono_codigo' => ['required', Rule::in(CodigosTelefonicos::codigos())],
+            'telefono' => ['bail', 'required', 'regex:/^[0-9]{6,14}$/', new ContactoUnico(
+                Consulta::class,
+                ContactoUnico::TELEFONO,
+                codigo: (string) $request->input('telefono_codigo', CodigosTelefonicos::POR_DEFECTO),
+                mensaje: $yaRegistrada('teléfono'),
+            )],
+            'correo' => ['bail', 'nullable', 'email', 'max:80', new ContactoUnico(
+                Consulta::class,
+                ContactoUnico::CORREO,
+                mensaje: $yaRegistrada('correo electrónico'),
+            )],
             'ciudad' => ['nullable', 'string', 'max:40'],
             'consulta' => ['required', 'string', 'max:3000'],
+        ], [
+            'telefono_codigo.*' => 'Selecciona el código de país del teléfono.',
+            'telefono.required' => 'Ingresa tu número de teléfono / WhatsApp.',
+            'telefono.regex' => 'El teléfono debe tener solo números (de 6 a 14 dígitos), sin el código de país.',
         ]);
+
+        $data['telefono'] = Telefono::componer($data['telefono_codigo'], $data['telefono']);
+        unset($data['telefono_codigo']);
 
         Consulta::create([
             ...$data,
             'fecha_consulta' => now(),
             'origen' => 'Sitio web',
+            // Las consultas que llegan por la página web nacen "Pendiente".
+            'estado' => EstadoConsulta::inicialSegunOrigen('Sitio web'),
         ]);
 
         $request->session()->forget(['captcha_a', 'captcha_b']);

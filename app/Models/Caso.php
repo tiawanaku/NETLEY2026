@@ -23,6 +23,7 @@ class Caso extends Model
         'delito_texto',
         'descripcion',
         'apersonamiento',
+        'denunciado',
         'iguala',
         'saldo',
         'pagado',
@@ -74,6 +75,15 @@ class Caso extends Model
     public function delito(): BelongsTo
     {
         return $this->belongsTo(Delito::class);
+    }
+
+    /**
+     * "Denuncias": delitos del catálogo denunciados en el caso (varios).
+     * Adicional a delito(), que es el delito / materia específica principal.
+     */
+    public function delitosDenunciados(): BelongsToMany
+    {
+        return $this->belongsToMany(Delito::class, 'caso_delito_denunciado')->withTimestamps();
     }
 
     public function personal(): BelongsToMany

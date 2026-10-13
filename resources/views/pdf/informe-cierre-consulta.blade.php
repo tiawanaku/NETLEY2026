@@ -26,13 +26,13 @@
     <div class="seccion">Datos del cliente</div>
     <table class="datos">
         <tr><td class="label">Nombre</td><td>{{ $consulta->nombre_completo }}</td></tr>
-        <tr><td class="label">Teléfono</td><td>{{ $consulta->telefono ?: '-' }}</td></tr>
-        <tr><td class="label">WhatsApp</td><td>{{ $consulta->whatsapp ?: '-' }}</td></tr>
+        <tr><td class="label">Teléfono</td><td>{{ \App\Support\Telefono::formatear($consulta->telefono) ?: '-' }}</td></tr>
+        <tr><td class="label">WhatsApp</td><td>{{ \App\Support\Telefono::formatear($consulta->whatsapp) ?: '-' }}</td></tr>
         <tr><td class="label">Correo</td><td>{{ $consulta->correo ?: '-' }}</td></tr>
         <tr><td class="label">País / Ciudad</td><td>{{ $consulta->pais ?: '-' }} / {{ $consulta->ciudad ?: '-' }}</td></tr>
         <tr><td class="label">Provincia</td><td>{{ $consulta->provincia ?: '-' }}</td></tr>
         <tr><td class="label">Dirección</td><td>{{ $consulta->direccion ?: '-' }}</td></tr>
-        <tr><td class="label">Origen</td><td>{{ $consulta->origen ?: '-' }}</td></tr>
+        <tr><td class="label">Origen</td><td>{{ \App\Support\Origenes::texto($consulta->origen, $consulta->origen_detalle) ?: '-' }}</td></tr>
     </table>
 
     <div class="seccion">La consulta</div>

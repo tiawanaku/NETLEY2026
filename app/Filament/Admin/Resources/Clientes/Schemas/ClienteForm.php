@@ -3,6 +3,9 @@
 namespace App\Filament\Admin\Resources\Clientes\Schemas;
 
 use App\Filament\Admin\Support\CamposDomicilio;
+use App\Filament\Admin\Support\CamposTelefono;
+use App\Filament\Admin\Support\ReglasContacto;
+use App\Models\Cliente;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -37,9 +40,10 @@ class ClienteForm
 
                 Section::make('Contacto')
                     ->schema([
-                        TextInput::make('telefono')->tel()->disabled($isEditing),
-                        TextInput::make('whatsapp')->tel()->disabled($isEditing),
-                        TextInput::make('correo')->email()->disabled($isEditing),
+                        // No repetir con OTRO cliente (ver App\Rules\ContactoUnico).
+                        CamposTelefono::make('telefono', deshabilitado: $isEditing, unicoEn: Cliente::class, entidadUnica: 'otro cliente'),
+                        CamposTelefono::make('whatsapp', deshabilitado: $isEditing, unicoEn: Cliente::class, entidadUnica: 'otro cliente'),
+                        TextInput::make('correo')->email()->disabled($isEditing)->rules([ReglasContacto::correo(Cliente::class, 'otro cliente')]),
                         ...CamposDomicilio::region($isEditing),
                         TextInput::make('direccion')->label('Dirección')->disabled($isEditing),
                     ]),

@@ -6,6 +6,8 @@ use App\Enums\EstadoPersonal;
 use App\Enums\Rol;
 use App\Filament\Admin\Support\CampoConOtro;
 use App\Filament\Admin\Support\CamposTelefono;
+use App\Filament\Admin\Support\ReglasContacto;
+use App\Models\Personal;
 use App\Support\PersonalEspecialidades;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -70,9 +72,11 @@ class PersonalForm
 
                     Section::make('Contacto')
                         ->schema([
-                            TextInput::make('telefono')->tel()->prefix('+591', isInline: true)->regex('/^[0-9]*$/')->maxLength(20)->required()->unique(ignoreRecord: true)->validationMessages(['unique' => 'Ya existe una persona registrada con este número de teléfono. Revisa el dato.'])->extraInputAttributes(CamposTelefono::atributos()),
-                            TextInput::make('whatsapp')->tel()->prefix('+591', isInline: true)->regex('/^[0-9]*$/')->maxLength(20)->extraInputAttributes(CamposTelefono::atributos()),
-                            TextInput::make('correo')->email()->required()->extraInputAttributes(['data-enter-nav' => 'true']),
+                            // Teléfono, WhatsApp y correo no se pueden repetir con
+                            // OTRO personal (ver App\Rules\ContactoUnico).
+                            CamposTelefono::make('telefono', requerido: true, unicoEn: Personal::class, entidadUnica: 'otro personal'),
+                            CamposTelefono::make('whatsapp', unicoEn: Personal::class, entidadUnica: 'otro personal'),
+                            TextInput::make('correo')->email()->required()->rules([ReglasContacto::correo(Personal::class, 'otro personal')])->extraInputAttributes(['data-enter-nav' => 'true']),
                             TextInput::make('ciudad_residencia')->label('Ciudad de residencia')->extraInputAttributes(['data-enter-nav' => 'true']),
                             TextInput::make('direccion')->extraInputAttributes(['data-enter-nav' => 'true']),
                         ]),
@@ -92,8 +96,10 @@ class PersonalForm
 
                     Section::make('Datos laborales')
                         ->schema([
+                        // `rol` define los permisos de acceso al sistema (User::hasRole),
+                        // por eso se sigue pidiendo, pero ya no se rotula "Cargo".
                         Select::make('rol')
-                            ->label('Cargo')
+                            ->label('Rol de acceso')
                             ->options(Rol::class)
                             ->required()
                             ->extraInputAttributes(['data-enter-nav' => 'true']),

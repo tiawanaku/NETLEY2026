@@ -25,8 +25,8 @@
     <table class="datos">
         <tr><td class="label">Nombre</td><td>{{ $caso->cliente->nombre_completo ?? '-' }}</td></tr>
         <tr><td class="label">Carnet de identidad</td><td>{{ $caso->cliente->ci ?? '-' }}{{ $caso->cliente?->extension ? " ({$caso->cliente->extension})" : '' }}</td></tr>
-        <tr><td class="label">Teléfono</td><td>{{ $caso->cliente->telefono ?? '-' }}</td></tr>
-        <tr><td class="label">WhatsApp</td><td>{{ $caso->cliente->whatsapp ?? '-' }}</td></tr>
+        <tr><td class="label">Teléfono</td><td>{{ \App\Support\Telefono::formatear($caso->cliente?->telefono) ?: '-' }}</td></tr>
+        <tr><td class="label">WhatsApp</td><td>{{ \App\Support\Telefono::formatear($caso->cliente?->whatsapp) ?: '-' }}</td></tr>
         <tr><td class="label">Correo</td><td>{{ $caso->cliente->correo ?? '-' }}</td></tr>
         <tr><td class="label">Dirección</td><td>{{ $caso->cliente->direccion ?? '-' }}</td></tr>
     </table>

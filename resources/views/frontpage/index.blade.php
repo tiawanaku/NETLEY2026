@@ -55,6 +55,12 @@
         .fila-campos { display: flex; gap: 12px; flex-wrap: wrap; }
         .fila-campos .campo { flex: 1; min-width: 200px; }
         .campo .error { color: #b91c1c; font-size: 12px; margin-top: 4px; }
+        .telefono-fusionado { display: flex; }
+        .telefono-fusionado select {
+            flex: 0 1 auto; max-width: 55%; padding: 10px 8px; border: 1px solid #d1d5db; border-right: none;
+            border-radius: 8px 0 0 8px; background: #f9fafb; font-size: 14px; font-family: inherit; color: #1a2537;
+        }
+        .telefono-fusionado input { flex: 1; min-width: 0; border-radius: 0 8px 8px 0; }
 
         .estrellas {
             display: flex; flex-direction: row-reverse; justify-content: flex-end;
@@ -320,9 +326,9 @@
                     </div>
                 @endif
 
-                @if ($errors->any() && ($errors->has('telefono') || $errors->has('consulta') || $errors->has('captcha')))
+                @if ($errors->any() && ($errors->has('telefono') || $errors->has('telefono_codigo') || $errors->has('correo') || $errors->has('consulta') || $errors->has('captcha')))
                     <div class="banner-error">
-                        {{ $errors->first('telefono') ?: ($errors->first('consulta') ?: $errors->first('captcha')) }}
+                        {{ $errors->first('telefono_codigo') ?: ($errors->first('telefono') ?: ($errors->first('correo') ?: ($errors->first('consulta') ?: $errors->first('captcha')))) }}
                     </div>
                 @endif
 
@@ -341,7 +347,18 @@
                     <div class="fila-campos">
                         <div class="campo">
                             <label for="c-telefono">Teléfono / WhatsApp</label>
-                            <input type="text" id="c-telefono" name="telefono" value="{{ old('telefono') }}" required>
+                            {{-- Código de país (sin banderas) + número; ver App\Support\CodigosTelefonicos --}}
+                            <div class="telefono-fusionado">
+                                <select id="c-telefono-codigo" name="telefono_codigo" aria-label="Código de país" required>
+                                    @foreach (\App\Support\CodigosTelefonicos::opciones() as $codigo => $etiqueta)
+                                        <option value="{{ $codigo }}" @selected(old('telefono_codigo', \App\Support\CodigosTelefonicos::POR_DEFECTO) === $codigo)>{{ $etiqueta }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="tel" id="c-telefono" name="telefono" value="{{ old('telefono') }}"
+                                    inputmode="numeric" pattern="[0-9]{6,14}" maxlength="14" placeholder="Número"
+                                    title="Solo números (de 6 a 14 dígitos), sin el código de país"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,'')" required>
+                            </div>
                         </div>
                         <div class="campo">
                             <label for="c-correo">Correo (opcional)</label>

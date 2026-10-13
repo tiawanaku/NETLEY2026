@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Consultas\Actions;
 use App\Enums\EstadoConsulta;
 use App\Enums\Rol;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
+use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\CamposDomicilio;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Consulta;
@@ -79,10 +80,18 @@ class AscenderCasoAction
                     'especialidad' => $ultimaRespuesta?->designacion?->value
                         ?? ($ultimaRespuesta?->materia_texto ? DelitoSelect::OTROS : null),
                     'materia_texto' => $ultimaRespuesta?->designacion ? null : $ultimaRespuesta?->materia_texto,
+                    // "Delitos" (DelitoSelect::delitos()): sin delito del
+                    // catálogo pero con delito o materia escritos, "Otro".
                     'delito_id' => $ultimaRespuesta?->delito_id
-                        ?? ($ultimaRespuesta?->delito_texto ? DelitoSelect::OTROS : null),
+                        ?? ($ultimaRespuesta?->delito_texto || (! $ultimaRespuesta?->designacion && $ultimaRespuesta?->materia_texto)
+                            ? DelitoSelect::OTROS
+                            : null),
                     'delito_texto' => $ultimaRespuesta?->delito_id ? null : $ultimaRespuesta?->delito_texto,
                     'personal' => $personalIds->unique()->values()->all(),
+                    // Denunciado y denuncias cargados al agendar: pasan al
+                    // caso (crearCaso() los guarda desde el paso "Proceso").
+                    'denunciado' => $record->denunciado,
+                    'denuncias' => CamposDenuncia::ids($record),
                 ];
             })
             ->schema([

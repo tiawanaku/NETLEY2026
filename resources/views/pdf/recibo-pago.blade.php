@@ -71,7 +71,7 @@
                     </table>
                     <div class="info" style="margin-top: 8px;">
                         Calle Murillo esq. Sagárnaga · Edif. Michel N° 189, Piso 6 Of. 601<br>
-                        WhatsApp: 71536460 · info@netley.bo · www.netley.bo<br>
+                        WhatsApp: +591 71536460 · info@netley.bo · www.netley.bo<br>
                         La Paz, Bolivia
                     </div>
                 </td>

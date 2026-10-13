@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Consultas\Pages;
 
+use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Resources\Consultas\ConsultaResource;
 use App\Filament\Admin\Resources\Consultas\Schemas\ConsultaForm;
 use App\Filament\Admin\Support\RespuestaFields;
@@ -40,6 +41,12 @@ class CreateConsulta extends CreateRecord
     {
         if (filled($data['fecha_consulta'] ?? null)) {
             $data['fecha_consulta'] = Carbon::parse($data['fecha_consulta'])->setTimeFrom(now());
+        }
+
+        // Una consulta que entra por WhatsApp nace "Agendado" (regla de
+        // negocio, se aplica en el servidor aunque se elija otro estado).
+        if (EstadoConsulta::esOrigenWhatsapp($data['origen'] ?? null)) {
+            $data['estado'] = EstadoConsulta::Agendado->value;
         }
 
         return $data;

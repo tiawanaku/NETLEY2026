@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Citas\Tables;
 
 use App\Filament\Admin\Resources\Citas\Actions\AnularCitaAction;
+use App\Filament\Admin\Support\FiltrosContacto;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -31,6 +32,8 @@ class CitasTable
                 SelectFilter::make('personal')
                     ->relationship('personal', 'nombres')
                     ->searchable(),
+                // Datos de contacto de la consulta o del cliente del caso.
+                ...FiltrosContacto::make(relacion: ['consulta', 'caso.cliente']),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([

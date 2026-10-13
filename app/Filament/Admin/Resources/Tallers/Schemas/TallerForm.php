@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Tallers\Schemas;
 
 use App\Filament\Admin\Forms\Components\DelitoSelect;
+use App\Filament\Admin\Support\CamposTelefono;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -22,8 +23,8 @@ class TallerForm
                         TextInput::make('nombres')->required(),
                         TextInput::make('ap_paterno')->label('Apellido paterno'),
                         TextInput::make('ap_materno')->label('Apellido materno'),
-                        TextInput::make('telefono')->tel(),
-                        TextInput::make('whatsapp')->tel(),
+                        CamposTelefono::make('telefono'),
+                        CamposTelefono::make('whatsapp'),
                         TextInput::make('ciudad'),
                         TextInput::make('numero_consulta')->label('N° de consulta'),
                         TextInput::make('origen')->helperText('Ej. "taller colegio: San Calixto"'),

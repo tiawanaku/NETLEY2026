@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Consultas\Actions;
 use App\Filament\Admin\Resources\Consultas\Actions\AnularCitaAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReagendarCitaAction;
 use App\Filament\Admin\Support\AgendaPreview;
+use App\Filament\Admin\Support\CamposDenuncia;
 use App\Models\Consulta;
 use App\Support\PersonalEspecialidades;
 use Filament\Actions\Action;
@@ -15,6 +16,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TimePicker;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Botón rápido para agendar una cita desde la ficha de la consulta, sin
@@ -59,6 +61,12 @@ class AgendarCitaAction
                 DatePicker::make('fecha')->required()->default(now())->extraInputAttributes(['data-enter-nav' => 'true']),
                 TimePicker::make('hora')->seconds(false)->required()->extraInputAttributes(['data-enter-nav' => 'true']),
                 Textarea::make('detalle')->label('Nota')->rows(3)->extraInputAttributes(['data-enter-nav' => 'true']),
+                // Se guardan en la consulta (no en la cita) y pasan al caso
+                // al ascenderla a cliente ejecutivo.
+                CamposDenuncia::denunciado()
+                    ->default(fn (Consulta $record) => $record->denunciado),
+                CamposDenuncia::denuncias()
+                    ->default(fn (Consulta $record) => CamposDenuncia::ids($record)),
                 Placeholder::make('citas_agendadas')
                     ->label('Citas agendadas')
                     ->content(fn (Consulta $record) => view('filament.admin.consultas.citas-agendadas', [
@@ -80,16 +88,23 @@ class AgendarCitaAction
             ->modalSubmitActionLabel('Guardar')
             ->modalCancelAction(false)
             ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))
-            ->action(function (Consulta $record, array $data): void {
-                $cita = $record->citas()->create([
-                    'fecha' => $data['fecha'],
-                    'hora' => $data['hora'],
-                    'detalle' => $data['detalle'] ?? null,
-                ]);
+            ->action(function (Consulta $record, array $data, $livewire): void {
+                DB::transaction(function () use ($record, $data): void {
+                    $cita = $record->citas()->create([
+                        'fecha' => $data['fecha'],
+                        'hora' => $data['hora'],
+                        'detalle' => $data['detalle'] ?? null,
+                    ]);
 
-                if (filled($data['personal'] ?? null)) {
-                    $cita->personal()->sync($data['personal']);
-                }
+                    if (filled($data['personal'] ?? null)) {
+                        $cita->personal()->sync($data['personal']);
+                    }
+
+                    $record->update(['denunciado' => filled($data['denunciado'] ?? null) ? $data['denunciado'] : null]);
+                    CamposDenuncia::sincronizar($record, $data['denuncias'] ?? []);
+                });
+
+                CamposDenuncia::refrescarFicha($livewire, $record);
 
                 Notification::make()->title('Cita agendada')->success()->send();
             });

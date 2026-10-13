@@ -4,8 +4,10 @@ namespace App\Filament\Admin\Resources\Casos\Schemas;
 
 use App\Enums\EstadoCaso;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
+use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Caso;
+use App\Support\Telefono;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -45,12 +47,12 @@ class CasoForm
                         TextInput::make('cliente_telefono')
                             ->label('Teléfono')
                             ->dehydrated(false)
-                            ->formatStateUsing(fn (?Caso $record) => $record?->cliente?->telefono)
+                            ->formatStateUsing(fn (?Caso $record) => Telefono::formatear($record?->cliente?->telefono))
                             ->disabled(),
                         TextInput::make('cliente_whatsapp')
                             ->label('WhatsApp')
                             ->dehydrated(false)
-                            ->formatStateUsing(fn (?Caso $record) => $record?->cliente?->whatsapp)
+                            ->formatStateUsing(fn (?Caso $record) => Telefono::formatear($record?->cliente?->whatsapp))
                             ->disabled(),
                         TextInput::make('cliente_correo')
                             ->label('Correo')
@@ -111,6 +113,10 @@ class CasoForm
                                 ->all())
                             ->native(false)
                             ->disabled($isEditing),
+                        // En la ficha quedan de solo lectura; se actualizan
+                        // desde la acción "Agendar cita".
+                        CamposDenuncia::denunciado()->disabled($isEditing),
+                        CamposDenuncia::denuncias(conRelacion: true)->disabled($isEditing),
                         TextInput::make('ciudad')->disabled($isEditing),
                         Select::make('estado')
                             ->options(EstadoCaso::class)

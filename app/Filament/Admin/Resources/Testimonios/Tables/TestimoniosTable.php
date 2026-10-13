@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Testimonios\Tables;
 
 use App\Enums\EstadoAprobacion;
+use App\Filament\Admin\Support\FiltrosContacto;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -32,6 +33,8 @@ class TestimoniosTable
             ->filters([
                 SelectFilter::make('estado')->options(EstadoAprobacion::class),
                 TernaryFilter::make('visible'),
+                // Testimonios solo tiene correo.
+                FiltrosContacto::correo(),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([

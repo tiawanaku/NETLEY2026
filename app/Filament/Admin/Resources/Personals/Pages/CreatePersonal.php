@@ -7,6 +7,7 @@ use App\Support\PersonalEspecialidades;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class CreatePersonal extends CreateRecord
 {
@@ -55,7 +56,20 @@ class CreatePersonal extends CreateRecord
         return parent::getCreateFormAction()
             ->label('Guardar')
             ->submit(null)
-            ->action(fn () => $this->create())
+            ->action(function (): void {
+                try {
+                    $this->create();
+                } catch (ValidationException $exception) {
+                    // Con el modal de confirmación abierto, Filament solo
+                    // vuelve a dibujar el modal y los errores de los campos
+                    // (ej. "Este teléfono ya está registrado…") no se verían:
+                    // se cierra el modal y se dibuja la página completa.
+                    $this->unmountAction();
+                    $this->forceRender();
+
+                    throw $exception;
+                }
+            })
             ->requiresConfirmation()
             ->modalHeading('¿Agregar este personal?')
             ->modalDescription('Revisa los datos antes de confirmar. Puedes presionar Enter para confirmar.')

@@ -3,9 +3,10 @@
 namespace App\Filament\Admin\Resources\Personals\Tables;
 
 use App\Enums\EstadoPersonal;
-use App\Enums\Rol;
 use App\Filament\Admin\Resources\Personals\Actions\PersonalActions;
+use App\Filament\Admin\Support\FiltrosContacto;
 use App\Support\PersonalEspecialidades;
+use App\Support\Telefono;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -40,10 +41,6 @@ class PersonalsTable
                     ->formatStateUsing(fn ($state) => \Illuminate\Support\Str::limit(is_array($state) ? implode(', ', $state) : (string) $state, 25))
                     ->searchable()
                     ->tooltip(fn ($state) => is_array($state) ? implode(', ', $state) : $state),
-                TextColumn::make('rol')
-                    ->label('Cargo')
-                    ->badge()
-                    ->sortable(),
                 TextColumn::make('especialidades')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => PersonalEspecialidades::label($state))
@@ -51,6 +48,8 @@ class PersonalsTable
                 TextColumn::make('estado')
                     ->badge(),
                 TextColumn::make('telefono')
+                    ->label('Teléfono')
+                    ->formatStateUsing(fn (?string $state): ?string => Telefono::formatear($state))
                     ->toggleable(),
                 TextColumn::make('correo')
                     ->toggleable(),
@@ -65,7 +64,6 @@ class PersonalsTable
             ])
             ->defaultSort('id', 'desc')
             ->filters([
-                SelectFilter::make('rol')->label('Cargo')->options(Rol::class),
                 SelectFilter::make('estado')->options(EstadoPersonal::class),
                 SelectFilter::make('especialidades')
                     ->label('Especialidad')
@@ -73,6 +71,7 @@ class PersonalsTable
                     ->query(fn ($query, $data) => $data['value']
                         ? $query->whereJsonContains('especialidades', $data['value'])
                         : $query),
+                ...FiltrosContacto::make(),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([

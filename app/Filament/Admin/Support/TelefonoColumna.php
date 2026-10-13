@@ -6,10 +6,10 @@ use App\Support\Telefono;
 use Illuminate\Support\HtmlString;
 
 /**
- * Contenido HTML de una celda de teléfono: bandera del país según el código
- * (imagen de flagcdn.com), el número en formato nacional (sin repetir el
- * código de país al lado — ya lo indica la bandera) y el logo de WhatsApp
- * (Simple Icons, CC0) que abre el chat en https://wa.me/.
+ * Contenido HTML de una celda de teléfono: el número con su código de país,
+ * sin bandera (ej. "+591 71234567", ver App\Support\Telefono::formatear) y
+ * el logo de WhatsApp (Simple Icons, CC0) que abre el chat en
+ * https://wa.me/.
  *
  * La fila de la tabla ya es un enlace a la consulta, así que el logo no
  * puede ser otro <a> (enlaces anidados): es un <span role="link"> que abre
@@ -21,25 +21,14 @@ class TelefonoColumna
 
     public static function html(?string $numero): HtmlString|string
     {
-        $datos = Telefono::analizar($numero);
+        $texto = Telefono::formatear($numero);
+        $url = Telefono::urlWhatsapp($numero);
 
-        if ($datos === null) {
-            return e((string) $numero);
+        if ($texto === null || $url === null) {
+            return e((string) ($texto ?? $numero));
         }
 
-        $bandera = '';
-
-        if ($datos['region'] !== null) {
-            $iso = strtolower($datos['region']);
-            $bandera = sprintf(
-                '<img src="https://flagcdn.com/w20/%1$s.png" srcset="https://flagcdn.com/w40/%1$s.png 2x" width="20" alt="%2$s" title="%2$s (+%3$d)" loading="lazy" style="height:auto;border-radius:2px;box-shadow:0 0 0 1px rgb(0 0 0 / .1);">',
-                e($iso),
-                e($datos['region']),
-                $datos['codigo'],
-            );
-        }
-
-        $url = e(Telefono::urlWhatsapp($numero));
+        $url = e($url);
 
         $whatsapp = sprintf(
             '<span role="link" tabindex="0" title="Abrir chat de WhatsApp" aria-label="Abrir chat de WhatsApp"'
@@ -52,9 +41,8 @@ class TelefonoColumna
         );
 
         return new HtmlString(sprintf(
-            '<span style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap;">%s<span>%s</span>%s</span>',
-            $bandera,
-            e($datos['nacional']),
+            '<span style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap;"><span>%s</span>%s</span>',
+            e($texto),
             $whatsapp,
         ));
     }
