@@ -5,12 +5,11 @@ namespace App\Filament\Admin\Resources\Casos\RelationManagers;
 use App\Enums\EstadoCuota;
 use App\Filament\Admin\Support\CamposPago;
 use App\Filament\Admin\Support\PlanPagoRecalculo;
+use App\Models\Caso;
 use App\Models\Pago;
 use App\Models\PlanPago;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
-use Filament\Actions\CreateAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -50,7 +49,22 @@ class PlanesPagoRelationManager extends RelationManager
             ])
             ->defaultSort('numero')
             ->headerActions([
-                CreateAction::make(),
+                Action::make('imprimirPlanPago')
+                    ->label('Imprimir plan de pago')
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->action(function (): mixed {
+                        /** @var Caso $caso */
+                        $caso = $this->getOwnerRecord()->load('cliente');
+
+                        return response()->streamDownload(
+                            fn () => print (Pdf::loadView('pdf.plan-pago-caso', [
+                                'caso' => $caso,
+                                'planes' => $caso->planesPago()->orderBy('numero')->get(),
+                            ])->output()),
+                            "plan-pago-caso-{$caso->id}.pdf"
+                        );
+                    }),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
@@ -104,8 +118,27 @@ class PlanesPagoRelationManager extends RelationManager
 
                         Notification::make()->title('Pago registrado')->success()->send();
                     }),
-                EditAction::make()->visible(fn () => auth()->user()?->puede('editar')),
-                DeleteAction::make()->visible(fn () => auth()->user()?->puede('eliminar')),
+                Action::make('imprimirRecibo')
+                    ->label('Imprimir recibo')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->visible(fn (PlanPago $record) => $record->estado === EstadoCuota::Pagado)
+                    ->action(function (PlanPago $record) {
+                        $pago = Pago::where('caso_id', $record->caso_id)
+                            ->where('nro_cuota', $record->numero)
+                            ->latest('id')
+                            ->first();
+
+                        if (! $pago) {
+                            Notification::make()->title('No se encontró el pago de esta cuota')->danger()->send();
+
+                            return null;
+                        }
+
+                        return response()->streamDownload(
+                            fn () => print (Pdf::loadView('pdf.recibo-pago', ['pago' => $pago->load(['cliente', 'caso'])])->output()),
+                            "recibo-{$pago->nro_recibo}.pdf"
+                        );
+                    }),
             ]);
     }
 }

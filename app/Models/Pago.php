@@ -33,6 +33,30 @@ class Pago extends Model
         ];
     }
 
+    /**
+     * Personal detrás de registrado_por (que guarda el username de la
+     * cuenta, no el nombre) — para mostrar nombre y carnet reales en el
+     * recibo en vez de las credenciales de acceso.
+     */
+    public function registradoPorPersonal(): ?Personal
+    {
+        if (blank($this->registrado_por)) {
+            return null;
+        }
+
+        return User::where('username', $this->registrado_por)->first()?->personal;
+    }
+
+    public function getRegistradoPorNombreAttribute(): ?string
+    {
+        return $this->registradoPorPersonal()?->nombre_completo ?? $this->registrado_por;
+    }
+
+    public function getRegistradoPorCiAttribute(): ?string
+    {
+        return $this->registradoPorPersonal()?->ci;
+    }
+
     public function montoEnLetras(): string
     {
         $entero = (int) floor((float) $this->monto);

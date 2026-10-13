@@ -5,6 +5,14 @@
     $forma = $pago->forma_pago;
     $numero = str_pad($pago->nro_recibo, 6, '0', STR_PAD_LEFT);
     $azul = '#1a2537';
+
+    $formaPagoTexto = match ($forma) {
+        'efectivo' => 'Efectivo',
+        'qr' => 'QR',
+        'cheque' => 'Cheque N° '.($pago->nro_cheque ?: '-').($pago->banco ? ' — Banco '.$pago->banco : ''),
+        'banco' => 'Transferencia bancaria'.($pago->banco ? ' — Banco '.$pago->banco : ''),
+        default => ucfirst((string) $forma),
+    };
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -68,6 +76,9 @@
                     </div>
                 </td>
                 <td style="width: 37%;">
+                    <div style="text-align: right; margin-bottom: 8px;">
+                        <span class="numero-badge">N° {{ $numero }}</span>
+                    </div>
                     <table class="fechas" style="margin-bottom: 10px;">
                         <tr>
                             <th style="width: 40%;">CIUDAD</th>
@@ -84,10 +95,7 @@
                     </table>
 
                     <table>
-                        <tr><td class="etiqueta-monto" style="width: 55%; padding-bottom: 5px;">Iguala Profesional:</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $tipo === 'iguala' ? $monto : '' }}</div></td></tr>
-                        <tr><td class="etiqueta-monto" style="padding-bottom: 5px;">Anticipo Cliente:</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $tipo === 'anticipo' ? $monto : '' }}</div></td></tr>
-                        <tr><td class="etiqueta-monto" style="padding-bottom: 5px;">Pago delegado (HIH):</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $tipo === 'delegado' ? $monto : '' }}</div></td></tr>
-                        <tr><td class="etiqueta-monto" style="padding-bottom: 5px;">A Cuenta:</td><td style="padding-bottom: 5px;"><div class="caja-monto" style="font-weight: bold;">{{ $tipo === 'a_cuenta' ? $monto : '' }}</div></td></tr>
+                        <tr><td class="etiqueta-monto" style="width: 55%; padding-bottom: 5px;">Anticipo Cliente:</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $tipo === 'anticipo' ? $monto : '' }}</div></td></tr>
                         <tr><td class="etiqueta-monto" style="padding-bottom: 5px;">Saldo a Pagar Cliente:</td><td style="padding-bottom: 5px;"><div class="caja-monto">{{ $pago->caso ? $bs($pago->caso->saldo) : '' }}</div></td></tr>
                         <tr><td class="etiqueta-monto">ID Cliente:</td><td><div class="caja-monto">{{ $pago->cliente_id }}</div></td></tr>
                     </table>
@@ -99,9 +107,6 @@
             <tr>
                 <td>
                     <div class="titulo">COMPROBANTE DE INGRESO</div>
-                </td>
-                <td style="text-align: right;">
-                    <span class="numero-badge">N° {{ $numero }}</span>
                 </td>
             </tr>
         </table>
@@ -125,21 +130,7 @@
             <tr>
                 <td style="width: 58%; padding-right: 16px;">
                     <div class="pago-titulo">FORMA DE PAGO</div>
-                    <table>
-                        <tr>
-                            <td class="pago-campo" style="width: 90px;">En efectivo:</td>
-                            <td><div class="pago-caja">{{ $forma === 'efectivo' ? $monto : '' }}</div></td>
-                            <td class="pago-campo" style="width: 40px; padding-left: 12px;">QR:</td>
-                            <td><div class="pago-caja">{{ $forma === 'qr' ? $monto : '' }}</div></td>
-                        </tr>
-                        <tr><td style="height: 8px;"></td><td></td><td></td><td></td></tr>
-                        <tr>
-                            <td class="pago-campo">Cheque N:</td>
-                            <td><div class="pago-caja">{{ $pago->nro_cheque }}</div></td>
-                            <td class="pago-campo" style="padding-left: 12px;">Banco:</td>
-                            <td><div class="pago-caja">{{ $pago->banco }}</div></td>
-                        </tr>
-                    </table>
+                    <div class="pago-caja" style="height: auto; display: inline-block; min-width: 260px;">{{ $formaPagoTexto }}</div>
                 </td>
                 <td style="width: 42%;">
                     <table>
@@ -163,12 +154,12 @@
                                 <table style="margin-top: 26px;">
                                     <tr>
                                         <td class="firma-etiqueta">Nombre:</td>
-                                        <td class="firma-linea">{{ $pago->registrado_por ?? '' }}</td>
+                                        <td class="firma-linea">{{ $pago->registrado_por_nombre ?? '' }}</td>
                                     </tr>
                                     <tr><td style="height: 12px;"></td><td></td></tr>
                                     <tr>
                                         <td class="firma-etiqueta">C.I.:</td>
-                                        <td class="firma-linea"></td>
+                                        <td class="firma-linea">{{ $pago->registrado_por_ci ?? '' }}</td>
                                     </tr>
                                 </table>
                             </td>
