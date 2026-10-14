@@ -76,8 +76,12 @@ class CamposTelefono
         if ($unicoEn !== null) {
             // No repetir el número de OTRO registro de la misma entidad
             // (compara con su teléfono y su WhatsApp, normalizado por
-            // dígitos; ver App\Rules\ContactoUnico).
-            $numero->rules([ReglasContacto::telefono($unicoEn, $campoCodigo, $entidadUnica, $alcanceUnico, $mensajeUnico)]);
+            // dígitos; ver App\Rules\ContactoUnico). Se valida apenas se
+            // completa el campo (al perder el foco), no recién al guardar.
+            $numero
+                ->rules([ReglasContacto::telefono($unicoEn, $campoCodigo, $entidadUnica, $alcanceUnico, $mensajeUnico)])
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn (TextInput $component) => $component->getLivewire()->validateOnly($component->getStatePath()));
         }
 
         return FusedGroup::make([

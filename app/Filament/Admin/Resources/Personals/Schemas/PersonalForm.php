@@ -76,7 +76,15 @@ class PersonalForm
                             // OTRO personal (ver App\Rules\ContactoUnico).
                             CamposTelefono::make('telefono', requerido: true, unicoEn: Personal::class, entidadUnica: 'otro personal'),
                             CamposTelefono::make('whatsapp', unicoEn: Personal::class, entidadUnica: 'otro personal'),
-                            TextInput::make('correo')->email()->required()->rules([ReglasContacto::correo(Personal::class, 'otro personal')])->extraInputAttributes(['data-enter-nav' => 'true']),
+                            TextInput::make('correo')
+                                ->email()
+                                ->required()
+                                ->rules([ReglasContacto::correo(Personal::class, 'otro personal')])
+                                // Valida apenas se completa el campo (al perder el foco), no
+                                // recién al guardar.
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (TextInput $component) => $component->getLivewire()->validateOnly($component->getStatePath()))
+                                ->extraInputAttributes(['data-enter-nav' => 'true']),
                             TextInput::make('ciudad_residencia')->label('Ciudad de residencia')->extraInputAttributes(['data-enter-nav' => 'true']),
                             TextInput::make('direccion')->extraInputAttributes(['data-enter-nav' => 'true']),
                         ]),
