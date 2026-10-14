@@ -11,7 +11,6 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -25,10 +24,6 @@ class PersonalsTable
                 TextColumn::make('id')
                     ->label('ID Personal')
                     ->sortable(),
-                ImageColumn::make('foto')
-                    ->label('')
-                    ->circular()
-                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->nombres.' '.$record->ap_paterno)),
                 TextColumn::make('nombre_completo')
                     ->label('Nombre')
                     ->searchable(['nombres', 'ap_paterno', 'ap_materno'])
