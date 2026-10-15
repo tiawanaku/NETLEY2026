@@ -58,9 +58,9 @@ class ConsultaForm
                     Section::make('Consulta')
                         ->schema([
                             ...RespuestaFields::camposMateria(etiquetaDelito: 'Tipo de proceso'),
-                            Textarea::make('nota_interna')->label('Nota interna')->rows(2)->columnSpanFull()->extraInputAttributes(['data-enter-nav' => 'true']),
+                            Textarea::make('nota_interna')->label('Nota interna')->rows(2)->extraInputAttributes(['data-enter-nav' => 'true']),
                         ])
-                        ->columns(2)
+                        ->columns(1)
                         ->visibleOn('create'),
 
                     Section::make('La consulta')
