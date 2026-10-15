@@ -51,6 +51,18 @@ class ConsultaForm
                     ]),
 
                 Group::make([
+                    // Al crear la consulta, en esta columna solo se pide la
+                    // materia legal, el tipo de proceso y la nota interna —
+                    // el resto (texto de la consulta, respuesta, seguimiento)
+                    // se completa después, desde la ficha ya creada.
+                    Section::make('Consulta')
+                        ->schema([
+                            ...RespuestaFields::camposMateria(etiquetaDelito: 'Tipo de proceso'),
+                            Textarea::make('nota_interna')->label('Nota interna')->rows(2)->columnSpanFull()->extraInputAttributes(['data-enter-nav' => 'true']),
+                        ])
+                        ->columns(2)
+                        ->visibleOn('create'),
+
                     Section::make('La consulta')
                         ->schema([
                             Textarea::make('consulta')->required()->rows(4)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
@@ -59,16 +71,18 @@ class ConsultaForm
                             // se ven (y se editan con "Editar"). No en Crear.
                             CamposDenuncia::denunciado()->disabled($isEditing)->visibleOn('edit'),
                             CamposDenuncia::denuncias(conRelacion: true)->disabled($isEditing)->visibleOn('edit'),
-                        ]),
+                        ])
+                        ->hiddenOn('create'),
 
                     // El switch solo tiene sentido al crear (decidir si se
-                    // responde de una vez); al editar una consulta que ya
-                    // tiene respuesta, el cuadro se muestra directo, sin
-                    // switch, con lo que ya se guardó.
+                    // responde de una vez); ya no se ofrece en Crear (ver
+                    // Section "Consulta" arriba), así que queda oculto
+                    // siempre — solo sirve como contenedor del dato al editar
+                    // una consulta que ya tiene respuesta guardada.
                     Toggle::make('tiene_respuesta')
                         ->label('Respuesta')
                         ->live()
-                        ->visible(fn (string $operation) => $operation === 'create')
+                        ->hidden()
                         ->columnSpanFull(),
 
                     Section::make('Respuesta')
@@ -78,6 +92,7 @@ class ConsultaForm
                         ->columns(2),
 
                     Section::make('Seguimiento')
+                        ->hiddenOn('create')
                         ->schema([
                             // Solo se pide la fecha; la hora se registra sola por dentro (ver
                             // CreateConsulta), no se le pregunta al usuario.

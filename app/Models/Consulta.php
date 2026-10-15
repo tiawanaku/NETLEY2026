@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Especialidad;
 use App\Enums\EstadoConsulta;
 use App\Support\Origenes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,10 @@ class Consulta extends Model
         'whatsapp',
         'correo',
         'consulta',
+        'designacion',
+        'materia_texto',
+        'delito_id',
+        'delito_texto',
         'nota_interna',
         'denunciado',
         'fecha_consulta',
@@ -56,6 +61,7 @@ class Consulta extends Model
     {
         return [
             'estado' => EstadoConsulta::class,
+            'designacion' => Especialidad::class,
             'fecha_consulta' => 'datetime',
             'fecha_contacto' => 'date',
             'ubicacion' => 'array',
@@ -67,9 +73,23 @@ class Consulta extends Model
         return trim("{$this->nombres} {$this->ap_paterno} {$this->ap_materno}");
     }
 
+    /**
+     * Materia legal para mostrar: la del catálogo o, si se eligió "Otro", la
+     * escrita a mano.
+     */
+    public function getMateriaLegalAttribute(): string
+    {
+        return $this->designacion?->getLabel() ?? $this->materia_texto ?? '—';
+    }
+
     public function caso(): BelongsTo
     {
         return $this->belongsTo(Caso::class);
+    }
+
+    public function delito(): BelongsTo
+    {
+        return $this->belongsTo(Delito::class);
     }
 
     public function respuestas(): HasMany

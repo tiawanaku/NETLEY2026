@@ -27,6 +27,25 @@ class RespuestaFields
     public static function schema(): array
     {
         return [
+            ...self::camposMateria(),
+            Textarea::make('respuesta')
+                ->required()
+                ->rows(3)
+                ->columnSpanFull()
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+        ];
+    }
+
+    /**
+     * Materia legal + delito, sin el texto de la respuesta: también se usan
+     * para clasificar la consulta misma al crearla (ver ConsultaForm), no
+     * solo al responderla.
+     *
+     * @return array<int, Component>
+     */
+    public static function camposMateria(string $etiquetaDelito = 'Delito / Materia específica'): array
+    {
+        return [
             Select::make('designacion')
                 ->label('Materia legal')
                 ->options(fn () => collect(Especialidad::cases())
@@ -44,7 +63,7 @@ class RespuestaFields
                 ->visible(fn (Get $get) => $get('designacion') === self::OTRO)
                 ->extraInputAttributes(['data-enter-nav' => 'true']),
             Select::make('delito_id')
-                ->label('Delito / Materia específica')
+                ->label($etiquetaDelito)
                 ->options(function (Get $get) {
                     $area = $get('designacion');
 
@@ -69,11 +88,6 @@ class RespuestaFields
                 ->maxLength(255)
                 ->required()
                 ->visible(fn (Get $get) => $get('delito_id') === self::OTRO)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
-            Textarea::make('respuesta')
-                ->required()
-                ->rows(3)
-                ->columnSpanFull()
                 ->extraInputAttributes(['data-enter-nav' => 'true']),
         ];
     }
