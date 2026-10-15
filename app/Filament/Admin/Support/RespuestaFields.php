@@ -4,7 +4,6 @@ namespace App\Filament\Admin\Support;
 
 use App\Enums\Especialidad;
 use App\Models\Delito;
-use App\Models\Respuesta;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -13,9 +12,8 @@ use Filament\Schemas\Components\Utilities\Get;
 
 /**
  * Campos de "Materia legal / Delito / Respuesta" compartidos entre
- * ResponderConsultaAction (botón rápido "Responder") y el switch "Respuesta"
- * del formulario de Crear Consulta (para responderla de una vez, sin pasar
- * por ese botón aparte).
+ * ResponderConsultaAction (botón "Responder") y ConsultaForm (que usa
+ * camposMateria() para clasificar la consulta misma, no una respuesta).
  */
 class RespuestaFields
 {
@@ -111,30 +109,6 @@ class RespuestaFields
             'materia_texto' => $esOtraMateria ? ($data['materia_texto'] ?? null) : null,
             'delito_id' => $esOtroDelito ? null : ($data['delito_id'] ?? null),
             'delito_texto' => $esOtroDelito ? ($data['delito_texto'] ?? null) : null,
-        ];
-    }
-
-    /**
-     * Inverso de datosParaGuardar(): a partir de una respuesta ya guardada,
-     * arma los datos para precargar estos mismos campos en el formulario
-     * (ej. al editar una consulta que ya tiene respuesta). Null si todavía
-     * no tiene ninguna.
-     *
-     * @return array<string, mixed>
-     */
-    public static function datosParaMostrar(?Respuesta $respuesta): array
-    {
-        if (! $respuesta) {
-            return ['tiene_respuesta' => false];
-        }
-
-        return [
-            'tiene_respuesta' => true,
-            'designacion' => $respuesta->designacion?->value ?? ($respuesta->materia_texto ? self::OTRO : null),
-            'materia_texto' => $respuesta->materia_texto,
-            'delito_id' => $respuesta->delito_id ?? ($respuesta->delito_texto ? self::OTRO : null),
-            'delito_texto' => $respuesta->delito_texto,
-            'respuesta' => $respuesta->respuesta,
         ];
     }
 }

@@ -10,7 +10,6 @@ use App\Filament\Admin\Resources\Consultas\Actions\CerrarConsultaAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReactivarConsultaAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ResponderConsultaAction;
 use App\Filament\Admin\Resources\Consultas\ConsultaResource;
-use App\Filament\Admin\Support\RespuestaFields;
 use App\Models\Consulta;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
@@ -53,21 +52,6 @@ class EditConsulta extends EditRecord
         $breadcrumbs[] = $this->getRecordTitle();
 
         return $breadcrumbs;
-    }
-
-    /**
-     * Precarga el cuadro "Respuesta" con la última respuesta ya guardada
-     * (si existe), para que se muestre directo sin pasar por el switch
-     * (que solo aparece al crear).
-     */
-    protected function mutateFormDataBeforeFill(array $data): array
-    {
-        $ultimaRespuesta = $this->getRecord()->respuestas()->latest('fecha_respuesta')->first();
-
-        return [
-            ...$data,
-            ...RespuestaFields::datosParaMostrar($ultimaRespuesta),
-        ];
     }
 
     public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void

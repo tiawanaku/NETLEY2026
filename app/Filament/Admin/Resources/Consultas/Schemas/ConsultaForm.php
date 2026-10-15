@@ -15,7 +15,6 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -51,48 +50,30 @@ class ConsultaForm
                     ]),
 
                 Group::make([
-                    // Al crear la consulta, en esta columna solo se pide la
-                    // materia legal, el tipo de proceso y la nota interna —
-                    // el resto (texto de la consulta, respuesta, seguimiento)
-                    // se completa después, desde la ficha ya creada.
+                    // Tanto al crear como al editar, en esta columna solo se
+                    // pide la materia legal, el tipo de proceso y la nota
+                    // interna. El texto de la consulta, la respuesta (se
+                    // sigue registrando con el botón "Responder" aparte) y el
+                    // seguimiento (estado/origen) ya no se muestran acá.
                     Section::make('Consulta')
                         ->schema([
                             ...RespuestaFields::camposMateria(etiquetaDelito: 'Tipo de proceso'),
-                            Textarea::make('nota_interna')->label('Nota interna')->rows(2)->extraInputAttributes(['data-enter-nav' => 'true']),
+                            Textarea::make('nota_interna')->label('Nota interna')->rows(2)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                         ])
-                        ->columns(1)
-                        ->visibleOn('create'),
+                        ->columns(1),
 
                     Section::make('La consulta')
                         ->schema([
                             Textarea::make('consulta')->required()->rows(4)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
-                            Textarea::make('nota_interna')->label('Nota interna')->rows(2)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
-                            // Se cargan con la acción "Agendar"; en la ficha
-                            // se ven (y se editan con "Editar"). No en Crear.
-                            CamposDenuncia::denunciado()->disabled($isEditing)->visibleOn('edit'),
-                            CamposDenuncia::denuncias(conRelacion: true)->disabled($isEditing)->visibleOn('edit'),
+                            // Se cargan con la acción "Agendar"; se sincronizan
+                            // ahí, no se editan acá.
+                            CamposDenuncia::denunciado()->disabled($isEditing),
+                            CamposDenuncia::denuncias(conRelacion: true)->disabled($isEditing),
                         ])
-                        ->hiddenOn('create'),
-
-                    // El switch solo tiene sentido al crear (decidir si se
-                    // responde de una vez); ya no se ofrece en Crear (ver
-                    // Section "Consulta" arriba), así que queda oculto
-                    // siempre — solo sirve como contenedor del dato al editar
-                    // una consulta que ya tiene respuesta guardada.
-                    Toggle::make('tiene_respuesta')
-                        ->label('Respuesta')
-                        ->live()
-                        ->hidden()
-                        ->columnSpanFull(),
-
-                    Section::make('Respuesta')
-                        ->schema(RespuestaFields::schema())
-                        ->visible(fn (Get $get) => (bool) $get('tiene_respuesta'))
-                        ->disabled($isEditing)
-                        ->columns(2),
+                        ->hidden(),
 
                     Section::make('Seguimiento')
-                        ->hiddenOn('create')
+                        ->hidden()
                         ->schema([
                             // Solo se pide la fecha; la hora se registra sola por dentro (ver
                             // CreateConsulta), no se le pregunta al usuario.
