@@ -53,10 +53,15 @@ class CreateConsulta extends CreateRecord
         return $data;
     }
 
-    /** Después de guardar, volver al listado de Consultas en vez de abrir la edición. */
+    /**
+     * Después de guardar, abrir la ficha de la consulta recién creada con la
+     * ventana de "Agendar" ya abierta (ver EditConsulta::mount()) — la misma
+     * que aparece en la ficha de cualquier consulta, para agendar la cita de
+     * una vez sin tener que buscarla de nuevo.
+     */
     protected function getRedirectUrl(): string
     {
-        return $this->getResourceUrl('index');
+        return $this->getResourceUrl('edit', ['record' => $this->getRecord()]).'?agendar=1';
     }
 
     /** Botones únicamente al pie del formulario: Guardar y Cancelar. */

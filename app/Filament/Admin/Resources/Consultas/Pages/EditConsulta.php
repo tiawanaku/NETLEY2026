@@ -22,6 +22,25 @@ class EditConsulta extends EditRecord
 
     public bool $editando = false;
 
+    /**
+     * Al venir de "Crear Consulta" (ver CreateConsulta::getRedirectUrl()),
+     * abre de una vez la ventana de "Agendar" de esta misma ficha.
+     *
+     * mountAction() no sirve llamado directo acá: en la carga inicial de la
+     * página los header actions todavía no están cacheados, así que no
+     * encuentra la acción y no pasa nada. $this->js() en cambio deja la
+     * llamada para el navegador, que la ejecuta ya con Livewire/Alpine
+     * listos — el mismo camino que sigue un clic real en "Agendar".
+     */
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        if (request()->boolean('agendar')) {
+            $this->js('$wire.mountAction(\'agendarCita\')');
+        }
+    }
+
     public function getTitle(): string
     {
         return 'N° '.$this->getRecord()->getKey();
