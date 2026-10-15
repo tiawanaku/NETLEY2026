@@ -51,12 +51,28 @@ class ConsultaForm
 
                 Group::make([
                     // Tanto al crear como al editar, en esta columna solo se
-                    // pide la materia legal, el tipo de proceso y la nota
-                    // interna. El texto de la consulta, la respuesta (se
-                    // sigue registrando con el botón "Responder" aparte) y el
-                    // seguimiento (estado/origen) ya no se muestran acá.
+                    // pide el origen, la materia legal, el tipo de proceso y
+                    // la nota interna. El texto de la consulta, la respuesta
+                    // (se sigue registrando con el botón "Responder" aparte)
+                    // y el resto del seguimiento (estado) ya no se muestran
+                    // acá.
                     Section::make('Consulta')
                         ->schema([
+                            TextInput::make('origen')
+                                ->required()
+                                ->datalist(Origenes::SUGERENCIAS)
+                                ->regex('/^[^0-9]*$/')
+                                ->disabled($isEditing)
+                                // Si entra por WhatsApp, el estado pasa solo a "Agendado".
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function (?string $state, Set $set): void {
+                                    if (EstadoConsulta::esOrigenWhatsapp($state)) {
+                                        $set('estado', EstadoConsulta::Agendado->value);
+                                    }
+                                })
+                                ->extraInputAttributes(self::atributosSoloLetras()),
+                            // Con origen "Talleres" se pide qué taller.
+                            CamposOrigen::detalle($isEditing),
                             ...RespuestaFields::camposMateria(etiquetaDelito: 'Tipo de proceso'),
                             Textarea::make('nota_interna')->label('Nota interna')->rows(2)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                         ])
@@ -98,21 +114,6 @@ class ConsultaForm
                                 ->required()
                                 ->disabled($isEditing)
                                 ->extraInputAttributes(['data-enter-nav' => 'true']),
-                            TextInput::make('origen')
-                                ->required()
-                                ->datalist(Origenes::SUGERENCIAS)
-                                ->regex('/^[^0-9]*$/')
-                                ->disabled($isEditing)
-                                // Si entra por WhatsApp, el estado pasa solo a "Agendado".
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(function (?string $state, Set $set): void {
-                                    if (EstadoConsulta::esOrigenWhatsapp($state)) {
-                                        $set('estado', EstadoConsulta::Agendado->value);
-                                    }
-                                })
-                                ->extraInputAttributes(self::atributosSoloLetras()),
-                            // Con origen "Talleres" se pide qué taller.
-                            CamposOrigen::detalle($isEditing),
                         ]),
                 ]),
 
