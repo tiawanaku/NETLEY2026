@@ -3,13 +3,11 @@
 namespace App\Filament\Admin\Forms\Components;
 
 use App\Enums\Especialidad;
-use App\Filament\Admin\Support\CamposDenuncia;
 use App\Models\Delito;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 
 /**
  * Par de selects en cascada Área -> Delito, respaldados por el catálogo `delitos`.
@@ -99,71 +97,6 @@ class DelitoSelect
         ]));
     }
 
-    /**
-     * Campo único "Delitos" del paso "Proceso" (Crear cliente / Cliente
-     * Ejecutivo / Nuevo proceso): se elige directamente el delito del
-     * catálogo, agrupado por área, y la materia legal se toma del área de
-     * ese delito (ver especialidadDe()). Con "Otro (especificar)" se piden a
-     * mano la materia (o "Otros" + materia escrita) y el delito, igual que
-     * en make(conOtros: true).
-     *
-     * Guarda en los mismos campos que make(): especialidad, materia_texto,
-     * delito_id y delito_texto.
-     *
-     * @return array<int, Component>
-     */
-    public static function delitos(string $label = 'Delitos'): array
-    {
-        $esOtro = fn (Get $get): bool => $get('delito_id') === self::OTROS;
-        $esOtraMateria = fn (Get $get): bool => $esOtro($get) && $get('especialidad') === self::OTROS;
-
-        return [
-            Select::make('delito_id')
-                ->label($label)
-                ->options(fn (): array => CamposDenuncia::opciones() + ['Otros' => [self::OTROS => 'Otro (especificar)']])
-                ->searchable()
-                ->native(false)
-                ->live()
-                ->required()
-                // Delito del catálogo: la materia es su área (filtra los
-                // abogados por especialidad). "Otro": la materia se elige.
-                ->afterStateUpdated(fn (Set $set, $state) => $set('especialidad', self::areaDelDelito($state)))
-                ->helperText(function (Get $get): string {
-                    $area = self::areaDelDelito($get('delito_id'));
-
-                    return $area !== null
-                        ? 'Materia legal: '.(Especialidad::tryFrom($area)?->getLabel() ?? $area).'.'
-                        : 'La materia legal se toma del área del delito elegido.';
-                })
-                ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
-
-            Select::make('especialidad')
-                ->label('Materia legal')
-                ->options(fn () => collect(Especialidad::cases())
-                    ->mapWithKeys(fn ($e) => [$e->value => $e->getLabel()])
-                    ->put(self::OTROS, 'Otros'))
-                ->native(false)
-                ->live()
-                ->visible($esOtro)
-                ->required($esOtro)
-                ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
-
-            TextInput::make('materia_texto')
-                ->label('Materia legal (especificar)')
-                ->maxLength(120)
-                ->visible($esOtraMateria)
-                ->required($esOtraMateria)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
-
-            TextInput::make('delito_texto')
-                ->label('Delito (especificar)')
-                ->maxLength(255)
-                ->visible($esOtro)
-                ->required($esOtro)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
-        ];
-    }
-
     /** Área (valor de Especialidad, ej. "PENAL") del delito del catálogo, o null. */
     public static function areaDelDelito(mixed $delitoId): ?string
     {
@@ -175,9 +108,8 @@ class DelitoSelect
     }
 
     /**
-     * Especialidad para filtrar abogados con el campo delitos(): el área del
-     * delito elegido o, con "Otro", la materia elegida a mano ("Otros" =
-     * sin filtro).
+     * Especialidad para filtrar abogados: el área del delito elegido o, con
+     * "Otro", la materia elegida a mano ("Otros" = sin filtro).
      */
     public static function especialidadDe(Get $get): ?string
     {
@@ -187,8 +119,8 @@ class DelitoSelect
     }
 
     /**
-     * Normaliza los datos de delitos() (o de make(conOtros: true)) a las
-     * columnas del caso. Con un delito del catálogo la materia SIEMPRE es su
+     * Normaliza los datos de make() a las columnas del caso. Con un delito
+     * del catálogo la materia SIEMPRE es su
      * área (lo que llegue en "especialidad" se ignora); con "Otro" se usan la
      * materia y el delito escritos.
      *

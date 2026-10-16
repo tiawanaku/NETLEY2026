@@ -138,9 +138,9 @@ class ClienteCasoWizard
     public static function camposProceso(): array
     {
         return [
-            // "Delitos": se elige el delito y la materia legal sale de su
-            // área (antes eran dos selects, Materia legal -> Delito).
-            ...DelitoSelect::delitos(),
+            // Materia legal y delito, por separado: primero se elige la
+            // materia legal (área), que filtra las opciones de delito.
+            ...DelitoSelect::make(conOtros: true),
             Select::make('apersonamiento')
                 ->options(array_combine(self::APERSONAMIENTOS, self::APERSONAMIENTOS))
                 ->native(false)

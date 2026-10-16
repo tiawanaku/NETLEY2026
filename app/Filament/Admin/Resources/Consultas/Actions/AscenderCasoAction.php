@@ -79,8 +79,8 @@ class AscenderCasoAction
                     'especialidad' => $ultimaRespuesta?->designacion?->value
                         ?? ($ultimaRespuesta?->materia_texto ? DelitoSelect::OTROS : null),
                     'materia_texto' => $ultimaRespuesta?->designacion ? null : $ultimaRespuesta?->materia_texto,
-                    // "Delitos" (DelitoSelect::delitos()): sin delito del
-                    // catálogo pero con delito o materia escritos, "Otro".
+                    // Sin delito del catálogo pero con delito o materia
+                    // escritos, "Otro" (ver DelitoSelect::make()).
                     'delito_id' => $ultimaRespuesta?->delito_id
                         ?? ($ultimaRespuesta?->delito_texto || (! $ultimaRespuesta?->designacion && $ultimaRespuesta?->materia_texto)
                             ? DelitoSelect::OTROS
