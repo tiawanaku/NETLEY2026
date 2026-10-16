@@ -152,9 +152,6 @@ class ClienteCasoWizard
                 ->required(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
                 ->visible(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
                 ->extraInputAttributes(['data-enter-nav' => 'true']),
-            // Adicionales al delito principal; se guardan en crearCaso().
-            CamposDenuncia::denunciado(),
-            CamposDenuncia::denuncias(),
             Textarea::make('descripcion')->label('Descripción')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
             Select::make('personal')
                 ->label('Abogado(s) asignado(s)')

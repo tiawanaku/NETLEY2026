@@ -5,7 +5,6 @@ namespace App\Filament\Admin\Resources\Consultas\Actions;
 use App\Enums\EstadoConsulta;
 use App\Enums\Rol;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
-use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\CamposDomicilio;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Consulta;
@@ -88,10 +87,6 @@ class AscenderCasoAction
                             : null),
                     'delito_texto' => $ultimaRespuesta?->delito_id ? null : $ultimaRespuesta?->delito_texto,
                     'personal' => $personalIds->unique()->values()->all(),
-                    // Denunciado y denuncias cargados al agendar: pasan al
-                    // caso (crearCaso() los guarda desde el paso "Proceso").
-                    'denunciado' => $record->denunciado,
-                    'denuncias' => CamposDenuncia::ids($record),
                 ];
             })
             ->schema([
