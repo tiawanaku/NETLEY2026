@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Resources\Consultas\Tables;
 
 use App\Enums\EstadoConsulta;
-use App\Filament\Admin\Resources\Consultas\Actions\AscenderCasoAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReactivarConsultaAction;
 use App\Filament\Admin\Support\FiltrosContacto;
 use App\Filament\Admin\Support\TelefonoColumna;
@@ -52,7 +51,6 @@ class ConsultasTable
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
                 EditAction::make()->label('Ver'),
-                AscenderCasoAction::make(),
                 ReactivarConsultaAction::make(),
             ])
             ->toolbarActions([
