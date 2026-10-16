@@ -65,7 +65,9 @@ class AgendarCitaAction
                     ->label('Agenda (próximos 14 días)')
                     ->content(fn (Get $get) => AgendaPreview::render($get('personal')))
                     ->columnSpanFull(),
-                DatePicker::make('fecha')->required()->default(now())->extraInputAttributes(['data-enter-nav' => 'true']),
+                // El id fijo lo usa agenda-preview.blade.php para escribir la
+                // fecha directo al hacer clic en un día del mini-calendario.
+                DatePicker::make('fecha')->required()->default(now())->extraInputAttributes(['data-enter-nav' => 'true', 'id' => 'agendar-cita-fecha']),
                 TimePicker::make('hora')->seconds(false)->required()->extraInputAttributes(['data-enter-nav' => 'true']),
                 Textarea::make('detalle')->label('Nota')->rows(3)->extraInputAttributes(['data-enter-nav' => 'true']),
                 // Se guardan en la consulta (no en la cita) y pasan al caso

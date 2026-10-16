@@ -126,7 +126,9 @@ class CasoActions
                     ->label('Agenda (próximos 14 días)')
                     ->content(fn (Get $get) => AgendaPreview::render($get('personal')))
                     ->columnSpanFull(),
-                DatePicker::make('fecha')->required()->default(now()),
+                // El id fijo lo usa agenda-preview.blade.php para escribir la
+                // fecha directo al hacer clic en un día del mini-calendario.
+                DatePicker::make('fecha')->required()->default(now())->extraInputAttributes(['id' => 'agendar-cita-fecha']),
                 TimePicker::make('hora')->required(),
                 Textarea::make('detalle')->rows(3),
                 // Se guardan en el caso (no en la cita).

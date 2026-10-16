@@ -87,6 +87,21 @@
             }
             return this.diasCortos[actual.getDay()] + ' ' + actual.getDate() + ' de ' + this.meses[actual.getMonth()] + ', ' + actual.getFullYear();
         },
+        elegirFecha(clave) {
+            const input = document.getElementById('agendar-cita-fecha');
+
+            if (!input) {
+                return;
+            }
+
+            input.value = clave;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        irAlDia(clave) {
+            this.anchor = clave;
+            this.vista = 'dia';
+        },
     }"
     style="display:flex;flex-direction:column;gap:8px;"
 >
@@ -116,7 +131,12 @@
                 <div style="background:#1a2537;color:#fff;padding:5px;text-align:center;font-size:11px;font-weight:600;" x-text="nombre"></div>
             </template>
             <template x-for="dia in diasDelMes()" :key="dia.clave">
-                <div :style="'background:' + (dia.esHoy ? '#eff6ff' : '#fff') + ';min-height:60px;padding:4px;' + (dia.enMes ? '' : 'opacity:.4;')">
+                <div
+                    x-on:click="elegirFecha(dia.clave)"
+                    x-on:dblclick="irAlDia(dia.clave)"
+                    :title="'Clic: usar como fecha. Doble clic: ver el día ' + dia.numero + '.'"
+                    :style="'background:' + (dia.esHoy ? '#eff6ff' : '#fff') + ';min-height:60px;padding:4px;cursor:pointer;' + (dia.enMes ? '' : 'opacity:.4;')"
+                >
                     <div :style="'font-size:11px;font-weight:' + (dia.esHoy ? '700' : '600') + ';color:' + (dia.esHoy ? '#2563eb' : '#374151') + ';margin-bottom:2px;'" x-text="dia.numero"></div>
                     <template x-for="item in dia.citas" :key="item.hora + item.nombres">
                         <div
@@ -133,7 +153,12 @@
     <div x-show="vista === 'semana'" style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;">
         <div style="display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:1px;background:#e5e7eb;min-width:770px;">
             <template x-for="dia in diasDeLaSemana()" :key="dia.clave">
-                <div :style="'background:' + (dia.esHoy ? '#eff6ff' : '#fff') + ';min-height:150px;padding:5px;'">
+                <div
+                    x-on:click="elegirFecha(dia.clave)"
+                    x-on:dblclick="irAlDia(dia.clave)"
+                    :title="'Clic: usar como fecha. Doble clic: ver este día.'"
+                    :style="'background:' + (dia.esHoy ? '#eff6ff' : '#fff') + ';min-height:150px;padding:5px;cursor:pointer;'"
+                >
                     <div :style="'font-size:11px;font-weight:' + (dia.esHoy ? '700' : '600') + ';color:' + (dia.esHoy ? '#2563eb' : '#374151') + ';margin-bottom:4px;text-transform:capitalize;'" x-text="dia.etiqueta"></div>
                     <template x-for="item in dia.citas" :key="item.hora + item.nombres">
                         <div style="font-size:10px;line-height:1.3;background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;padding:2px 4px;margin-bottom:2px;">
