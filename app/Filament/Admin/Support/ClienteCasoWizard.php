@@ -122,7 +122,7 @@ class ClienteCasoWizard
 
             Step::make('Pago y plan de cuotas')
                 ->schema(self::camposPago())
-                ->columns(2)
+                ->columns(1)
                 ->inlineLabel(),
         ];
     }
@@ -227,22 +227,6 @@ class ClienteCasoWizard
                 ->label('Iguala Netley')
                 ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['monto_cliente'], 2)),
 
-            TextInput::make('anticipo')
-                ->label('Anticipo')
-                ->numeric()
-                ->prefix('Bs.')
-                ->default(0)
-                ->minValue(0)
-                ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
-                ->live(onBlur: true)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
-
-            // Saldo = Iguala Netley menos el anticipo; es lo que se
-            // reparte en las cuotas de abajo.
-            Placeholder::make('saldo_netley_preview')
-                ->label('Saldo')
-                ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['saldo_cliente'], 2)),
-
             // Comisión por un pago extra ocasional (ej. referido): dos
             // campos sueltos, sin relación entre sí ni con el resto —
             // solo se guardan tal cual se cargan.
@@ -259,6 +243,22 @@ class ClienteCasoWizard
                 ->minValue(0)
                 ->prefix('Bs.')
                 ->extraInputAttributes(['data-enter-nav' => 'true']),
+
+            TextInput::make('anticipo')
+                ->label('Anticipo')
+                ->numeric()
+                ->prefix('Bs.')
+                ->default(0)
+                ->minValue(0)
+                ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
+                ->live(onBlur: true)
+                ->extraInputAttributes(['data-enter-nav' => 'true']),
+
+            // Saldo Netley = Iguala Netley menos el anticipo; es lo que
+            // se reparte en las cuotas de abajo (plan de pagos).
+            Placeholder::make('saldo_netley_preview')
+                ->label('Saldo Netley')
+                ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['saldo_cliente'], 2)),
 
             TextInput::make('numero_cuotas')
                 ->label('N° de cuotas mensuales')
