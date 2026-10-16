@@ -53,6 +53,13 @@ class AgendarCitaAction
                     ->multiple()
                     ->searchable()
                     ->live()
+                    // El select de "multiple" por defecto queda abierto tras
+                    // cada elección (para poder marcar varios seguidos); acá
+                    // se prefiere que se colapse apenas se elige uno. No hay
+                    // una opción nativa para eso, así que se simula un clic
+                    // fuera del select (en el <body>), que es justamente lo
+                    // que ya hace que se cierre solo.
+                    ->afterStateUpdated(fn ($livewire) => $livewire->js('document.body.click()'))
                     ->extraAttributes(['data-enter-nav-field' => 'true']),
                 Placeholder::make('agenda_personal')
                     ->label('Agenda (próximos 14 días)')
