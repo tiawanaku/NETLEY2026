@@ -9,7 +9,6 @@ use App\Filament\Admin\Support\FiltrosContacto;
 use App\Filament\Admin\Support\TelefonoColumna;
 use App\Models\Consulta;
 use App\Support\Origenes;
-use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -53,10 +52,8 @@ class ConsultasTable
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
                 EditAction::make()->label('Ver'),
-                ActionGroup::make([
-                    AscenderCasoAction::make(),
-                    ReactivarConsultaAction::make(),
-                ]),
+                AscenderCasoAction::make(),
+                ReactivarConsultaAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
