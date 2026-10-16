@@ -268,6 +268,9 @@ class ClienteCasoWizard
                 ->numeric()
                 ->integer()
                 ->minValue(1)
+                // No puede haber más cuotas que meses dure el proceso (paso "Proceso").
+                ->maxValue(fn (Get $get) => filled($get('duracion_meses')) ? (int) $get('duracion_meses') : null)
+                ->validationMessages(['max' => 'No puede exceder la duración del proceso (:max mes(es)).'])
                 ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->live(onBlur: true)
