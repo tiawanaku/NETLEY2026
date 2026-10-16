@@ -72,6 +72,10 @@ class ClienteCasoWizard
                     TextInput::make('correo')
                         ->email()
                         ->rules([ReglasContacto::correo(Cliente::class, 'otro cliente', ReglasContacto::excluirMismaCi())])
+                        // Valida apenas se completa el campo (al perder el foco), no
+                        // recién al guardar.
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn (TextInput $component) => $component->getLivewire()->validateOnly($component->getStatePath()))
                         ->extraInputAttributes(['data-enter-nav' => 'true']),
                     TextInput::make('ci')
                         ->label('Carnet de identidad')
