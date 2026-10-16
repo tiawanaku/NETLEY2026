@@ -35,7 +35,7 @@ class ClienteCasoWizard
     public const EXTENSION_OTRO = 'OTRO';
 
     /** Opciones de "Apersonamiento"; "Otros" habilita "apersonamiento_otro". */
-    public const APERSONAMIENTOS = ['Demandado', 'Demandante', 'Testigo', self::APERSONAMIENTO_OTROS];
+    public const APERSONAMIENTOS = ['Demandado', 'Demandante', 'Denunciante', 'Denunciado', 'Testigo', self::APERSONAMIENTO_OTROS];
 
     public const APERSONAMIENTO_OTROS = 'Otros';
 
