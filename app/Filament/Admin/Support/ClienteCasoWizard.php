@@ -140,7 +140,7 @@ class ClienteCasoWizard
         return [
             // Materia legal y delito, por separado: primero se elige la
             // materia legal (área), que filtra las opciones de delito.
-            ...DelitoSelect::make(conOtros: true),
+            ...DelitoSelect::make(delitoLabel: 'Tipo de proceso', conOtros: true),
             Select::make('apersonamiento')
                 ->options(array_combine(self::APERSONAMIENTOS, self::APERSONAMIENTOS))
                 ->native(false)
