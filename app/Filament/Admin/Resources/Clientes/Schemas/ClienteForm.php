@@ -29,7 +29,17 @@ class ClienteForm
                         TextInput::make('nombres')->required()->maxLength(60)->disabled($isEditing),
                         TextInput::make('ap_paterno')->label('Apellido paterno')->required()->maxLength(30)->disabled($isEditing),
                         TextInput::make('ap_materno')->label('Apellido materno')->maxLength(30)->disabled($isEditing),
-                        TextInput::make('ci')->label('Carnet de identidad')->required()->unique(ignoreRecord: true)->disabled($isEditing),
+                        TextInput::make('ci')->label('Carnet de identidad')->required()->disabled($isEditing)
+                            // scopedUnique() (no unique()): así el mensaje
+                            // personalizado también se muestra al validar en
+                            // tiempo real (->unique() solo lo toma en cuenta
+                            // al guardar el formulario completo).
+                            ->scopedUnique(model: Cliente::class, ignoreRecord: true)
+                            ->validationMessages(['unique' => 'Ya existe un cliente registrado con este carnet de identidad. Revisa el dato.'])
+                            // Valida apenas se completa el campo (al perder el foco), no
+                            // recién al guardar.
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (TextInput $component) => $component->getLivewire()->validateOnly($component->getStatePath())),
                         TextInput::make('extension')->label('Extensión CI')->maxLength(20)->disabled($isEditing),
                         Select::make('sucursal')
                             ->options(['LA PAZ' => 'La Paz', 'SANTA CRUZ' => 'Santa Cruz', 'COCHABAMBA' => 'Cochabamba'])
@@ -43,7 +53,11 @@ class ClienteForm
                         // No repetir con OTRO cliente (ver App\Rules\ContactoUnico).
                         CamposTelefono::make('telefono', deshabilitado: $isEditing, unicoEn: Cliente::class, entidadUnica: 'otro cliente'),
                         CamposTelefono::make('whatsapp', deshabilitado: $isEditing, unicoEn: Cliente::class, entidadUnica: 'otro cliente'),
-                        TextInput::make('correo')->email()->disabled($isEditing)->rules([ReglasContacto::correo(Cliente::class, 'otro cliente')]),
+                        TextInput::make('correo')->email()->disabled($isEditing)->rules([ReglasContacto::correo(Cliente::class, 'otro cliente')])
+                            // Valida apenas se completa el campo (al perder el foco), no
+                            // recién al guardar.
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (TextInput $component) => $component->getLivewire()->validateOnly($component->getStatePath())),
                         ...CamposDomicilio::region($isEditing),
                         TextInput::make('direccion')->label('Dirección')->disabled($isEditing),
                     ]),

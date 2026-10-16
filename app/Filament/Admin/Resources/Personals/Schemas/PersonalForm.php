@@ -34,7 +34,18 @@ class PersonalForm
                             TextInput::make('nombres')->required()->maxLength(60)->regex('/^[^0-9]*$/')->extraInputAttributes(self::atributosSoloLetras()),
                             TextInput::make('ap_paterno')->label('Apellido paterno')->required()->maxLength(40)->regex('/^[^0-9]*$/')->extraInputAttributes(self::atributosSoloLetras()),
                             TextInput::make('ap_materno')->label('Apellido materno')->maxLength(40)->regex('/^[^0-9]*$/')->extraInputAttributes(self::atributosSoloLetras()),
-                            TextInput::make('ci')->label('Carnet de identidad')->required()->unique(ignoreRecord: true)->regex('/^[0-9]*$/')->extraInputAttributes(self::atributosSoloNumeros())->validationMessages(['unique' => 'Ya existe una persona registrada con este carnet de identidad. Revisa el dato.']),
+                            TextInput::make('ci')->label('Carnet de identidad')->required()->regex('/^[0-9]*$/')
+                                // scopedUnique() (no unique()): así el mensaje
+                                // personalizado también se muestra al validar en
+                                // tiempo real (->unique() solo lo toma en cuenta
+                                // al guardar el formulario completo).
+                                ->scopedUnique(model: Personal::class, ignoreRecord: true)
+                                ->validationMessages(['unique' => 'Ya existe una persona registrada con este carnet de identidad. Revisa el dato.'])
+                                // Valida apenas se completa el campo (al perder el foco), no
+                                // recién al guardar.
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (TextInput $component) => $component->getLivewire()->validateOnly($component->getStatePath()))
+                                ->extraInputAttributes(self::atributosSoloNumeros()),
                             ...CampoConOtro::simple(
                                 Select::make('ci_expedido')
                                     ->label('Expedido en')

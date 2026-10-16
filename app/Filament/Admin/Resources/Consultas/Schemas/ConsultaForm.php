@@ -45,7 +45,12 @@ class ConsultaForm
                         // No repetir con OTRA consulta (ver App\Rules\ContactoUnico).
                         CamposTelefono::make('telefono', deshabilitado: $isEditing, unicoEn: Consulta::class, entidadUnica: 'otra consulta'),
                         CamposTelefono::make('whatsapp', deshabilitado: $isEditing, unicoEn: Consulta::class, entidadUnica: 'otra consulta'),
-                        TextInput::make('correo')->email()->disabled($isEditing)->rules([ReglasContacto::correo(Consulta::class, 'otra consulta')])->extraInputAttributes(['data-enter-nav' => 'true']),
+                        TextInput::make('correo')->email()->disabled($isEditing)->rules([ReglasContacto::correo(Consulta::class, 'otra consulta')])
+                            // Valida apenas se completa el campo (al perder el foco), no
+                            // recién al guardar.
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (TextInput $component) => $component->getLivewire()->validateOnly($component->getStatePath()))
+                            ->extraInputAttributes(['data-enter-nav' => 'true']),
                         ...CamposDomicilio::region($isEditing),
                     ]),
 
