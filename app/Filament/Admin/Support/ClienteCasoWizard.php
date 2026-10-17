@@ -199,7 +199,7 @@ class ClienteCasoWizard
             TextInput::make('iguala')
                 ->label('Iguala profesional')
                 ->numeric()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
 
             Toggle::make('patrocinio_hih')
                 ->label('Patrocinio Hand in Hand (HIH)')
@@ -216,7 +216,7 @@ class ClienteCasoWizard
                 ->required(fn (Get $get) => (bool) $get('patrocinio_hih'))
                 ->visible(fn (Get $get) => (bool) $get('patrocinio_hih'))
                 ->live(onBlur: true)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
 
             // Iguala Netley = iguala profesional menos el descuento que
             // cubre HIH: es el monto real que el cliente le debe a
@@ -236,13 +236,13 @@ class ClienteCasoWizard
                 ->minValue(0)
                 ->maxValue(100)
                 ->suffix('%')
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
             TextInput::make('comision_monto')
                 ->label('Comisión (Bs.)')
                 ->numeric()
                 ->minValue(0)
                 ->prefix('Bs.')
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
 
             TextInput::make('anticipo')
                 ->label('Anticipo')
@@ -252,7 +252,7 @@ class ClienteCasoWizard
                 ->minValue(0)
                 ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
                 ->live(onBlur: true)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
 
             // Saldo Netley = Iguala Netley menos el anticipo; es lo que
             // se reparte en las cuotas de abajo (plan de pagos).
@@ -274,20 +274,24 @@ class ClienteCasoWizard
                 ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->live(onBlur: true)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
             DatePicker::make('fecha_primera_cuota')
                 ->label('Fecha de la primera cuota')
                 ->default(now()->addMonth())
                 ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->live()
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
 
             // Datos del cobro de hoy (si hay anticipo).
             Group::make(CamposPago::components(conTipo: false))
                 ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['pago_hoy'] > 0)
                 ->columns(2)
-                ->columnSpanFull(),
+                ->columnSpanFull()
+                // Ver nota en atributosEnterSinAutoguardar(): sin esto, Enter
+                // en "Forma de pago" (ya trae "Efectivo" por defecto) también
+                // disparaba el guardado.
+                ->extraAttributes(['data-enter-no-autosubmit' => 'true']),
 
             Placeholder::make('plan_preview')
                 ->label('Resumen')
@@ -591,6 +595,25 @@ class ClienteCasoWizard
             'data-enter-nav' => 'true',
             'inputmode' => 'numeric',
             'oninput' => 'this.value=this.value.replace(/[^0-9]/g,\'\')',
+        ];
+    }
+
+    /**
+     * Campos del paso "Pago y plan de cuotas": varios ya traen un valor por
+     * defecto (anticipo, N° de cuotas, fecha de la primera cuota), así que
+     * sin esto Enter los salta a todos por "ya tener valor" y termina
+     * dándole clic a "Guardar" apenas se completa el primer campo vacío
+     * (ver resources/js/filament/enter-navigation.js). data-enter-nav sigue
+     * presente para que Enter avance normal entre ellos; solo se desactiva
+     * el guardado automático al final de la cadena.
+     *
+     * @return array<string, string>
+     */
+    protected static function atributosEnterSinAutoguardar(): array
+    {
+        return [
+            'data-enter-nav' => 'true',
+            'data-enter-no-autosubmit' => 'true',
         ];
     }
 }

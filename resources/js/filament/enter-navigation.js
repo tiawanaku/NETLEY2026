@@ -192,6 +192,17 @@
             return;
         }
 
+        // data-enter-no-autosubmit: en un campo (o un contenedor ancestro,
+        // ej. "Datos del cobro de hoy") marcado así, no se dispara el
+        // guardado solo porque no quede nada vacío por delante. Sin esto,
+        // un paso con varios campos opcionales YA precargados con un valor
+        // por defecto (ej. "Pago y plan de cuotas": anticipo, N° de cuotas,
+        // fecha de la primera cuota) queda a un Enter de distancia de
+        // guardarse sin querer apenas se completa el primer campo vacío.
+        if (sequence[idx].closest('[data-enter-no-autosubmit="true"]')) {
+            return;
+        }
+
         clickCreateButton();
     }
 
