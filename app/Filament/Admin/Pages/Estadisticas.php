@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Pages;
 
+use App\Filament\Admin\Support\ModoMenu;
 use App\Filament\Admin\Widgets\CasosPorEstadoWidget;
 use App\Filament\Admin\Widgets\ClientesEnMoraWidget;
 use App\Filament\Admin\Widgets\IngresosMensualesWidget;
@@ -26,6 +27,12 @@ class Estadisticas extends Page
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('estadisticas') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     protected function getFooterWidgets(): array

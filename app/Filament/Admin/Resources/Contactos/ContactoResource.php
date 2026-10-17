@@ -7,6 +7,7 @@ use App\Filament\Admin\Resources\Contactos\Pages\EditContacto;
 use App\Filament\Admin\Resources\Contactos\Pages\ListContactos;
 use App\Filament\Admin\Resources\Contactos\Schemas\ContactoForm;
 use App\Filament\Admin\Resources\Contactos\Tables\ContactosTable;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Contacto;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -31,6 +32,12 @@ class ContactoResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('contactos') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema

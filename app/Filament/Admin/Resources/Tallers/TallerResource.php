@@ -7,6 +7,7 @@ use App\Filament\Admin\Resources\Tallers\Pages\EditTaller;
 use App\Filament\Admin\Resources\Tallers\Pages\ListTallers;
 use App\Filament\Admin\Resources\Tallers\Schemas\TallerForm;
 use App\Filament\Admin\Resources\Tallers\Tables\TallersTable;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Taller;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -33,6 +34,12 @@ class TallerResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('talleres') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema

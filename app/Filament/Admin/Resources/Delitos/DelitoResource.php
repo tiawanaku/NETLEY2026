@@ -7,6 +7,7 @@ use App\Filament\Admin\Resources\Delitos\Pages\EditDelito;
 use App\Filament\Admin\Resources\Delitos\Pages\ListDelitos;
 use App\Filament\Admin\Resources\Delitos\Schemas\DelitoForm;
 use App\Filament\Admin\Resources\Delitos\Tables\DelitosTable;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Delito;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -35,6 +36,12 @@ class DelitoResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('delitos') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema

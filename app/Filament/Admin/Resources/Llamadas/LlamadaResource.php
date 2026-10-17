@@ -9,6 +9,7 @@ use App\Filament\Admin\Resources\Llamadas\Pages\ListLlamadas;
 use App\Filament\Admin\Resources\Llamadas\RelationManagers\IntentosLlamadaRelationManager;
 use App\Filament\Admin\Resources\Llamadas\Schemas\LlamadaForm;
 use App\Filament\Admin\Resources\Llamadas\Tables\LlamadasTable;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Llamada;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -35,6 +36,12 @@ class LlamadaResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('llamadas') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema

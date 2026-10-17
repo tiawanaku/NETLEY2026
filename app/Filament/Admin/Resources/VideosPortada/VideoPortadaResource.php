@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\VideosPortada;
 
 use App\Filament\Admin\Resources\VideosPortada\Pages\ManageVideosPortada;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\VideoPortada;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -45,6 +46,12 @@ class VideoPortadaResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('sitio_web') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema

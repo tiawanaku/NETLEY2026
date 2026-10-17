@@ -11,6 +11,7 @@ use App\Filament\Admin\Resources\Clientes\RelationManagers\DocumentosRelationMan
 use App\Filament\Admin\Resources\Clientes\RelationManagers\PagosRelationManager;
 use App\Filament\Admin\Resources\Clientes\Schemas\ClienteForm;
 use App\Filament\Admin\Resources\Clientes\Tables\ClientesTable;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Cliente;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -35,6 +36,12 @@ class ClienteResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('clientes') ?? false;
+    }
+
+    /** En modo simple (ver ModoMenu) el ítem del menú se llama "Clientes ejecutivos". */
+    public static function getNavigationLabel(): string
+    {
+        return ModoMenu::esSimple() ? 'Clientes ejecutivos' : (static::$navigationLabel ?? 'Clientes');
     }
 
     /** Pasantes y procuradoras no pueden dar de alta clientes nuevos. */

@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Oficinas;
 
 use App\Filament\Admin\Resources\Oficinas\Pages\ManageOficinas;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Oficina;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -31,6 +32,12 @@ class OficinaResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('oficinas') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema

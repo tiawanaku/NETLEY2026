@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\RedesSociales;
 
 use App\Enums\RedSocialPlataforma;
 use App\Filament\Admin\Resources\RedesSociales\Pages\ManageRedesSociales;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\RedSocial;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -44,6 +45,12 @@ class RedSocialResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('sitio_web') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema

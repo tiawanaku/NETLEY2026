@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Casos;
 
 use App\Enums\Rol;
 use App\Filament\Admin\Concerns\ScopesToAssignedAbogado;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Filament\Admin\Resources\Casos\Pages\CreateCaso;
 use App\Filament\Admin\Resources\Casos\Pages\EditCaso;
 use App\Filament\Admin\Resources\Casos\Pages\ListCasos;
@@ -42,6 +43,12 @@ class CasoResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('casos') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu); sigue accesible desde la ficha del cliente. */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     /** Pasantes y procuradoras no pueden dar de alta procesos nuevos. */

@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\Pagos\Pages\CreatePago;
 use App\Filament\Admin\Resources\Pagos\Pages\ListPagos;
 use App\Filament\Admin\Resources\Pagos\Schemas\PagoForm;
 use App\Filament\Admin\Resources\Pagos\Tables\PagosTable;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Pago;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -30,6 +31,12 @@ class PagoResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('pagos') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     /** Registros financieros inmutables una vez emitido el recibo: no hay página de edición. */

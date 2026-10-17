@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Admin\Auth\Login;
 use App\Filament\Admin\Pages\Dashboard;
+use App\Filament\Admin\Support\ModoMenu;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -51,6 +52,22 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn (): HtmlString => new HtmlString('<script>'.File::get(resource_path('js/filament/enter-navigation.js')).'</script>'),
+            )
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                function (): HtmlString {
+                    $simple = ModoMenu::esSimple();
+                    $url = route('admin.menu-modo.set', ['valor' => $simple ? 'completo' : 'simple']);
+
+                    return new HtmlString(
+                        '<div class="netley-menu-modo">'
+                        .'<a href="'.e($url).'" class="netley-menu-modo-link" role="switch" aria-checked="'.($simple ? 'true' : 'false').'">'
+                        .'<span class="netley-menu-modo-switch'.($simple ? ' is-on' : '').'"><span class="netley-menu-modo-knob"></span></span>'
+                        .'<span class="netley-menu-modo-label">Menú simple</span>'
+                        .'</a>'
+                        .'</div>'
+                    );
+                },
             )
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\Filament\Admin\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\Filament\Admin\Pages')

@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Filament\Admin\Resources\Citas\CitaResource;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Cita;
 use App\Models\Personal;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -37,6 +38,12 @@ class AgendaCalendario extends Page
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('agenda') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     /** 'mes' | 'semana' | 'dia' */

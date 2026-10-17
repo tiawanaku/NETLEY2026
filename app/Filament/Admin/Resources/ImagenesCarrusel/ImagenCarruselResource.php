@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\ImagenesCarrusel;
 
 use App\Filament\Admin\Resources\ImagenesCarrusel\Pages\ManageImagenesCarrusel;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\ImagenCarrusel;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
@@ -44,6 +45,12 @@ class ImagenCarruselResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('sitio_web') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema

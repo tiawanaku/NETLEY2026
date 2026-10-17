@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Enums\Rol;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Support\Permisos;
 use BackedEnum;
 use Filament\Notifications\Notification;
@@ -33,6 +34,12 @@ class Privilegios extends Page
     public static function canAccess(): bool
     {
         return auth()->user()?->isAdmin() ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public function getTitle(): string

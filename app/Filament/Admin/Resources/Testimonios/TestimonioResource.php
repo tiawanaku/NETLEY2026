@@ -7,6 +7,7 @@ use App\Filament\Admin\Resources\Testimonios\Pages\EditTestimonio;
 use App\Filament\Admin\Resources\Testimonios\Pages\ListTestimonios;
 use App\Filament\Admin\Resources\Testimonios\Schemas\TestimonioForm;
 use App\Filament\Admin\Resources\Testimonios\Tables\TestimoniosTable;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Testimonio;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -31,6 +32,12 @@ class TestimonioResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('testimonios') ?? false;
+    }
+
+    /** Oculto del menú en modo simple (ver ModoMenu). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return ! ModoMenu::esSimple();
     }
 
     public static function form(Schema $schema): Schema
