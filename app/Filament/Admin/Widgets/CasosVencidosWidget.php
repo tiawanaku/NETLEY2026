@@ -35,7 +35,7 @@ class CasosVencidosWidget extends TableWidget
             ->heading('🔴 Casos Vencidos ('.$this->getCasosQuery()->count().')')
             ->query(fn () => $this->getCasosQuery()->orderBy('fecha_fin'))
             ->columns([
-                TextColumn::make('id')->label('ID Caso')->weight('bold'),
+                TextColumn::make('cliente.nro_cliente')->label('ID cliente')->placeholder('—'),
                 TextColumn::make('cliente.nombre_completo')->label('Cliente')->placeholder('Sin asignar'),
                 TextColumn::make('personal.nombres')->label('Personal asignado')->listWithLineBreaks()->limitList(1)->placeholder('Sin asignar'),
                 TextColumn::make('descripcion')->label('Descripción')->limit(40),

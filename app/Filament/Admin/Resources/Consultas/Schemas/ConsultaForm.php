@@ -11,6 +11,8 @@ use App\Filament\Admin\Support\ReglasContacto;
 use App\Filament\Admin\Support\RespuestaFields;
 use App\Models\Consulta;
 use App\Support\Origenes;
+use App\Support\Telefono;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -55,30 +57,36 @@ class ConsultaForm
                     ]),
 
                 Group::make([
-                    // Tanto al crear como al editar, en esta columna solo se
-                    // pide el origen, la materia legal, el tipo de proceso y
-                    // la nota interna. El texto de la consulta, la respuesta
-                    // (se sigue registrando con el botón "Responder" aparte)
-                    // y el resto del seguimiento (estado) ya no se muestran
-                    // acá.
+                    // Tanto al crear como al editar, en esta columna se pide la
+                    // materia legal, el tipo de proceso y la nota interna, y
+                    // debajo el Seguimiento (fecha de consulta, estado y
+                    // origen). El texto de la consulta y la respuesta (se
+                    // sigue registrando con el botón "Responder" aparte) no
+                    // se muestran acá.
                     Section::make('Consulta')
+                        // Solo en consultas que llegaron por la portada: abre el
+                        // chat de WhatsApp con la persona (al teléfono de WhatsApp,
+                        // o al de contacto si no dejó otro), en una pestaña nueva.
+                        ->headerActions([
+                            Action::make('responderWhatsapp')
+                                ->label('Responder por WhatsApp')
+                                ->icon('heroicon-o-chat-bubble-left-right')
+                                ->color('success')
+                                ->visible(fn (string $operation, ?Consulta $record): bool => $operation === 'edit'
+                                    && self::urlWhatsappConsulta($record) !== null)
+                                ->url(fn (?Consulta $record): ?string => self::urlWhatsappConsulta($record))
+                                ->openUrlInNewTab(),
+                        ])
                         ->schema([
-                            TextInput::make('origen')
-                                ->required()
-                                ->datalist(Origenes::SUGERENCIAS)
-                                ->regex('/^[^0-9]*$/')
+                            // Lo que escribió la persona en el formulario de la portada.
+                            Textarea::make('consulta')
+                                ->label('Consulta')
+                                ->rows(4)
                                 ->disabled($isEditing)
-                                // Si entra por WhatsApp, el estado pasa solo a "Agendado".
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(function (?string $state, Set $set): void {
-                                    if (EstadoConsulta::esOrigenWhatsapp($state)) {
-                                        $set('estado', EstadoConsulta::Agendado->value);
-                                    }
-                                })
-                                ->extraInputAttributes(self::atributosSoloLetras()),
-                            // Con origen "Talleres" se pide qué taller.
-                            CamposOrigen::detalle($isEditing),
-                            ...RespuestaFields::camposMateria(etiquetaDelito: 'Tipo de proceso'),
+                                ->visible(fn (string $operation, Get $get): bool => $operation === 'edit'
+                                    && self::esDeLaPortada($get('origen')))
+                                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                            ...RespuestaFields::camposMateria(etiquetaDelito: 'Tipo de proceso', deshabilitado: $isEditing),
                             Textarea::make('nota_interna')->label('Nota interna')->rows(2)->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
                         ])
                         ->columns(1),
@@ -94,7 +102,6 @@ class ConsultaForm
                         ->hidden(),
 
                     Section::make('Seguimiento')
-                        ->hidden()
                         ->schema([
                             // Solo se pide la fecha; la hora se registra sola por dentro (ver
                             // CreateConsulta), no se le pregunta al usuario.
@@ -102,23 +109,56 @@ class ConsultaForm
                             Select::make('estado')
                                 // "Agendado" solo se ofrece cuando la consulta entra por
                                 // WhatsApp (o ya está agendada), ver EstadoConsulta::inicialSegunOrigen.
-                                ->options(fn (Get $get, $state) => collect([
-                                    EstadoConsulta::Pendiente,
-                                    EstadoConsulta::NoContesta,
-                                    EstadoConsulta::Respondido,
-                                    EstadoConsulta::SoloConsulta,
-                                    EstadoConsulta::RemitirPsicologia,
-                                    EstadoConsulta::RemitirSocial,
-                                ])
-                                    ->when(
-                                        EstadoConsulta::esOrigenWhatsapp($get('origen'))
-                                            || ($state instanceof EstadoConsulta ? $state : EstadoConsulta::tryFrom((string) $state)) === EstadoConsulta::Agendado,
-                                        fn ($estados) => $estados->prepend(EstadoConsulta::Agendado),
-                                    )
-                                    ->mapWithKeys(fn (EstadoConsulta $e) => [$e->value => $e->getLabel()]))
+                                ->options(function (Get $get, $state) {
+                                    $actual = $state instanceof EstadoConsulta ? $state : EstadoConsulta::tryFrom((string) $state);
+
+                                    return collect([
+                                        EstadoConsulta::Pendiente,
+                                        EstadoConsulta::NoContesta,
+                                        EstadoConsulta::Respondido,
+                                        EstadoConsulta::SoloConsulta,
+                                        EstadoConsulta::RemitirPsicologia,
+                                        EstadoConsulta::RemitirSocial,
+                                    ])
+                                        ->when(
+                                            EstadoConsulta::esOrigenWhatsapp($get('origen')) || $actual === EstadoConsulta::Agendado,
+                                            fn ($estados) => $estados->prepend(EstadoConsulta::Agendado),
+                                        )
+                                        // Estados que se asignan solos (p. ej. "Caso iniciado" al
+                                        // ascender a caso): no se ofrecen para elegir, pero si la
+                                        // consulta ya lo tiene debe mostrarse, no quedar en blanco.
+                                        ->when(
+                                            $actual !== null && ! in_array($actual, [
+                                                EstadoConsulta::Pendiente,
+                                                EstadoConsulta::NoContesta,
+                                                EstadoConsulta::Respondido,
+                                                EstadoConsulta::SoloConsulta,
+                                                EstadoConsulta::RemitirPsicologia,
+                                                EstadoConsulta::RemitirSocial,
+                                                EstadoConsulta::Agendado,
+                                            ], true),
+                                            fn ($estados) => $estados->push($actual),
+                                        )
+                                        ->mapWithKeys(fn (EstadoConsulta $e) => [$e->value => $e->getLabel()]);
+                                })
                                 ->required()
                                 ->disabled($isEditing)
                                 ->extraInputAttributes(['data-enter-nav' => 'true']),
+                            TextInput::make('origen')
+                                ->required()
+                                ->datalist(Origenes::SUGERENCIAS)
+                                ->regex('/^[^0-9]*$/')
+                                ->disabled($isEditing)
+                                // Si entra por WhatsApp, el estado pasa solo a "Agendado".
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function (?string $state, Set $set): void {
+                                    if (EstadoConsulta::esOrigenWhatsapp($state)) {
+                                        $set('estado', EstadoConsulta::Agendado->value);
+                                    }
+                                })
+                                ->extraInputAttributes(self::atributosSoloLetras()),
+                            // Con origen "Talleres" se pide qué taller.
+                            CamposOrigen::detalle($isEditing),
                         ]),
                 ]),
 
@@ -131,6 +171,30 @@ class ConsultaForm
                     ->columnSpanFull()
                     ->visible(false),
             ]);
+    }
+
+    /** Las consultas del formulario público de la portada nacen con origen "Sitio web". */
+    protected static function esDeLaPortada(?string $origen): bool
+    {
+        return mb_strtolower(trim((string) $origen)) === 'sitio web';
+    }
+
+    /** Enlace de WhatsApp con un saludo ya escrito, solo para consultas de la portada. */
+    protected static function urlWhatsappConsulta(?Consulta $consulta): ?string
+    {
+        if (! $consulta || ! self::esDeLaPortada($consulta->origen)) {
+            return null;
+        }
+
+        $url = Telefono::urlWhatsapp($consulta->whatsapp ?: $consulta->telefono);
+
+        if ($url === null) {
+            return null;
+        }
+
+        $saludo = 'Hola '.trim((string) $consulta->nombres).', te escribimos de NETLEY & Asociados por la consulta que enviaste desde nuestra página web.';
+
+        return $url.'?text='.rawurlencode($saludo);
     }
 
     protected static function atributosSoloLetras(): array

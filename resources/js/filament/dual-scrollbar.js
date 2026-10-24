@@ -60,6 +60,10 @@
                     entry.bar.style.display = 'none';
                 }
 
+                if (ctn.style.marginTop) {
+                    ctn.style.marginTop = '';
+                }
+
                 return;
             }
 
@@ -71,11 +75,21 @@
 
             seen.add(ctn);
 
-            var rect = ctn.getBoundingClientRect();
+            entry.bar.style.display = 'block';
+
             var barHeight = entry.bar.offsetHeight || 15;
 
+            // Deja libre arriba del contenedor el alto de la barra, para que
+            // no tape la fila de búsqueda/filtros que está justo encima.
+            var hueco = barHeight + 'px';
+
+            if (ctn.style.marginTop !== hueco) {
+                ctn.style.marginTop = hueco;
+            }
+
+            var rect = ctn.getBoundingClientRect();
+
             entry.inner.style.width = table.scrollWidth + 'px';
-            entry.bar.style.display = 'block';
             entry.bar.style.width = rect.width + 'px';
             entry.bar.style.left = rect.left + window.scrollX + 'px';
             // Se posiciona ARRIBA del contenedor (no encima), para no tapar

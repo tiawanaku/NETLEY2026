@@ -109,13 +109,18 @@
 .netley-ta-top-scroll {
     display: none;
     position: absolute;
-    z-index: 30;
+    /* Debajo del topbar sticky, del menú lateral y de su overlay (los tres
+       en z-30 en Filament), de los modales y de los desplegables (z-10,
+       como el de columnas de la tabla): así, al bajar la página, abrir el
+       menú o un desplegable, la barra queda tapada y no flota por encima.
+       Solo debe quedar sobre la tabla. */
+    z-index: 5;
     overflow-x: auto;
     overflow-y: hidden;
-    height: 14px;
+    height: 22px;
     border-bottom: 1px solid rgb(0 0 0 / 0.06);
     background-color: #fff;
-    scrollbar-width: thin;
+    scrollbar-width: auto;
 }
 
 .netley-ta-top-scroll > div {
@@ -123,7 +128,7 @@
 }
 
 .netley-ta-top-scroll::-webkit-scrollbar {
-    height: 10px;
+    height: 18px;
 }
 
 .netley-ta-top-scroll::-webkit-scrollbar-thumb {

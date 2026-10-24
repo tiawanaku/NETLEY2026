@@ -35,6 +35,8 @@ class EditConsulta extends EditRecord
     {
         parent::mount($record);
 
+        $this->editando = request()->boolean('editar') && auth()->user()?->puede('editar');
+
         if (request()->boolean('agendar')) {
             $this->js('$wire.mountAction(\'agendarCita\')');
         }
@@ -61,6 +63,10 @@ class EditConsulta extends EditRecord
         parent::save($shouldRedirect, $shouldSendSavedNotification);
 
         $this->editando = false;
+
+        // Recarga la ficha en vista normal (los botones del pie no se
+        // actualizan solos, ver getFormActions()).
+        $this->redirect($this->urlFicha());
     }
 
     protected function getHeaderActions(): array
@@ -71,7 +77,7 @@ class EditConsulta extends EditRecord
                 ->icon('heroicon-o-pencil-square')
                 ->color('warning')
                 ->visible(fn () => ! $this->editando && auth()->user()?->puede('editar'))
-                ->action(fn () => $this->editando = true),
+                ->action(fn () => $this->redirect($this->urlFicha(editar: true))),
             // Insignia informativa (no clicable): señala de un vistazo si
             // esta consulta ya se convirtió en cliente ejecutivo (caso_id).
             Action::make('esClienteEjecutivo')
@@ -90,10 +96,14 @@ class EditConsulta extends EditRecord
     }
 
     /**
-     * Todos los campos del formulario quedan deshabilitados en esta vista
-     * (ver ConsultaForm), así que no hay nada que "Guardar" — se deja el
-     * botón para volver al listado y, si la consulta ya está cerrada, el
-     * de descargar el informe de cierre en PDF.
+     * En la vista normal todos los campos están deshabilitados (ver
+     * ConsultaForm), así que solo se ofrece, si la consulta ya está cerrada,
+     * descargar el informe de cierre en PDF. En modo edición (ver
+     * urlFicha()) se ofrecen "Guardar cambios" y "Cancelar edición".
+     *
+     * Filament arma estos botones antes de ejecutar la acción del clic, así
+     * que cambiar $this->editando en un clic no los actualiza: por eso
+     * "Editar", "Cancelar edición" y "Guardar cambios" recargan la ficha.
      */
     protected function getFormActions(): array
     {
@@ -103,10 +113,7 @@ class EditConsulta extends EditRecord
                 Action::make('cancelarEdicion')
                     ->label('Cancelar edición')
                     ->color('gray')
-                    ->action(function () {
-                        $this->editando = false;
-                        $this->fillForm();
-                    }),
+                    ->action(fn () => $this->redirect($this->urlFicha())),
             ];
         }
 
@@ -123,5 +130,13 @@ class EditConsulta extends EditRecord
                     "informe-cierre-consulta-{$record->id}.pdf"
                 )),
         ];
+    }
+
+    /** Ficha de esta consulta; con $editar abre directo en modo edición. */
+    protected function urlFicha(bool $editar = false): string
+    {
+        $url = $this->getResourceUrl('edit', ['record' => $this->getRecord()]);
+
+        return $editar ? $url.'?editar=1' : $url;
     }
 }

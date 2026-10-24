@@ -29,6 +29,7 @@ class PagosPorVencerWidget extends TableWidget
             ->query(fn () => $this->getPlanesQuery()->orderBy('fecha'))
             ->columns([
                 TextColumn::make('caso_id')->label('Caso')->formatStateUsing(fn ($state) => "#{$state}"),
+                TextColumn::make('caso.cliente.nro_cliente')->label('ID cliente')->placeholder('—'),
                 TextColumn::make('caso.cliente.nombre_completo')->label('Cliente'),
                 TextColumn::make('caso.descripcion')->label('Descripción')->limit(40),
                 TextColumn::make('numero')->label('N° cuota'),

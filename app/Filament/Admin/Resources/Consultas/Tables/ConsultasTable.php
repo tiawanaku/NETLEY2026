@@ -38,7 +38,7 @@ class ConsultasTable
                     // "Talleres — <detalle del taller>".
                     ->formatStateUsing(fn (?string $state, Consulta $record): ?string => Origenes::texto($state, $record->origen_detalle))
                     ->wrap()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 TextColumn::make('fecha_consulta')
                     ->date('d/m/Y')
                     ->sortable(),

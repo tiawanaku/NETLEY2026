@@ -41,10 +41,14 @@ class RespuestaFields
      *
      * @return array<int, Component>
      */
-    public static function camposMateria(string $etiquetaDelito = 'Delito / Materia específica'): array
+    public static function camposMateria(string $etiquetaDelito = 'Delito / Materia específica', ?\Closure $deshabilitado = null): array
     {
+        // Sin condición, los campos nunca se bloquean (es lo que usa Responder).
+        $deshabilitado ??= fn (): bool => false;
+
         return [
             Select::make('designacion')
+                ->disabled($deshabilitado)
                 ->label('Materia legal')
                 ->options(fn () => collect(Especialidad::cases())
                     ->mapWithKeys(fn ($e) => [$e->value => $e->getLabel()])
@@ -55,6 +59,7 @@ class RespuestaFields
                 ->afterStateUpdated(fn ($set) => $set('delito_id', null))
                 ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
             TextInput::make('materia_texto')
+                ->disabled($deshabilitado)
                 ->label('Materia legal (manual)')
                 ->maxLength(120)
                 ->required()
@@ -78,10 +83,12 @@ class RespuestaFields
                 ->searchable()
                 ->native(false)
                 ->live()
-                ->disabled(fn (Get $get) => blank($get('designacion')))
+                ->disabled(fn (Get $get, string $operation, $livewire) => blank($get('designacion'))
+                    || $deshabilitado($operation, $livewire))
                 ->helperText(fn (Get $get) => blank($get('designacion')) ? 'Selecciona primero una materia legal.' : null)
                 ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
             TextInput::make('delito_texto')
+                ->disabled($deshabilitado)
                 ->label('Delito (manual)')
                 ->maxLength(255)
                 ->required()
