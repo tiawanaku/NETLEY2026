@@ -7,8 +7,10 @@ use App\Filament\Admin\Resources\Personals\Pages\EditPersonal;
 use App\Filament\Admin\Resources\Personals\Pages\ListPersonals;
 use App\Filament\Admin\Resources\Personals\Schemas\PersonalForm;
 use App\Filament\Admin\Resources\Personals\Tables\PersonalsTable;
+use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Personal;
 use BackedEnum;
+use Filament\Navigation\NavigationItem;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -53,6 +55,44 @@ class PersonalResource extends Resource
     {
         return [
             //
+        ];
+    }
+
+    /**
+     * En modo simple (ver ModoMenu), el único ítem "Personal" se reemplaza
+     * por 3: Vigentes / Retirados / Eliminados, cada uno apuntando a su
+     * propia pestaña de ListPersonals (?tab=...). En modo completo queda el
+     * único ítem de siempre.
+     *
+     * @return array<NavigationItem>
+     */
+    public static function getNavigationItems(): array
+    {
+        if (! ModoMenu::esSimple()) {
+            return parent::getNavigationItems();
+        }
+
+        $base = static::getUrl('index');
+
+        return [
+            NavigationItem::make('Vigentes')
+                ->group(static::getNavigationGroup())
+                ->icon(static::getNavigationIcon())
+                ->sort(static::getNavigationSort())
+                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab', 'vigentes') === 'vigentes')
+                ->url("{$base}?tab=vigentes"),
+            NavigationItem::make('Retirados')
+                ->group(static::getNavigationGroup())
+                ->icon(static::getNavigationIcon())
+                ->sort(static::getNavigationSort() + 1)
+                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab') === 'retirados')
+                ->url("{$base}?tab=retirados"),
+            NavigationItem::make('Eliminados')
+                ->group(static::getNavigationGroup())
+                ->icon(static::getNavigationIcon())
+                ->sort(static::getNavigationSort() + 2)
+                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab') === 'eliminados')
+                ->url("{$base}?tab=eliminados"),
         ];
     }
 

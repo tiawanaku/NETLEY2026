@@ -10,10 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Personal extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'personal';
 
@@ -31,6 +33,7 @@ class Personal extends Model
         'telefono',
         'whatsapp',
         'correo',
+        'redes_sociales',
         'estado',
         'cargo',
         'profesion',
@@ -50,6 +53,7 @@ class Personal extends Model
         return [
             'rol' => Rol::class,
             'estado' => EstadoPersonal::class,
+            'redes_sociales' => 'array',
             'especialidades' => 'array',
             'cargo' => CsvArray::class,
             'tiene_contrato' => 'boolean',

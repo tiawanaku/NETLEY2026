@@ -38,10 +38,39 @@ class ConsultasTable
                     // "Talleres — <detalle del taller>".
                     ->formatStateUsing(fn (?string $state, Consulta $record): ?string => Origenes::texto($state, $record->origen_detalle))
                     ->wrap()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) !== 'agendados'),
                 TextColumn::make('fecha_consulta')
                     ->date('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) !== 'agendados'),
+                // En la pestaña "Agendados" se muestran los datos de la cita
+                // vigente (ver ListConsultas, que precarga `citas`) en vez de
+                // los de la consulta.
+                TextColumn::make('citaVigente.fecha')
+                    ->label('Fecha de cita')
+                    ->state(fn (Consulta $record) => $record->citas->first()?->fecha)
+                    ->date('d/m/Y')
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) === 'agendados'),
+                TextColumn::make('citaVigente.hora')
+                    ->label('Hora')
+                    ->state(fn (Consulta $record) => $record->citas->first()?->hora)
+                    ->time()
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) === 'agendados'),
+                TextColumn::make('citaVigente.personal')
+                    ->label('Abogado(s)')
+                    ->state(fn (Consulta $record) => $record->citas->first()?->personal->pluck('nombres')->all() ?? [])
+                    ->listWithLineBreaks()
+                    ->limitList(2)
+                    ->placeholder('Sin asignar')
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) === 'agendados'),
+                TextColumn::make('citaVigente.detalle')
+                    ->label('Detalle de la cita')
+                    ->state(fn (Consulta $record) => $record->citas->first()?->detalle)
+                    ->limit(40)
+                    ->placeholder('—')
+                    ->toggleable()
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) === 'agendados'),
             ])
             ->defaultSort('fecha_consulta', 'desc')
             ->filters([
