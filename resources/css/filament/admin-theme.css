@@ -1,0 +1,282 @@
+/* Réplica de la identidad visual del panel interno legacy de NETLEY
+   (dashboard.php / styles.css): sidebar azul marino, acento celeste,
+   fondo gris claro, tarjetas blancas con sombra suave. */
+:root {
+    --netley-navy: #1a2537;
+    --netley-navy-light: #22325a;
+    --netley-cyan: #4fc3f7;
+    --netley-bg: #f4f6f8;
+}
+
+.fi-sidebar,
+.fi-sidebar-header-ctn,
+.fi-sidebar-header {
+    background-color: var(--netley-navy) !important;
+    border-color: var(--netley-navy-light) !important;
+}
+
+.fi-sidebar .fi-logo {
+    color: #fff !important;
+    font-weight: 700;
+    letter-spacing: .5px;
+}
+
+/* El logo trae texto en azul marino: le damos un chip blanco para que se
+   lea sobre el sidebar navy, igual de legible que en el sistema viejo. */
+.fi-sidebar .fi-logo img {
+    background-color: #fff;
+    padding: .5rem .85rem;
+    border-radius: .6rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.fi-simple-layout .fi-logo img {
+    margin-inline: auto;
+}
+
+.fi-sidebar-nav {
+    background-color: var(--netley-navy);
+}
+
+.fi-sidebar-group-label,
+.fi-sidebar-item-label,
+.fi-sidebar-item-icon {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.fi-sidebar-item-btn:hover .fi-sidebar-item-label,
+.fi-sidebar-item-btn:hover .fi-sidebar-item-icon,
+.fi-sidebar-item.fi-active .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: var(--netley-cyan) !important;
+}
+
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn,
+.fi-sidebar-item-btn:hover {
+    background-color: var(--netley-navy-light) !important;
+    border-radius: .5rem;
+}
+
+.fi-sidebar-group-items {
+    background-color: transparent;
+}
+
+/* Fondo del contenido y tarjetas, igual que .main-content / .contenedor-tabla legacy */
+.fi-main {
+    background-color: var(--netley-bg);
+}
+
+.fi-section,
+.fi-ta-ctn,
+.fi-in-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Encabezados de tabla azul marino con texto blanco, igual que .tabla-casos
+   thead del dashboard legacy. */
+.fi-ta-header-cell {
+    background-color: var(--netley-navy) !important;
+    color: #fff !important;
+}
+
+.fi-ta-header-cell-label,
+.fi-ta-header-cell-sort-btn,
+.fi-ta-header-cell .fi-icon,
+.fi-ta-header-cell .fi-ta-header-cell-tooltip {
+    color: #fff !important;
+}
+
+.fi-ta-header-cell-sort-btn:hover {
+    color: var(--netley-cyan) !important;
+}
+
+/* Filas de tabla: hover suave igual que .tabla-casos tbody tr:hover */
+.fi-ta-row:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* Widgets del dashboard con el mismo aire de tarjeta que .contenedor-tabla */
+.fi-wi-table {
+    border-radius: .75rem;
+    overflow: hidden;
+}
+
+/* Barra de scroll horizontal duplicada arriba de la tabla (la nativa ya
+   queda abajo, al final del contenedor con overflow-x), para que las
+   tablas anchas se puedan navegar sin bajar primero hasta el final.
+   Se posiciona por coordenadas (ver dual-scrollbar.js) y vive fuera del
+   árbol que gestiona Livewire, para no interferir con sus re-renders. */
+.netley-ta-top-scroll {
+    display: none;
+    position: absolute;
+    /* Debajo del topbar sticky, del menú lateral y de su overlay (los tres
+       en z-30 en Filament), de los modales y de los desplegables (z-10,
+       como el de columnas de la tabla): así, al bajar la página, abrir el
+       menú o un desplegable, la barra queda tapada y no flota por encima.
+       Solo debe quedar sobre la tabla. */
+    z-index: 5;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 22px;
+    border-bottom: 1px solid rgb(0 0 0 / 0.06);
+    background-color: #fff;
+    scrollbar-width: auto;
+}
+
+.netley-ta-top-scroll > div {
+    height: 1px;
+}
+
+.netley-ta-top-scroll::-webkit-scrollbar {
+    height: 18px;
+}
+
+.netley-ta-top-scroll::-webkit-scrollbar-thumb {
+    background-color: rgb(0 0 0 / 0.25);
+    border-radius: 9999px;
+}
+
+.netley-ta-top-scroll::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+
+/*
+ * Plugin afsakar/filament-leaflet-map-picker: su vista usa utilidades de
+ * Tailwind que este panel no compila (no hay tema propio con Vite). Sin
+ * esto, el ícono del resumen de coordenadas se dibuja a ancho completo y
+ * tapa el mapa. Se acotan al contenedor del plugin.
+ */
+[x-data^="leafletMapPicker"] .relative { position: relative; }
+[x-data^="leafletMapPicker"] .w-full { width: 100%; }
+[x-data^="leafletMapPicker"] .overflow-hidden { overflow: hidden; }
+[x-data^="leafletMapPicker"] .rounded-lg { border-radius: .5rem; }
+[x-data^="leafletMapPicker"] .shadow { box-shadow: 0 1px 3px rgb(0 0 0 / .1), 0 1px 2px rgb(0 0 0 / .06); }
+[x-data^="leafletMapPicker"] .border { border: 1px solid rgb(229 231 235); }
+[x-data^="leafletMapPicker"] .border-t { border-top: 1px solid rgb(229 231 235); }
+[x-data^="leafletMapPicker"] .bg-gray-50 { background-color: rgb(249 250 251); }
+[x-data^="leafletMapPicker"] .p-4 { padding: 1rem; }
+[x-data^="leafletMapPicker"] .px-4 { padding-inline: 1rem; }
+[x-data^="leafletMapPicker"] .py-3 { padding-block: .75rem; }
+[x-data^="leafletMapPicker"] .py-4 { padding-block: 1rem; }
+[x-data^="leafletMapPicker"] .mt-1 { margin-top: .25rem; }
+[x-data^="leafletMapPicker"] .mt-2 { margin-top: .5rem; }
+[x-data^="leafletMapPicker"] .mr-2 { margin-right: .5rem; }
+[x-data^="leafletMapPicker"] .mx-auto { margin-inline: auto; }
+[x-data^="leafletMapPicker"] .flex { display: flex; }
+[x-data^="leafletMapPicker"] .grid { display: grid; }
+[x-data^="leafletMapPicker"] .items-center { align-items: center; }
+[x-data^="leafletMapPicker"] .items-start { align-items: flex-start; }
+[x-data^="leafletMapPicker"] .justify-center { justify-content: center; }
+[x-data^="leafletMapPicker"] .gap-3 { gap: .75rem; }
+[x-data^="leafletMapPicker"] .gap-4 { gap: 1rem; }
+[x-data^="leafletMapPicker"] .space-y-4 > * + * { margin-top: 1rem; }
+[x-data^="leafletMapPicker"] .flex-shrink-0 { flex-shrink: 0; }
+[x-data^="leafletMapPicker"] .text-left { text-align: left; }
+[x-data^="leafletMapPicker"] .text-center { text-align: center; }
+[x-data^="leafletMapPicker"] .text-sm { font-size: .875rem; line-height: 1.25rem; }
+[x-data^="leafletMapPicker"] .font-medium { font-weight: 500; }
+[x-data^="leafletMapPicker"] .text-gray-500 { color: rgb(107 114 128); }
+[x-data^="leafletMapPicker"] .text-gray-700 { color: rgb(55 65 81); }
+[x-data^="leafletMapPicker"] .h-5 { height: 1.25rem; }
+[x-data^="leafletMapPicker"] .w-5 { width: 1.25rem; }
+[x-data^="leafletMapPicker"] .h-6 { height: 1.5rem; }
+[x-data^="leafletMapPicker"] .w-6 { width: 1.5rem; }
+.dark [x-data^="leafletMapPicker"] .border-t { border-top-color: rgb(75 85 99); }
+.dark [x-data^="leafletMapPicker"] .bg-gray-50 { background-color: rgb(55 65 81); }
+.dark [x-data^="leafletMapPicker"] .text-gray-700,
+.dark [x-data^="leafletMapPicker"] .text-gray-500 { color: rgb(229 231 235); }
+
+/* Teléfono (App\Filament\Admin\Support\CamposTelefono): selector de código
+   de país + número. El selector toma el ancho de lo elegido ("+591
+   (Bolivia)", "+1 (EE. UU. / Canadá)"…) y el número ocupa el resto,
+   con un mínimo para que siempre se pueda escribir; si no alcanza el
+   espacio (móvil), el país se recorta con "…" en vez de montarse sobre el
+   número. */
+.campo-telefono > .fi-grid {
+    grid-template-columns: minmax(0, max-content) minmax(5.5rem, 1fr) !important;
+}
+
+.campo-telefono > .fi-grid > .fi-grid-col {
+    grid-column: auto !important;
+    min-width: 0;
+}
+
+.campo-telefono .fi-fo-select,
+.campo-telefono .fi-fo-select .fi-input-wrp-content-ctn {
+    min-width: 0;
+}
+
+.campo-telefono .fi-select-input-value-ctn {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.campo-telefono .fi-select-input-value-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* La lista de códigos se abre al menos de 18rem para que se lea el país
+   completo aunque el selector sea angosto. */
+.campo-telefono .fi-select-input-ctn .fi-dropdown-panel {
+    min-width: min(18rem, calc(100vw - 3rem));
+}
+
+/* Interruptor "Menú simple" al pie del sidebar (ver AdminPanelProvider
+   y App\Filament\Admin\Support\ModoMenu). Es un <a>, no un <input>: cada
+   clic recarga la página para que el menú (armado del lado del servidor)
+   se recalcule con el modo nuevo. */
+.netley-menu-modo {
+    padding: .75rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.netley-menu-modo-link {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.netley-menu-modo-label {
+    color: rgba(255, 255, 255, .85);
+    font-size: .8125rem;
+    font-weight: 500;
+}
+
+.netley-menu-modo-link:hover .netley-menu-modo-label {
+    color: var(--netley-cyan);
+}
+
+.netley-menu-modo-switch {
+    position: relative;
+    width: 2.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    background-color: rgba(255, 255, 255, .25);
+    flex-shrink: 0;
+    transition: background-color .15s ease;
+}
+
+.netley-menu-modo-switch.is-on {
+    background-color: var(--netley-cyan);
+}
+
+.netley-menu-modo-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background-color: #fff;
+    transition: transform .15s ease;
+}
+
+.netley-menu-modo-switch.is-on .netley-menu-modo-knob {
+    transform: translateX(1rem);
+}

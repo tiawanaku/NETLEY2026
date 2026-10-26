@@ -1,0 +1,121 @@
+<?php
+
+namespace App\Filament\Admin\Resources\Consultas\Actions;
+
+use App\Filament\Admin\Resources\Consultas\Actions\AnularCitaAction;
+use App\Filament\Admin\Resources\Consultas\Actions\ReagendarCitaAction;
+use App\Filament\Admin\Support\AgendaPreview;
+use App\Filament\Admin\Support\CamposDenuncia;
+use App\Models\Consulta;
+use App\Support\PersonalEspecialidades;
+use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TimePicker;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Botón rápido para agendar una cita desde la ficha de la consulta, sin
+ * pasar por la pestaña "Citas agendadas" (que quedó de solo lectura).
+ */
+class AgendarCitaAction
+{
+    public static function make(): Action
+    {
+        return Action::make('agendarCita')
+            ->label('Agendar')
+            ->icon('heroicon-o-calendar-days')
+            ->color('info')
+            ->schema([
+                Select::make('personal')
+                    ->label('Abogado(s) asignado(s)')
+                    ->options(function (Consulta $record) {
+                        // Si la consulta ya tiene una respuesta con materia legal
+                        // definida, solo se listan los abogados con esa
+                        // especialidad; si no tiene respuesta (o la respuesta usó
+                        // "Otro" como materia), se listan todos los abogados, sin
+                        // filtrar por especialidad — pero nunca otras profesiones.
+                        $designacion = $record->respuestas()
+                            ->latest('fecha_respuesta')
+                            ->first()
+                            ?->designacion;
+
+                        return PersonalEspecialidades::personalOptionsWithEspecialidad(
+                            $designacion?->value,
+                            'Abogado',
+                        );
+                    })
+                    ->allowHtml()
+                    ->multiple()
+                    ->searchable()
+                    ->live()
+                    // El select de "multiple" por defecto queda abierto tras
+                    // cada elección (para poder marcar varios seguidos); acá
+                    // se prefiere que se colapse apenas se elige uno. No hay
+                    // una opción nativa para eso, así que se simula un clic
+                    // fuera del select (en el <body>), que es justamente lo
+                    // que ya hace que se cierre solo.
+                    ->afterStateUpdated(fn ($livewire) => $livewire->js('document.body.click()'))
+                    ->extraAttributes(['data-enter-nav-field' => 'true']),
+                Placeholder::make('agenda_personal')
+                    ->label('Agenda (próximos 14 días)')
+                    ->content(fn (Get $get) => AgendaPreview::render($get('personal')))
+                    ->columnSpanFull(),
+                // El id fijo lo usa agenda-preview.blade.php para escribir la
+                // fecha directo al hacer clic en un día del mini-calendario.
+                DatePicker::make('fecha')->required()->default(now())->extraInputAttributes(['data-enter-nav' => 'true', 'id' => 'agendar-cita-fecha']),
+                TimePicker::make('hora')->seconds(false)->required()->extraInputAttributes(['data-enter-nav' => 'true']),
+                Textarea::make('detalle')->label('Nota')->rows(3)->extraInputAttributes(['data-enter-nav' => 'true']),
+                // Se guardan en la consulta (no en la cita) y pasan al caso
+                // al ascenderla a cliente ejecutivo.
+                CamposDenuncia::denunciado()
+                    ->default(fn (Consulta $record) => $record->denunciado),
+                CamposDenuncia::denuncias()
+                    ->default(fn (Consulta $record) => CamposDenuncia::ids($record)),
+                Placeholder::make('citas_agendadas')
+                    ->label('Citas agendadas')
+                    ->content(fn (Consulta $record) => view('filament.admin.consultas.citas-agendadas', [
+                        'citas' => $record->citas()->with('personal')->orderByDesc('fecha')->get(),
+                        'puedeEditar' => auth()->user()?->puede('editar') ?? false,
+                    ]))
+                    ->columnSpanFull(),
+            ])
+            // registerModalActions() (no modalActions(), que está obsoleto y en
+            // realidad REEMPLAZA todo el pie del modal, incluido el botón
+            // Guardar) — solo registra "anularCita"/"reagendarCita" para que
+            // los botones de citas-agendadas.blade.php puedan invocarlos vía
+            // mountAction(), sin tocar el pie de este modal.
+            ->registerModalActions([
+                AnularCitaAction::make(),
+                ReagendarCitaAction::make(),
+            ])
+            ->modalWidth('4xl')
+            ->modalSubmitActionLabel('Guardar')
+            ->modalCancelAction(false)
+            ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))
+            ->action(function (Consulta $record, array $data, $livewire): void {
+                DB::transaction(function () use ($record, $data): void {
+                    $cita = $record->citas()->create([
+                        'fecha' => $data['fecha'],
+                        'hora' => $data['hora'],
+                        'detalle' => $data['detalle'] ?? null,
+                    ]);
+
+                    if (filled($data['personal'] ?? null)) {
+                        $cita->personal()->sync($data['personal']);
+                    }
+
+                    $record->update(['denunciado' => filled($data['denunciado'] ?? null) ? $data['denunciado'] : null]);
+                    CamposDenuncia::sincronizar($record, $data['denuncias'] ?? []);
+                });
+
+                CamposDenuncia::refrescarFicha($livewire, $record);
+
+                Notification::make()->title('Cita agendada')->success()->send();
+            });
+    }
+}
