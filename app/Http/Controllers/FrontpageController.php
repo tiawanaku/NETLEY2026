@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\EstadoAprobacion;
 use App\Enums\EstadoCaso;
 use App\Enums\EstadoConsulta;
+use App\Enums\FormaIngreso;
 use App\Models\Caso;
 use App\Models\Cliente;
 use App\Models\Consulta;
@@ -114,6 +115,7 @@ class FrontpageController extends Controller
             ...$data,
             'fecha_consulta' => now(),
             'origen' => 'Sitio web',
+            'forma_ingreso' => FormaIngreso::PaginaWeb,
             // Las consultas que llegan por la página web nacen "Pendiente".
             'estado' => EstadoConsulta::inicialSegunOrigen('Sitio web'),
         ]);

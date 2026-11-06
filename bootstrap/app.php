@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,6 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Solo afecta al guard `cliente` del portal público: el panel Filament
         // usa su propio middleware de autenticación y no pasa por aquí.
         $middleware->redirectGuestsTo(fn () => route('portal.login'));
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        // Requiere que el servidor tenga configurado el cron de Laravel
+        // (`* * * * * php artisan schedule:run`), ver documentación de
+        // despliegue.
+        $schedule->command('personal:inhabilitar-programados')->dailyAt('00:05');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

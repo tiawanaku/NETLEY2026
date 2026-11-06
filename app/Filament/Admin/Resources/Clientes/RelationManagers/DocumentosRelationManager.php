@@ -3,6 +3,8 @@
 namespace App\Filament\Admin\Resources\Clientes\RelationManagers;
 
 use App\Enums\TipoDocumento;
+use App\Models\Caso;
+use App\Models\DocumentoCliente;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\FileUpload;
@@ -76,6 +78,14 @@ class DocumentosRelationManager extends RelationManager
                         $data['fecha_origen'] = now();
 
                         return $data;
+                    })
+                    // Si este documento queda ligado a un caso marcado
+                    // "documentos_pendientes" (ver ClienteCasoWizard), ya
+                    // tiene uno: apaga la marca sola.
+                    ->after(function (DocumentoCliente $record): void {
+                        if ($record->caso_id) {
+                            Caso::whereKey($record->caso_id)->update(['documentos_pendientes' => false]);
+                        }
                     }),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())

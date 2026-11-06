@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Consultas\Schemas;
 
 use App\Enums\EstadoConsulta;
+use App\Enums\FormaIngreso;
 use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\CamposDomicilio;
 use App\Filament\Admin\Support\CamposOrigen;
@@ -27,8 +28,10 @@ class ConsultaForm
 {
     /**
      * @param  array<int, \Filament\Schemas\Components\Component>  $before  Componentes a mostrar antes del formulario (ej. rótulo de N° de consulta en Crear).
+     * @param  array<int, \Filament\Schemas\Components\Component>  $after  Componentes a mostrar justo debajo de la sección "Consulta" (ej. "Cerrar consulta" en VerAgendado).
+     * @param  bool  $conSeguimiento  false la omite por completo (sin dejar el espacio): la usa VerAgendado, que no la necesita.
      */
-    public static function configure(Schema $schema, array $before = []): Schema
+    public static function configure(Schema $schema, array $before = [], array $after = [], bool $conSeguimiento = true): Schema
     {
         // La consulta queda de solo lectura una vez creada, salvo que el
         // usuario active el modo edición (botón "Editar" en EditConsulta).
@@ -78,6 +81,18 @@ class ConsultaForm
                                 ->openUrlInNewTab(),
                         ])
                         ->schema([
+                            Select::make('forma_ingreso')
+                                ->label('Forma de ingreso')
+                                ->options(FormaIngreso::class)
+                                ->native(false)
+                                ->required()
+                                ->disabled($isEditing)
+                                // ->native(false): es un combobox, no un <select>
+                                // nativo, así que la marca de Enter va en el
+                                // contenedor (extraAttributes), no en el input
+                                // oculto (extraInputAttributes no llega al botón
+                                // real — ver enter-navigation.js).
+                                ->extraAttributes(['data-enter-nav-field' => 'true']),
                             // Lo que escribió la persona en el formulario de la portada.
                             Textarea::make('consulta')
                                 ->label('Consulta')
@@ -101,65 +116,81 @@ class ConsultaForm
                         ])
                         ->hidden(),
 
-                    Section::make('Seguimiento')
+                    ...$after,
+
+                    ...($conSeguimiento ? [Section::make('Seguimiento')
                         ->schema([
                             // Solo se pide la fecha; la hora se registra sola por dentro (ver
                             // CreateConsulta), no se le pregunta al usuario.
                             DatePicker::make('fecha_consulta')->required()->default(now())->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
-                            Select::make('estado')
-                                // "Agendado" solo se ofrece cuando la consulta entra por
-                                // WhatsApp (o ya está agendada), ver EstadoConsulta::inicialSegunOrigen.
-                                ->options(function (Get $get, $state) {
-                                    $actual = $state instanceof EstadoConsulta ? $state : EstadoConsulta::tryFrom((string) $state);
-
-                                    return collect([
-                                        EstadoConsulta::Pendiente,
-                                        EstadoConsulta::NoContesta,
-                                        EstadoConsulta::Respondido,
-                                        EstadoConsulta::SoloConsulta,
-                                        EstadoConsulta::RemitirPsicologia,
-                                        EstadoConsulta::RemitirSocial,
-                                    ])
-                                        ->when(
-                                            EstadoConsulta::esOrigenWhatsapp($get('origen')) || $actual === EstadoConsulta::Agendado,
-                                            fn ($estados) => $estados->prepend(EstadoConsulta::Agendado),
-                                        )
-                                        // Estados que se asignan solos (p. ej. "Caso iniciado" al
-                                        // ascender a caso): no se ofrecen para elegir, pero si la
-                                        // consulta ya lo tiene debe mostrarse, no quedar en blanco.
-                                        ->when(
-                                            $actual !== null && ! in_array($actual, [
-                                                EstadoConsulta::Pendiente,
-                                                EstadoConsulta::NoContesta,
-                                                EstadoConsulta::Respondido,
-                                                EstadoConsulta::SoloConsulta,
-                                                EstadoConsulta::RemitirPsicologia,
-                                                EstadoConsulta::RemitirSocial,
-                                                EstadoConsulta::Agendado,
-                                            ], true),
-                                            fn ($estados) => $estados->push($actual),
-                                        )
-                                        ->mapWithKeys(fn (EstadoConsulta $e) => [$e->value => $e->getLabel()]);
+                            Select::make('origen')
+                                // Opciones fijas (antes era texto libre con
+                                // sugerencias) + "Otro" al final para escribirlo
+                                // a mano (ver 'origen_otro' debajo).
+                                ->options(
+                                    collect(Origenes::SUGERENCIAS)
+                                        ->mapWithKeys(fn (string $o) => [$o => $o])
+                                        ->put(Origenes::OTRO, 'Otro')
+                                )
+                                ->native(false)
+                                ->required()
+                                ->disabled($isEditing)
+                                // Un registro antiguo con un origen que no está en
+                                // la lista se muestra como "Otro", con ese texto
+                                // ya cargado en 'origen_otro'.
+                                ->afterStateHydrated(function (Set $set, ?string $state): void {
+                                    if (filled($state) && ! in_array($state, Origenes::SUGERENCIAS, true) && $state !== Origenes::OTRO) {
+                                        $set('origen_otro', $state);
+                                        $set('origen', Origenes::OTRO);
+                                    }
                                 })
-                                ->required()
-                                ->disabled($isEditing)
-                                ->extraInputAttributes(['data-enter-nav' => 'true']),
-                            TextInput::make('origen')
-                                ->required()
-                                ->datalist(Origenes::SUGERENCIAS)
-                                ->regex('/^[^0-9]*$/')
-                                ->disabled($isEditing)
                                 // Si entra por WhatsApp, el estado pasa solo a "Agendado".
-                                ->live(onBlur: true)
+                                ->live()
                                 ->afterStateUpdated(function (?string $state, Set $set): void {
                                     if (EstadoConsulta::esOrigenWhatsapp($state)) {
                                         $set('estado', EstadoConsulta::Agendado->value);
                                     }
                                 })
-                                ->extraInputAttributes(self::atributosSoloLetras()),
+                                ->extraAttributes(['data-enter-nav-field' => 'true']),
+                            TextInput::make('origen_otro')
+                                ->label('Origen (especificar)')
+                                ->maxLength(100)
+                                ->required(fn (Get $get) => $get('origen') === Origenes::OTRO)
+                                ->visible(fn (Get $get) => $get('origen') === Origenes::OTRO)
+                                ->disabled($isEditing)
+                                ->extraInputAttributes(['data-enter-nav' => 'true']),
                             // Con origen "Talleres" se pide qué taller.
                             CamposOrigen::detalle($isEditing),
-                        ]),
+                            Select::make('estado')
+                                // Solo Pendiente/Agendado se ofrecen para elegir; otros
+                                // estados (NoContesta, Respondido, Caso Iniciado, etc.) se
+                                // asignan solos desde otras acciones, pero si la consulta ya
+                                // los tiene deben mostrarse igual, no quedar en blanco.
+                                ->options(function ($state) {
+                                    $actual = $state instanceof EstadoConsulta ? $state : EstadoConsulta::tryFrom((string) $state);
+
+                                    return collect([EstadoConsulta::Pendiente, EstadoConsulta::Agendado])
+                                        ->when(
+                                            $actual !== null && ! in_array($actual, [EstadoConsulta::Pendiente, EstadoConsulta::Agendado], true),
+                                            fn ($estados) => $estados->push($actual),
+                                        )
+                                        // "Agendado" (internamente, App\Enums\EstadoConsulta) es
+                                        // el estado real que solo corresponde si la consulta
+                                        // tiene una cita vigente (ver AgendarCitaAction, que lo
+                                        // fuerza al crear una cita). Elegir esta opción acá es
+                                        // la intención de agendar, no el hecho consumado — por
+                                        // eso en el select se lee "Agendar", aunque el valor
+                                        // guardado siga siendo 'agendado' y abre el modal de
+                                        // Agendar al guardar (ver CreateConsulta::getRedirectUrl()).
+                                        ->mapWithKeys(fn (EstadoConsulta $e) => [
+                                            $e->value => $e === EstadoConsulta::Agendado ? 'Agendar' : $e->getLabel(),
+                                        ]);
+                                })
+                                ->native(false)
+                                ->required()
+                                ->disabled($isEditing)
+                                ->extraAttributes(['data-enter-nav-field' => 'true']),
+                        ])] : []),
                 ]),
 
                 Section::make('Domicilio')
@@ -171,6 +202,25 @@ class ConsultaForm
                     ->columnSpanFull()
                     ->visible(false),
             ]);
+    }
+
+    /**
+     * Resuelve el select "Origen" + "Otro" (origen_otro) al valor real a
+     * guardar en la columna `origen`, y descarta el campo auxiliar (no
+     * existe en la tabla). Se usa al crear y al editar.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function resolverOrigen(array $data): array
+    {
+        if (($data['origen'] ?? null) === Origenes::OTRO) {
+            $data['origen'] = trim((string) ($data['origen_otro'] ?? ''));
+        }
+
+        unset($data['origen_otro']);
+
+        return $data;
     }
 
     /** Las consultas del formulario público de la portada nacen con origen "Sitio web". */

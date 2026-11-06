@@ -7,10 +7,13 @@ use App\Filament\Admin\Forms\Components\DelitoSelect;
 use App\Filament\Admin\Support\CamposPago;
 use App\Models\Caso;
 use App\Models\Cliente;
+use App\Models\DocumentoCliente;
 use App\Models\Pago;
 use App\Support\PersonalEspecialidades;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -31,9 +34,6 @@ use Illuminate\Support\HtmlString;
  */
 class ClienteCasoWizard
 {
-    /** Valor de "extension" que habilita el campo manual "extension_texto". */
-    public const EXTENSION_OTRO = 'OTRO';
-
     /** Opciones de "Apersonamiento"; "Otros" habilita "apersonamiento_otro". */
     public const APERSONAMIENTOS = ['Demandado', 'Demandante', 'Denunciante', 'Denunciado', 'Testigo', self::APERSONAMIENTO_OTROS];
 
@@ -77,38 +77,17 @@ class ClienteCasoWizard
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn (TextInput $component) => $component->getLivewire()->validateOnly($component->getStatePath()))
                         ->extraInputAttributes(['data-enter-nav' => 'true']),
-                    TextInput::make('ci')
-                        ->label('Carnet de identidad')
-                        ->required()
-                        ->regex('/^[0-9]+$/')
-                        ->validationMessages(['regex' => 'Solo se permiten números.'])
-                        ->extraInputAttributes(self::atributosSoloNumeros()),
-                    Select::make('extension')
-                        ->label('Expedido en')
-                        ->options([
-                            'LP' => 'La Paz',
-                            'CB' => 'Cochabamba',
-                            'SC' => 'Santa Cruz',
-                            'OR' => 'Oruro',
-                            'PT' => 'Potosí',
-                            'TJ' => 'Tarija',
-                            'CH' => 'Chuquisaca',
-                            'BE' => 'Beni',
-                            'PD' => 'Pando',
-                            'QR' => 'QR',
-                            self::EXTENSION_OTRO => 'Otro',
-                        ])
-                        ->native(false)
-                        ->live()
-                        ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
-                    TextInput::make('extension_texto')
-                        ->label('Expedido en (manual)')
-                        ->maxLength(20)
-                        ->visible(fn (Get $get) => $get('extension') === self::EXTENSION_OTRO)
-                        ->extraInputAttributes(['data-enter-nav' => 'true']),
+                    CamposCi::make(),
                     DatePicker::make('fecha_nacimiento')->label('Fecha de nacimiento')->maxDate(now())->extraInputAttributes(['data-enter-nav' => 'true']),
                     ...CamposDomicilio::region(),
-                    TextInput::make('direccion')->label('Dirección')->columnSpanFull()->extraInputAttributes(['data-enter-nav' => 'true']),
+                    // Ver .netley-campo-ancho-alineado en admin-theme.css: sin
+                    // esto, la etiqueta en línea queda tan ancha como el
+                    // cuadro de arriba, desalineando el cuadro para rellenar.
+                    TextInput::make('direccion')
+                        ->label('Dirección')
+                        ->columnSpanFull()
+                        ->extraInputAttributes(['data-enter-nav' => 'true'])
+                        ->extraFieldWrapperAttributes(['class' => 'netley-campo-ancho-alineado']),
                     ...CamposDomicilio::detalle(),
                     CamposDomicilio::mapa(),
                 ])
@@ -124,6 +103,48 @@ class ClienteCasoWizard
                 ->schema(self::camposPago())
                 ->columns(1)
                 ->inlineLabel(),
+
+            Step::make('Adjuntar documentos')
+                ->schema([
+                    // Totalmente opcional: sin ->required() en "Archivo" a
+                    // propósito, para que una fila sin archivo (agregada sin
+                    // querer, o dejada a medias) nunca bloquee "Guardar" —
+                    // guardarDocumentos() descarta sola cualquier fila sin
+                    // archivo al guardar, así que no hace falta.
+                    Repeater::make('documentos')
+                        ->hiddenLabel()
+                        ->extraAttributes(['class' => 'netley-fila-documento'])
+                        ->schema([
+                            // El archivo ya llega adjunto desde el clip (ver
+                            // AdjuntarDocumentosClip): este campo solo sigue
+                            // existiendo para que Filament lo guarde, pero
+                            // no se muestra (ver .netley-documento-oculto) —
+                            // el nombre del archivo se identifica con el
+                            // Placeholder de al lado.
+                            FileUpload::make('ruta')
+                                ->hiddenLabel()
+                                ->directory('documentos-clientes')
+                                ->extraAttributes(['class' => 'netley-documento-oculto']),
+                            Placeholder::make('nombreArchivo')
+                                ->label('Archivo')
+                                ->content(fn (Get $get) => AdjuntarDocumentosClip::nombreArchivo($get('ruta')) ?? '—'),
+                            TextInput::make('descripcion')
+                                ->label('Descripción')
+                                ->maxLength(100),
+                        ])
+                        ->columns(2)
+                        // Sin botón de agregar propio: lo reemplaza el campo
+                        // "clip" de abajo (ver AdjuntarDocumentosClip), que
+                        // sí puede abrir el explorador en un solo clic
+                        // porque ya existe en el formulario desde el
+                        // principio.
+                        ->addable(false)
+                        ->reorderable(false)
+                        ->defaultItems(0)
+                        ->columnSpanFull(),
+                    AdjuntarDocumentosClip::make('documentos', 'documentos-clientes'),
+                ])
+                ->columns(1),
         ];
     }
 
@@ -199,24 +220,38 @@ class ClienteCasoWizard
             TextInput::make('iguala')
                 ->label('Iguala profesional')
                 ->numeric()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)
-                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
+                ->extraInputAttributes(self::atributosEnterPago()),
 
             Toggle::make('patrocinio_hih')
                 ->label('Patrocinio Hand in Hand (HIH)')
                 ->default(false)
                 ->live(),
-            TextInput::make('porcentaje_patrocinio')
-                ->label('Porcentaje de patrocinio')
-                ->helperText('Parte de la iguala profesional que cubre Hand in Hand (ej. 40, 30).')
-                ->numeric()
-                ->minValue(1)
-                ->maxValue(100)
-                ->suffix('%')
-                ->datalist(['10', '20', '30', '40', '50', '60', '70', '80', '90'])
-                ->required(fn (Get $get) => (bool) $get('patrocinio_hih'))
-                ->visible(fn (Get $get) => (bool) $get('patrocinio_hih'))
-                ->live(onBlur: true)
-                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
+            // El monto se carga en bolivianos (como el resto del paso) y el
+            // porcentaje que representa de la iguala profesional se calcula
+            // solo, al lado — antes era al revés (se cargaba el % a mano).
+            Group::make([
+                TextInput::make('monto_patrocinio_hih')
+                    ->label('Hand in Hand (HIH)')
+                    ->numeric()
+                    ->minValue(0)
+                    ->prefix('Bs.')
+                    ->maxValue(fn (Get $get) => (float) ($get('iguala') ?? 0))
+                    ->required(fn (Get $get) => (bool) $get('patrocinio_hih'))
+                    ->live(onBlur: true)
+                    ->extraInputAttributes(self::atributosEnterPago()),
+                Placeholder::make('porcentaje_patrocinio_preview')
+                    ->label('Porcentaje de la iguala')
+                    ->content(function (Get $get): string {
+                        $iguala = (float) ($get('iguala') ?? 0);
+                        $monto = (float) ($get('monto_patrocinio_hih') ?? 0);
+
+                        return $iguala > 0
+                            ? number_format(min($monto / $iguala * 100, 100), 2).'%'
+                            : '—';
+                    }),
+            ])
+                ->columns(2)
+                ->visible(fn (Get $get) => (bool) $get('patrocinio_hih')),
 
             // Iguala Netley = iguala profesional menos el descuento que
             // cubre HIH: es el monto real que el cliente le debe a
@@ -227,6 +262,25 @@ class ClienteCasoWizard
                 ->label('Iguala Netley')
                 ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['monto_cliente'], 2)),
 
+            // Primera cuota del plan de pagos (ver plan()): empieza vacío
+            // (no en 0) y, si se carga, nunca puede ser 0 — un anticipo de
+            // 0 no es un anticipo.
+            TextInput::make('anticipo')
+                ->label('Anticipo')
+                ->numeric()
+                ->prefix('Bs.')
+                ->minValue(0.01)
+                ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
+                ->validationMessages(['min' => 'El anticipo no puede ser 0; déjalo vacío si no hay anticipo.'])
+                ->live(onBlur: true)
+                ->extraInputAttributes(self::atributosEnterPago()),
+
+            // Saldo Netley = Iguala Netley menos el anticipo; es lo que
+            // se reparte en las cuotas de abajo (plan de pagos).
+            Placeholder::make('saldo_netley_preview')
+                ->label('Saldo Netley')
+                ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['saldo_cliente'], 2)),
+
             // Comisión por un pago extra ocasional (ej. referido): dos
             // campos sueltos, sin relación entre sí ni con el resto —
             // solo se guardan tal cual se cargan.
@@ -236,29 +290,13 @@ class ClienteCasoWizard
                 ->minValue(0)
                 ->maxValue(100)
                 ->suffix('%')
-                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
+                ->extraInputAttributes(self::atributosEnterPago()),
             TextInput::make('comision_monto')
                 ->label('Comisión (Bs.)')
                 ->numeric()
                 ->minValue(0)
                 ->prefix('Bs.')
-                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
-
-            TextInput::make('anticipo')
-                ->label('Anticipo')
-                ->numeric()
-                ->prefix('Bs.')
-                ->default(0)
-                ->minValue(0)
-                ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
-                ->live(onBlur: true)
-                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
-
-            // Saldo Netley = Iguala Netley menos el anticipo; es lo que
-            // se reparte en las cuotas de abajo (plan de pagos).
-            Placeholder::make('saldo_netley_preview')
-                ->label('Saldo Netley')
-                ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['saldo_cliente'], 2)),
+                ->extraInputAttributes(self::atributosEnterPago()),
 
             TextInput::make('numero_cuotas')
                 ->label('N° de cuotas mensuales')
@@ -274,24 +312,22 @@ class ClienteCasoWizard
                 ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->live(onBlur: true)
-                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
+                ->rule(fn (Get $get) => self::reglaUltimoPagoAntesDeFin($get))
+                ->extraInputAttributes(self::atributosEnterPago()),
             DatePicker::make('fecha_primera_cuota')
                 ->label('Fecha de la primera cuota')
                 ->default(now()->addMonth())
                 ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->live()
-                ->extraInputAttributes(self::atributosEnterSinAutoguardar()),
+                ->rule(fn (Get $get) => self::reglaUltimoPagoAntesDeFin($get))
+                ->extraInputAttributes(self::atributosEnterPago()),
 
             // Datos del cobro de hoy (si hay anticipo).
             Group::make(CamposPago::components(conTipo: false))
                 ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['pago_hoy'] > 0)
                 ->columns(2)
-                ->columnSpanFull()
-                // Ver nota en atributosEnterSinAutoguardar(): sin esto, Enter
-                // en "Forma de pago" (ya trae "Efectivo" por defecto) también
-                // disparaba el guardado.
-                ->extraAttributes(['data-enter-no-autosubmit' => 'true']),
+                ->columnSpanFull(),
 
             Placeholder::make('plan_preview')
                 ->label('Resumen')
@@ -333,16 +369,51 @@ class ClienteCasoWizard
                     'numero_domicilio' => $data['numero_domicilio'] ?? null,
                     'indicaciones_domicilio' => $data['indicaciones_domicilio'] ?? null,
                     'ubicacion' => CamposDomicilio::ubicacionValida($data['ubicacion'] ?? null),
-                    'extension' => ($data['extension'] ?? null) === self::EXTENSION_OTRO
-                        ? ($data['extension_texto'] ?? null)
-                        : ($data['extension'] ?? null),
+                    'extension' => $data['extension'] ?? null,
                 ]
             );
 
             $caso = self::crearCaso($cliente, $data);
 
+            self::guardarDocumentos($cliente, $caso, $data['documentos'] ?? []);
+
             return ['cliente' => $cliente, 'caso' => $caso];
         });
+    }
+
+    /**
+     * Documentos subidos en el paso "Adjuntar documentos" del wizard: quedan
+     * en la misma tabla que el resto de los documentos del cliente (ver
+     * App\Filament\Admin\Resources\Clientes\RelationManagers\DocumentosRelationManager),
+     * ligados también a este caso recién creado. Subir documentos acá es
+     * opcional; si no se sube ninguno, el caso queda marcado con
+     * "documentos_pendientes" (ver CasosTable y Clientes\RelationManagers\CasosRelationManager)
+     * hasta que se suba alguno más adelante desde la ficha del cliente —
+     * eso ya apaga la marca sola (ver DocumentosRelationManager).
+     *
+     * @param  array<int, array{ruta?: string, descripcion?: ?string}>  $documentos
+     */
+    protected static function guardarDocumentos(Cliente $cliente, Caso $caso, array $documentos): void
+    {
+        $huboDocumento = false;
+
+        foreach ($documentos as $documento) {
+            if (blank($documento['ruta'] ?? null)) {
+                continue;
+            }
+
+            DocumentoCliente::create([
+                'cliente_id' => $cliente->id,
+                'caso_id' => $caso->id,
+                'ruta' => $documento['ruta'],
+                'descripcion' => $documento['descripcion'] ?? null,
+                'fecha_origen' => now(),
+            ]);
+
+            $huboDocumento = true;
+        }
+
+        $caso->update(['documentos_pendientes' => ! $huboDocumento]);
     }
 
     /**
@@ -403,7 +474,8 @@ class ClienteCasoWizard
             CamposDenuncia::sincronizar($caso, $data['denuncias'] ?? []);
 
             // Cobro de hoy: el anticipo (puede ser el total de la Iguala
-            // Netley si así se cargó).
+            // Netley si así se cargó) — es la cuota 1 del plan (ver plan()),
+            // no una cuota 0 aparte.
             if ($plan['pago_hoy'] > 0) {
                 $siguienteRecibo = ((int) Pago::max('nro_recibo')) + 1;
 
@@ -413,20 +485,9 @@ class ClienteCasoWizard
                     'monto' => $plan['pago_hoy'],
                     ...CamposPago::datos($data, tipoFijo: 'anticipo'),
                     'fecha_pago' => now()->toDateString(),
-                    'nro_cuota' => 0,
+                    'nro_cuota' => 1,
                     'nro_recibo' => $siguienteRecibo,
                     'registrado_por' => auth()->user()?->username,
-                ]);
-
-                // Cuota 0 del plan = lo cobrado hoy, ya pagado, para que
-                // aparezca junto con el resto de las cuotas.
-                $caso->planesPago()->create([
-                    'numero' => 0,
-                    'fecha' => now()->toDateString(),
-                    'monto' => $plan['pago_hoy'],
-                    'nuevo_saldo' => $plan['saldo_cliente'],
-                    'estado' => 'pagado',
-                    'creado_por' => auth()->user()?->username,
                 ]);
             }
 
@@ -436,7 +497,7 @@ class ClienteCasoWizard
                     'fecha' => $cuota['fecha']->toDateString(),
                     'monto' => $cuota['monto'],
                     'nuevo_saldo' => $cuota['nuevo_saldo'],
-                    'estado' => 'pendiente',
+                    'estado' => $cuota['pagada_hoy'] ? 'pagado' : 'pendiente',
                     'creado_por' => auth()->user()?->username,
                 ]);
             }
@@ -451,23 +512,28 @@ class ClienteCasoWizard
      * guarda.
      *
      * - Iguala profesional, con un descuento opcional de Hand in Hand (HIH)
-     *   según su porcentaje de patrocinio, da la Iguala Netley (lo que el
-     *   cliente le debe a Netley).
-     * - El anticipo se resta de la Iguala Netley y da el Saldo, que se
-     *   reparte en N cuotas mensuales (por defecto, una por mes de duración
-     *   del proceso); la última cuota absorbe el redondeo para que la suma
-     *   cuadre. Sin anticipo ni cuotas, el saldo queda pendiente sin más.
+     *   cargado en bolivianos (el porcentaje que representa se calcula
+     *   solo), da la Iguala Netley (lo que el cliente le debe a Netley).
+     * - El anticipo es la cuota 1 del plan de pagos (no una "cuota 0"
+     *   aparte): se resta de la Iguala Netley y da el Saldo, que se reparte
+     *   en las cuotas mensuales siguientes (por defecto, una por mes de
+     *   duración del proceso), numeradas a partir de la 2 si hubo anticipo,
+     *   o desde la 1 si no lo hubo; la última cuota absorbe el redondeo
+     *   para que la suma cuadre. Sin anticipo ni cuotas, el saldo queda
+     *   pendiente sin más.
      *
      * @param  array<string, mixed>  $datos
-     * @return array{iguala: float, patrocinio: bool, porcentaje: float, monto_patrocinio: float, monto_cliente: float, pago_hoy: float, saldo_cliente: float, cuotas: array<int, array{numero: int, fecha: Carbon, monto: float, nuevo_saldo: float}>}
+     * @return array{iguala: float, patrocinio: bool, porcentaje: float, monto_patrocinio: float, monto_cliente: float, pago_hoy: float, saldo_cliente: float, cuotas: array<int, array{numero: int, fecha: Carbon, monto: float, nuevo_saldo: float, pagada_hoy: bool}>}
      */
     public static function plan(array $datos): array
     {
         $iguala = round(max((float) ($datos['iguala'] ?? 0), 0), 2);
         $patrocinio = (bool) ($datos['patrocinio_hih'] ?? false);
-        $porcentaje = $patrocinio ? min(max((float) ($datos['porcentaje_patrocinio'] ?? 0), 0), 100) : 0.0;
+        $montoPatrocinio = $patrocinio
+            ? round(min(max((float) ($datos['monto_patrocinio_hih'] ?? 0), 0), $iguala), 2)
+            : 0.0;
+        $porcentaje = ($patrocinio && $iguala > 0) ? round(min($montoPatrocinio / $iguala * 100, 100), 2) : 0.0;
 
-        $montoPatrocinio = round($iguala * $porcentaje / 100, 2);
         $montoCliente = round($iguala - $montoPatrocinio, 2);
 
         $pagoHoy = round(min(max((float) ($datos['anticipo'] ?? 0), 0), $montoCliente), 2);
@@ -476,6 +542,18 @@ class ClienteCasoWizard
         $numeroCuotas = max((int) ($datos['numero_cuotas'] ?? 0), 0);
 
         $cuotas = [];
+        $siguienteNumero = 1;
+
+        if ($pagoHoy > 0) {
+            $cuotas[] = [
+                'numero' => $siguienteNumero,
+                'fecha' => now()->startOfDay(),
+                'monto' => $pagoHoy,
+                'nuevo_saldo' => $saldoCliente,
+                'pagada_hoy' => true,
+            ];
+            $siguienteNumero++;
+        }
 
         if ($numeroCuotas > 0 && $saldoCliente > 0) {
             $montoCuota = round($saldoCliente / $numeroCuotas, 2);
@@ -484,15 +562,16 @@ class ClienteCasoWizard
                 : now()->addMonth();
             $restante = $saldoCliente;
 
-            for ($i = 1; $i <= $numeroCuotas; $i++) {
-                $monto = $i === $numeroCuotas ? $restante : $montoCuota;
+            for ($i = 0; $i < $numeroCuotas; $i++) {
+                $monto = $i === $numeroCuotas - 1 ? $restante : $montoCuota;
                 $restante = round($restante - $monto, 2);
 
                 $cuotas[] = [
-                    'numero' => $i,
-                    'fecha' => $primera->copy()->addMonthsNoOverflow($i - 1),
+                    'numero' => $siguienteNumero + $i,
+                    'fecha' => $primera->copy()->addMonthsNoOverflow($i),
                     'monto' => $monto,
                     'nuevo_saldo' => max($restante, 0),
+                    'pagada_hoy' => false,
                 ];
             }
         }
@@ -514,9 +593,36 @@ class ClienteCasoWizard
      */
     protected static function datosPlan(Get $get): array
     {
-        return collect(['iguala', 'patrocinio_hih', 'porcentaje_patrocinio', 'anticipo', 'numero_cuotas', 'fecha_primera_cuota'])
+        return collect(['iguala', 'patrocinio_hih', 'monto_patrocinio_hih', 'anticipo', 'numero_cuotas', 'fecha_primera_cuota'])
             ->mapWithKeys(fn (string $campo) => [$campo => $get($campo)])
             ->all();
+    }
+
+    /**
+     * El último pago del plan (la última cuota mensual, o el anticipo si no
+     * hay cuotas) tiene que caer antes de la fecha estimada de fin del
+     * proceso (paso "Proceso", ver fechaFinEstimada()) — si no, el cliente
+     * terminaría de pagar después de que el caso debería estar cerrado.
+     */
+    protected static function reglaUltimoPagoAntesDeFin(Get $get): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
+            $fechaFin = self::fechaFinEstimada($get('duracion_meses'));
+
+            if (! $fechaFin) {
+                return;
+            }
+
+            $ultimaCuota = collect(self::plan(self::datosPlan($get))['cuotas'])->last();
+
+            if (! $ultimaCuota) {
+                return;
+            }
+
+            if ($ultimaCuota['fecha']->greaterThanOrEqualTo($fechaFin)) {
+                $fail('El último pago ('.$ultimaCuota['fecha']->format('d/m/Y').') debe ser antes de la fecha estimada de fin del proceso ('.$fechaFin->format('d/m/Y').').');
+            }
+        };
     }
 
     /**
@@ -525,43 +631,51 @@ class ClienteCasoWizard
     protected static function resumenPlanHtml(array $plan): HtmlString
     {
         $bs = fn (float $monto): string => 'Bs. '.number_format($monto, 2);
-        $fila = fn (string $a, string $b, string $c, string $d): string => '<tr>'
-            .'<td style="padding:4px 8px;">'.e($a).'</td>'
-            .'<td style="padding:4px 8px;">'.e($b).'</td>'
-            .'<td style="padding:4px 8px;text-align:right;">'.e($c).'</td>'
-            .'<td style="padding:4px 8px;text-align:right;">'.e($d).'</td></tr>';
 
-        $lineas = ['Iguala profesional: <strong>'.e($bs($plan['iguala'])).'</strong>'];
+        // Todo en tabla (resumen y cuotas) para que los montos queden
+        // alineados a la derecha en vez de sueltos en una lista.
+        $filaResumen = fn (string $etiqueta, string $valor, bool $fuerte = false): string => '<tr>'
+            .'<td style="padding:4px 8px;color:#666;">'.e($etiqueta).'</td>'
+            .'<td style="padding:4px 8px;text-align:right;'.($fuerte ? 'font-weight:bold;' : '').'">'.e($valor).'</td></tr>';
+
+        $resumen = '<table style="border-collapse:collapse;font-size:.875rem;">';
+        $resumen .= $filaResumen('Iguala profesional', $bs($plan['iguala']));
 
         if ($plan['patrocinio']) {
             $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
-            $lineas[] = 'Hand in Hand ('.e($porcentaje).'%): '.e($bs($plan['monto_patrocinio']));
+            $resumen .= $filaResumen('Hand in Hand ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
         }
 
-        $lineas[] = 'Iguala Netley: <strong>'.e($bs($plan['monto_cliente'])).'</strong>';
-        $lineas[] = 'Anticipo: '.e($bs($plan['pago_hoy']));
-        $lineas[] = 'Saldo: <strong>'.e($bs($plan['saldo_cliente'])).'</strong>';
+        $resumen .= $filaResumen('Iguala Netley', $bs($plan['monto_cliente']), fuerte: true);
+        $resumen .= $filaResumen('Anticipo', $bs($plan['pago_hoy']));
+        $resumen .= $filaResumen('Saldo', $bs($plan['saldo_cliente']), fuerte: true);
+        $resumen .= '</table>';
 
-        $tabla = '';
+        $tablaCuotas = '';
 
-        if ($plan['pago_hoy'] > 0 || $plan['cuotas'] !== []) {
-            $tabla = '<table style="margin-top:.5rem;border-collapse:collapse;font-size:.875rem;">'
+        if ($plan['cuotas'] !== []) {
+            $filaCuota = fn (string $a, string $b, string $c, string $d): string => '<tr>'
+                .'<td style="padding:4px 8px;">'.e($a).'</td>'
+                .'<td style="padding:4px 8px;">'.e($b).'</td>'
+                .'<td style="padding:4px 8px;text-align:right;">'.e($c).'</td>'
+                .'<td style="padding:4px 8px;text-align:right;">'.e($d).'</td></tr>';
+
+            $tablaCuotas = '<table style="margin-top:.75rem;border-collapse:collapse;font-size:.875rem;">'
                 .'<thead><tr style="text-align:left;border-bottom:1px solid rgb(128 128 128 / .3);">'
                 .'<th style="padding:4px 8px;">Cuota</th><th style="padding:4px 8px;">Fecha</th>'
                 .'<th style="padding:4px 8px;text-align:right;">Monto</th><th style="padding:4px 8px;text-align:right;">Saldo</th></tr></thead><tbody>';
 
-            if ($plan['pago_hoy'] > 0) {
-                $tabla .= $fila('0 (anticipo, hoy)', now()->format('d/m/Y'), $bs($plan['pago_hoy']), $bs($plan['saldo_cliente']));
-            }
-
             foreach ($plan['cuotas'] as $cuota) {
-                $tabla .= $fila((string) $cuota['numero'], $cuota['fecha']->format('d/m/Y'), $bs($cuota['monto']), $bs($cuota['nuevo_saldo']));
+                // La cuota 1 es el anticipo pagado hoy (ver plan()): se
+                // marca acá para distinguirla, no es una fila aparte.
+                $numero = $cuota['numero'].($cuota['pagada_hoy'] ? ' (anticipo, hoy)' : '');
+                $tablaCuotas .= $filaCuota($numero, $cuota['fecha']->format('d/m/Y'), $bs($cuota['monto']), $bs($cuota['nuevo_saldo']));
             }
 
-            $tabla .= '</tbody></table>';
+            $tablaCuotas .= '</tbody></table>';
         }
 
-        return new HtmlString('<div style="line-height:1.7;">'.implode('<br>', $lineas).'</div>'.$tabla);
+        return new HtmlString($resumen.$tablaCuotas);
     }
 
     /**
@@ -599,21 +713,20 @@ class ClienteCasoWizard
     }
 
     /**
-     * Campos del paso "Pago y plan de cuotas": varios ya traen un valor por
-     * defecto (anticipo, N° de cuotas, fecha de la primera cuota), así que
-     * sin esto Enter los salta a todos por "ya tener valor" y termina
-     * dándole clic a "Guardar" apenas se completa el primer campo vacío
-     * (ver resources/js/filament/enter-navigation.js). data-enter-nav sigue
-     * presente para que Enter avance normal entre ellos; solo se desactiva
-     * el guardado automático al final de la cadena.
+     * Campos del paso "Pago y plan de cuotas". Ya no es el último paso del
+     * asistente (ver steps(), ahora sigue "Adjuntar documentos"), así que al
+     * llegar al final de la cadena con Enter corresponde pasar al siguiente
+     * paso con "Siguiente" — no hace falta bloquear el autoavance como
+     * cuando este era el paso final (ver resources/js/filament/enter-navigation.js:
+     * "Siguiente" ya está marcado con data-enter-submit en el propio Wizard,
+     * igual que el botón real de guardar).
      *
      * @return array<string, string>
      */
-    protected static function atributosEnterSinAutoguardar(): array
+    protected static function atributosEnterPago(): array
     {
         return [
             'data-enter-nav' => 'true',
-            'data-enter-no-autosubmit' => 'true',
         ];
     }
 }

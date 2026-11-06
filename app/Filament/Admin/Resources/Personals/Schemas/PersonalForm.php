@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Personals\Schemas;
 use App\Enums\EstadoPersonal;
 use App\Enums\RedSocialPlataforma;
 use App\Enums\Rol;
+use App\Filament\Admin\Support\AdjuntarDocumentosClip;
 use App\Filament\Admin\Support\CampoConOtro;
 use App\Filament\Admin\Support\CamposTelefono;
 use App\Filament\Admin\Support\ReglasContacto;
@@ -12,6 +13,7 @@ use App\Models\Personal;
 use App\Support\PersonalEspecialidades;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn as RepeaterTableColumn;
 use Filament\Forms\Components\Select;
@@ -224,25 +226,44 @@ class PersonalForm
                                 ->directory('personal/fotos'),
                             Repeater::make('documentos')
                                 ->relationship()
-                                ->label('Documentos')
+                                ->label('Adjuntar documentos')
+                                ->extraAttributes(['class' => 'netley-fila-documento'])
                                 ->schema([
+                                    // El archivo ya llega adjunto desde el
+                                    // clip (ver AdjuntarDocumentosClip): este
+                                    // campo solo sigue existiendo para que
+                                    // Filament lo guarde, pero no se muestra
+                                    // (ver .netley-documento-oculto) — el
+                                    // nombre del archivo se identifica con
+                                    // el Placeholder de al lado.
                                     FileUpload::make('ruta')
-                                        ->label('Archivo')
+                                        ->hiddenLabel()
                                         ->directory('documentos-personal')
+                                        ->extraAttributes(['class' => 'netley-documento-oculto'])
                                         ->disabled($isEditing)
                                         ->required(),
+                                    Placeholder::make('archivoNombre')
+                                        ->label('Archivo')
+                                        ->content(fn (Get $get) => AdjuntarDocumentosClip::nombreArchivo($get('ruta')) ?? '—'),
                                     TextInput::make('nombre')
                                         ->label('Nombre')
                                         ->maxLength(100)
                                         ->disabled($isEditing)
                                         ->required(),
                                 ])
-                                ->addActionLabel('Subir documento')
-                                ->addable($puedeEditar)
+                                ->columns(2)
+                                // Sin botón de agregar propio: lo reemplaza el
+                                // campo "clip" de abajo (ver
+                                // AdjuntarDocumentosClip), que sí puede abrir
+                                // el explorador en un solo clic porque ya
+                                // existe en el formulario desde el principio.
+                                ->addable(false)
                                 ->deletable($puedeEditar)
                                 ->reorderable(false)
                                 ->defaultItems(0)
                                 ->columnSpanFull(),
+                            AdjuntarDocumentosClip::make('documentos', 'documentos-personal')
+                                ->visible($puedeEditar),
                         ]),
                 ]),
             ]);

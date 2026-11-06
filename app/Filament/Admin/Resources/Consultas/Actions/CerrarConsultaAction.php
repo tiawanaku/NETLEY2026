@@ -16,12 +16,15 @@ use Filament\Notifications\Notification;
  */
 class CerrarConsultaAction
 {
-    protected static function motivos(): array
+    /** Público: también lo usa FichaAgendamiento para el selector interactivo de "Cerrar caso". */
+    public static function motivos(): array
     {
         return [
             EstadoConsulta::SoloConsulta->value => 'Solo consulta',
             EstadoConsulta::NoResponde->value => 'No responde',
             EstadoConsulta::NoContesta->value => 'No contesta',
+            EstadoConsulta::NoAsistio->value => 'No asistió',
+            EstadoConsulta::RemitirPsicologia->value => 'También necesita psicología',
             EstadoConsulta::NoRequiereServicios->value => 'No requiere los servicios',
         ];
     }

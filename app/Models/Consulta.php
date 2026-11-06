@@ -4,12 +4,14 @@ namespace App\Models;
 
 use App\Enums\Especialidad;
 use App\Enums\EstadoConsulta;
+use App\Enums\FormaIngreso;
 use App\Support\Origenes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Consulta extends Model
 {
@@ -17,6 +19,9 @@ class Consulta extends Model
 
     protected $fillable = [
         'caso_id',
+        'forma_ingreso',
+        'fecha_registro',
+        'atendido_por_id',
         'nombres',
         'ap_paterno',
         'ap_materno',
@@ -60,10 +65,12 @@ class Consulta extends Model
     protected function casts(): array
     {
         return [
+            'forma_ingreso' => FormaIngreso::class,
             'estado' => EstadoConsulta::class,
             'designacion' => Especialidad::class,
             'fecha_consulta' => 'datetime',
             'fecha_contacto' => 'date',
+            'fecha_registro' => 'date',
             'ubicacion' => 'array',
         ];
     }
@@ -87,6 +94,11 @@ class Consulta extends Model
         return $this->belongsTo(Caso::class);
     }
 
+    public function atendidoPor(): BelongsTo
+    {
+        return $this->belongsTo(Personal::class, 'atendido_por_id');
+    }
+
     public function delito(): BelongsTo
     {
         return $this->belongsTo(Delito::class);
@@ -100,6 +112,12 @@ class Consulta extends Model
     public function citas(): HasMany
     {
         return $this->hasMany(Cita::class);
+    }
+
+    /** La cita no anulada más reciente: la que se muestra en "Agendados". */
+    public function citaVigente(): HasOne
+    {
+        return $this->hasOne(Cita::class)->where('anulada', false)->latestOfMany();
     }
 
     /**

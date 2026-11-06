@@ -40,6 +40,8 @@ class CreateConsulta extends CreateRecord
      */
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        $data = ConsultaForm::resolverOrigen($data);
+
         $data['consulta'] ??= '';
         $data['estado'] ??= EstadoConsulta::Pendiente->value;
         $data['fecha_consulta'] = Carbon::parse($data['fecha_consulta'] ?? now())->setTimeFrom(now());
@@ -54,14 +56,18 @@ class CreateConsulta extends CreateRecord
     }
 
     /**
-     * Después de guardar, abrir la ficha de la consulta recién creada con la
-     * ventana de "Agendar" ya abierta (ver EditConsulta::mount()) — la misma
-     * que aparece en la ficha de cualquier consulta, para agendar la cita de
-     * una vez sin tener que buscarla de nuevo.
+     * Si quedó "Agendado", abrir de una la ficha de la consulta recién creada
+     * con la ventana de "Agendar" ya abierta (ver EditConsulta::mount()) —
+     * para agendar la cita de una vez sin tener que buscarla de nuevo. Si
+     * quedó "Pendiente", basta con volver al listado de Consultas.
      */
     protected function getRedirectUrl(): string
     {
-        return $this->getResourceUrl('edit', ['record' => $this->getRecord()]).'?agendar=1';
+        if ($this->getRecord()->estado === EstadoConsulta::Agendado) {
+            return $this->getResourceUrl('edit', ['record' => $this->getRecord()]).'?agendar=1';
+        }
+
+        return $this->getResourceUrl('index');
     }
 
     /** Botones únicamente al pie del formulario: Guardar y Cancelar. */

@@ -4,12 +4,10 @@ namespace App\Filament\Admin\Resources\Consultas\Pages;
 
 use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Resources\Consultas\Actions\AgendarCitaAction;
-use App\Filament\Admin\Resources\Consultas\Actions\AgendarLlamadaAction;
-use App\Filament\Admin\Resources\Consultas\Actions\AscenderCasoAction;
 use App\Filament\Admin\Resources\Consultas\Actions\CerrarConsultaAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReactivarConsultaAction;
-use App\Filament\Admin\Resources\Consultas\Actions\ResponderConsultaAction;
 use App\Filament\Admin\Resources\Consultas\ConsultaResource;
+use App\Filament\Admin\Resources\Consultas\Schemas\ConsultaForm;
 use App\Models\Consulta;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
@@ -56,13 +54,44 @@ class EditConsulta extends EditRecord
         return $breadcrumbs;
     }
 
+    /** Si se eligió "Agendar" al editar, ver mutateFormDataBeforeSave(). */
+    protected bool $quiereAgendar = false;
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $data = ConsultaForm::resolverOrigen($data);
+
+        // "Agendar" no se guarda directo: el estado Agendado solo lo deja
+        // ConfirmarAgendarCitaAction, cuando la cita ya quedó realmente
+        // creada. Si se eligió esta opción pero todavía no hay una cita
+        // vigente, se deja el estado que ya tenía (se abre el modal de
+        // Agendar en save(), ver abajo) — así, si el modal se cierra sin
+        // guardar ninguna cita, la consulta simplemente queda como estaba,
+        // sin quedar "Agendado" a medias.
+        if ($data['estado'] === EstadoConsulta::Agendado->value
+            && ! $this->getRecord()->citas()->where('anulada', false)->exists()) {
+            $this->quiereAgendar = true;
+            $data['estado'] = $this->getRecord()->estado->value;
+        }
+
+        return $data;
+    }
+
     public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void
     {
         abort_unless(auth()->user()?->puede('editar'), 403);
 
+        $this->quiereAgendar = false;
+
         parent::save($shouldRedirect, $shouldSendSavedNotification);
 
         $this->editando = false;
+
+        if ($this->quiereAgendar) {
+            $this->redirect($this->urlFicha().'?agendar=1');
+
+            return;
+        }
 
         // Recarga la ficha en vista normal (los botones del pie no se
         // actualizan solos, ver getFormActions()).
@@ -86,10 +115,7 @@ class EditConsulta extends EditRecord
                 ->color('success')
                 ->disabled()
                 ->visible(fn (Consulta $record) => $record->caso_id !== null),
-            ResponderConsultaAction::make(),
             AgendarCitaAction::make(),
-            AgendarLlamadaAction::make(),
-            AscenderCasoAction::make(),
             CerrarConsultaAction::make(),
             ReactivarConsultaAction::make(),
         ];

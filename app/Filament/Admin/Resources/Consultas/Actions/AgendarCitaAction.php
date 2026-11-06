@@ -2,21 +2,25 @@
 
 namespace App\Filament\Admin\Resources\Consultas\Actions;
 
+use App\Enums\EstadoPersonal;
 use App\Filament\Admin\Resources\Consultas\Actions\AnularCitaAction;
+use App\Filament\Admin\Resources\Consultas\Actions\ConfirmarAgendarCitaAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReagendarCitaAction;
+use App\Filament\Admin\Support\AdjuntarDocumentosClip;
 use App\Filament\Admin\Support\AgendaPreview;
-use App\Filament\Admin\Support\CamposDenuncia;
 use App\Models\Consulta;
+use App\Models\Personal;
 use App\Support\PersonalEspecialidades;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
-use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Botón rápido para agendar una cita desde la ficha de la consulta, sin
@@ -31,6 +35,21 @@ class AgendarCitaAction
             ->icon('heroicon-o-calendar-days')
             ->color('info')
             ->schema([
+                DatePicker::make('fecha_registro')
+                    ->label('Fecha de registro')
+                    ->required()
+                    ->extraInputAttributes(['data-enter-nav' => 'true']),
+                Select::make('atendido_por_id')
+                    ->label('Atendido por')
+                    ->options(fn () => Personal::query()
+                        ->where('estado', EstadoPersonal::Habilitado)
+                        ->orderBy('nombres')
+                        ->get()
+                        ->mapWithKeys(fn (Personal $personal) => [$personal->id => $personal->nombre_completo]))
+                    ->native(false)
+                    ->searchable()
+                    ->required()
+                    ->extraAttributes(['data-enter-nav-field' => 'true']),
                 Select::make('personal')
                     ->label('Abogado(s) asignado(s)')
                     ->options(function (Consulta $record) {
@@ -67,55 +86,101 @@ class AgendarCitaAction
                     ->columnSpanFull(),
                 // El id fijo lo usa agenda-preview.blade.php para escribir la
                 // fecha directo al hacer clic en un día del mini-calendario.
-                DatePicker::make('fecha')->required()->default(now())->extraInputAttributes(['data-enter-nav' => 'true', 'id' => 'agendar-cita-fecha']),
+                DatePicker::make('fecha')->required()->extraInputAttributes(['data-enter-nav' => 'true', 'id' => 'agendar-cita-fecha']),
                 TimePicker::make('hora')->seconds(false)->required()->extraInputAttributes(['data-enter-nav' => 'true']),
                 Textarea::make('detalle')->label('Nota')->rows(3)->extraInputAttributes(['data-enter-nav' => 'true']),
-                // Se guardan en la consulta (no en la cita) y pasan al caso
-                // al ascenderla a cliente ejecutivo.
-                CamposDenuncia::denunciado()
-                    ->default(fn (Consulta $record) => $record->denunciado),
-                CamposDenuncia::denuncias()
-                    ->default(fn (Consulta $record) => CamposDenuncia::ids($record)),
-                Placeholder::make('citas_agendadas')
-                    ->label('Citas agendadas')
-                    ->content(fn (Consulta $record) => view('filament.admin.consultas.citas-agendadas', [
-                        'citas' => $record->citas()->with('personal')->orderByDesc('fecha')->get(),
-                        'puedeEditar' => auth()->user()?->puede('editar') ?? false,
-                    ]))
+                // Datos de comisión del formulario de papel "Consultas directas".
+                TextInput::make('bs_iguala')->label('Bs. Iguala')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('bs_anticipo')->label('Bs. Anticipo')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('porcentaje_comision')->label('% Comisión')->numeric()->prefix('%')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('bs_comision')->label('Bs. Comisión')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                Repeater::make('documentos')
+                    ->label('Adjuntar documentos')
+                    ->extraAttributes(['class' => 'netley-fila-documento'])
+                    ->schema([
+                        // El archivo ya llega adjunto desde el clip (ver
+                        // AdjuntarDocumentosClip): este campo solo sigue
+                        // existiendo para que Filament lo guarde al guardar
+                        // el formulario, pero no se muestra (ver
+                        // .netley-documento-oculto) — el nombre del archivo
+                        // se identifica con el Placeholder de al lado.
+                        FileUpload::make('ruta')
+                            ->hiddenLabel()
+                            ->directory('documentos-citas')
+                            ->extraAttributes(['class' => 'netley-documento-oculto'])
+                            ->required(),
+                        Placeholder::make('nombreArchivo')
+                            ->label('Archivo')
+                            ->content(fn (Get $get) => AdjuntarDocumentosClip::nombreArchivo($get('ruta')) ?? '—'),
+                        TextInput::make('descripcion')
+                            ->label('Descripción')
+                            ->maxLength(100),
+                    ])
+                    ->columns(2)
+                    // Sin botón de agregar propio: lo reemplaza el campo
+                    // "clip" de abajo (ver AdjuntarDocumentosClip), que sí
+                    // puede abrir el explorador en un solo clic porque ya
+                    // existe en el formulario desde el principio.
+                    ->addable(false)
+                    ->reorderable(false)
+                    ->defaultItems(0)
                     ->columnSpanFull(),
+                AdjuntarDocumentosClip::make('documentos', 'documentos-citas'),
             ])
             // registerModalActions() (no modalActions(), que está obsoleto y en
             // realidad REEMPLAZA todo el pie del modal, incluido el botón
-            // Guardar) — solo registra "anularCita"/"reagendarCita" para que
-            // los botones de citas-agendadas.blade.php puedan invocarlos vía
-            // mountAction(), sin tocar el pie de este modal.
+            // Guardar) — registra "anularCita"/"reagendarCita" para que los
+            // botones de citas-agendadas.blade.php puedan invocarlos vía
+            // mountAction(), y "confirmarAgendarCita" (ver más abajo) para el
+            // paso de confirmación antes de guardar.
             ->registerModalActions([
                 AnularCitaAction::make(),
                 ReagendarCitaAction::make(),
+                ConfirmarAgendarCitaAction::make(),
             ])
+            // Valores iniciales de "Fecha de registro"/"Atendido por"/"Fecha"
+            // (antes en ->default() de cada campo, ver más arriba). Si se
+            // monta con 'copiarDeCitaId' (ver VerAgendado::guardarCierre(),
+            // motivo "Reagendar": la cita anterior queda anulada y esta
+            // misma acción abre para cargar una nueva), se copian también
+            // abogado(s) y datos de comisión de esa cita — pero nunca su
+            // fecha/hora, que vuelve a elegir la persona.
+            ->fillForm(function (Consulta $record, array $arguments): array {
+                $valores = [
+                    'fecha_registro' => $record->fecha_registro ?? now(),
+                    'atendido_por_id' => $record->atendido_por_id ?? auth()->user()?->personal_id,
+                ];
+
+                $anterior = filled($arguments['copiarDeCitaId'] ?? null)
+                    ? $record->citas()->find($arguments['copiarDeCitaId'])
+                    : null;
+
+                if (! $anterior) {
+                    $valores['fecha'] = now();
+
+                    return $valores;
+                }
+
+                return [
+                    ...$valores,
+                    'personal' => $anterior->personal->pluck('id')->all(),
+                    'bs_iguala' => $anterior->bs_iguala,
+                    'bs_anticipo' => $anterior->bs_anticipo,
+                    'porcentaje_comision' => $anterior->porcentaje_comision,
+                    'bs_comision' => $anterior->bs_comision,
+                ];
+            })
             ->modalWidth('4xl')
             ->modalSubmitActionLabel('Guardar')
-            ->modalCancelAction(false)
+            ->modalCancelActionLabel('Cancelar')
             ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))
-            ->action(function (Consulta $record, array $data, $livewire): void {
-                DB::transaction(function () use ($record, $data): void {
-                    $cita = $record->citas()->create([
-                        'fecha' => $data['fecha'],
-                        'hora' => $data['hora'],
-                        'detalle' => $data['detalle'] ?? null,
-                    ]);
-
-                    if (filled($data['personal'] ?? null)) {
-                        $cita->personal()->sync($data['personal']);
-                    }
-
-                    $record->update(['denunciado' => filled($data['denunciado'] ?? null) ? $data['denunciado'] : null]);
-                    CamposDenuncia::sincronizar($record, $data['denuncias'] ?? []);
-                });
-
-                CamposDenuncia::refrescarFicha($livewire, $record);
-
-                Notification::make()->title('Cita agendada')->success()->send();
+            // No guarda directo: abre la confirmación de
+            // ConfirmarAgendarCitaAction con los datos ya validados de este
+            // formulario (Filament detecta que se montó otra acción dentro
+            // de esta y no cierra el modal de los campos de golpe, lo
+            // reemplaza por el de confirmación).
+            ->action(function (array $data, $livewire): void {
+                $livewire->mountAction('confirmarAgendarCita', ['data' => $data]);
             });
     }
 }

@@ -12,6 +12,13 @@
     // botón "Crear" — replica el atajo de teclado que tenía agragar_pp.php.
     var PLACEHOLDER = 'Seleccione una opción';
 
+    // Techo de espera para waitForStableSequence(): antes 1500ms, insuficiente
+    // cuando la ida y vuelta de Livewire tarda más de eso (ej. "Materia legal"
+    // -> "Tipo de proceso" en Consultas, que además consulta el catálogo de
+    // delitos) — el sondeo se rendía antes de que el campo nuevo quedara
+    // habilitado y lo saltaba.
+    var MAX_WAIT_LIVE_MS = 4000;
+
     // Campos marcados con data-enter-nav-live="true" (ej. "Estado", "Materia
     // legal") disparan un ->live() que revela/oculta OTROS campos de la
     // cadena (ej. "Delito", "Especialidades") tras una ida y vuelta a
@@ -27,8 +34,17 @@
     // Por eso ahora se espera un mínimo fijo generoso ANTES de siquiera
     // empezar a sondear — para cuando se pregunta "¿sigue cambiando?", la
     // ida y vuelta normal ya debería haber terminado.
+    //
+    // minWaitMs en 500 NO alcanzaba para "Materia legal" -> "Tipo de
+    // proceso" (consulta el catálogo de delitos): medido en vivo, esa ida y
+    // vuelta tarda ~900ms, así que las DOS primeras lecturas (a los 500ms y
+    // 700ms) caían ANTES de que el campo cambiara, veían el mismo número de
+    // campos por pura casualidad (todavía no había cambiado nada) y el
+    // sondeo se daba por "estable" de forma prematura — subir el TECHO
+    // (maxWaitMs) no arregla esto, porque la resolución prematura ocurre
+    // mucho antes de llegar al techo. Por eso el PISO sube a 1000ms.
     function waitForStableSequence(maxWaitMs) {
-        var minWaitMs = 500;
+        var minWaitMs = 1000;
 
         return new Promise(function (resolve) {
             setTimeout(function () {
@@ -250,7 +266,7 @@
                 var isLive = trigger.closest('[data-enter-nav-live="true"]') !== null;
 
                 if (isLive) {
-                    waitForStableSequence(1500).then(function () {
+                    waitForStableSequence(MAX_WAIT_LIVE_MS).then(function () {
                         advanceFrom(triggerId);
                     });
                 } else {
@@ -297,7 +313,7 @@
         var targetId = target.id;
 
         if (target.hasAttribute('data-enter-nav-live')) {
-            waitForStableSequence(1500).then(function () {
+            waitForStableSequence(MAX_WAIT_LIVE_MS).then(function () {
                 advanceFrom(targetId);
             });
         } else {
@@ -322,7 +338,7 @@
     // exista/sea visible, así que se usa la misma espera robusta que ya
     // resolvió este mismo problema para los selects en cascada.
     function enfocarPrimerVacioDelPaso() {
-        waitForStableSequence(1500).then(function () {
+        waitForStableSequence(MAX_WAIT_LIVE_MS).then(function () {
             var primerVacio = getSequence().find(function (el) {
                 return isEmpty(el);
             });

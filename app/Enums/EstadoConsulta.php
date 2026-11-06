@@ -13,6 +13,7 @@ enum EstadoConsulta: string implements HasColor, HasLabel
     case CasoIniciado = 'caso_iniciado';
     case NoContesta = 'no_contesta';
     case NoResponde = 'no_responde';
+    case NoAsistio = 'no_asistio';
     case NoRequiereServicios = 'no_requiere_servicios';
     case SoloConsulta = 'solo_consulta';
     case RemitirPsicologia = 'remitir_psicologia';
@@ -28,6 +29,7 @@ enum EstadoConsulta: string implements HasColor, HasLabel
             self::CasoIniciado => 'Caso Iniciado',
             self::NoContesta => 'No Contesta',
             self::NoResponde => 'No Responde',
+            self::NoAsistio => 'No Asistió',
             self::NoRequiereServicios => 'No Requiere los Servicios',
             self::SoloConsulta => 'Solo Consulta',
             self::RemitirPsicologia => 'Remitir a Psicología',
@@ -48,7 +50,7 @@ enum EstadoConsulta: string implements HasColor, HasLabel
             self::Respondido, self::Agendado => 'warning',
             self::Reactivado => 'orange',
             self::CasoIniciado => 'info',
-            self::NoContesta, self::NoResponde, self::NoRequiereServicios,
+            self::NoContesta, self::NoResponde, self::NoAsistio, self::NoRequiereServicios,
             self::SoloConsulta, self::RemitirPsicologia, self::RemitirSocial => 'danger',
         };
     }

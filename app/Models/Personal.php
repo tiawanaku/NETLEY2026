@@ -19,6 +19,22 @@ class Personal extends Model
 
     protected $table = 'personal';
 
+    /**
+     * Al eliminar (pasa a la clasificación "Eliminados", ver SoftDeletes):
+     * queda Inhabilitado también, para que pierda el acceso al sistema de
+     * inmediato (ver User::canAccessPanel()), no solo cuando alguien entre
+     * a deshabilitarlo aparte.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (self $personal): void {
+            $personal->forceFill([
+                'estado' => EstadoPersonal::Inhabilitado,
+                'fecha_fin' => $personal->fecha_fin ?? now()->toDateString(),
+            ])->saveQuietly();
+        });
+    }
+
     protected $fillable = [
         'rol',
         'nombres',

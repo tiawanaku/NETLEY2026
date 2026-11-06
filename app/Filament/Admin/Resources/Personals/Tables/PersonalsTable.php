@@ -3,9 +3,9 @@
 namespace App\Filament\Admin\Resources\Personals\Tables;
 
 use App\Enums\EstadoPersonal;
-use App\Enums\RedSocialPlataforma;
 use App\Filament\Admin\Resources\Personals\Actions\PersonalActions;
 use App\Filament\Admin\Support\FiltrosContacto;
+use App\Filament\Admin\Support\TelefonoColumna;
 use App\Models\Personal;
 use App\Support\PersonalEspecialidades;
 use Filament\Actions\ActionGroup;
@@ -24,14 +24,21 @@ class PersonalsTable
         return $table
             ->columns([
                 TextColumn::make('id')
-                    ->label('Item personal')
+                    ->label('Item')
                     ->sortable(),
                 TextColumn::make('nombre_completo')
                     ->label('Nombre')
                     ->searchable(['nombres', 'ap_paterno', 'ap_materno'])
                     ->sortable(['nombres']),
-                TextColumn::make('ci')
-                    ->label('CI')
+                TextColumn::make('whatsapp')
+                    ->label('WhatsApp')
+                    ->formatStateUsing(fn (?string $state) => TelefonoColumna::html($state))
+                    ->html()
+                    ->searchable(),
+                TextColumn::make('telefono')
+                    ->label('Teléfono')
+                    ->formatStateUsing(fn (?string $state) => TelefonoColumna::html($state))
+                    ->html()
                     ->searchable(),
                 TextColumn::make('cargo')
                     ->label('Profesión')
@@ -40,38 +47,13 @@ class PersonalsTable
                     ->tooltip(fn ($state) => is_array($state) ? implode(', ', $state) : $state),
                 TextColumn::make('especialidades')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => PersonalEspecialidades::label($state))
-                    ->toggleable(),
-                TextColumn::make('estado')
-                    ->badge(),
+                    ->formatStateUsing(fn (string $state): string => PersonalEspecialidades::label($state)),
                 TextColumn::make('fecha_inicio')
                     ->label('Fecha inicio')
                     ->date()
-                    ->sortable()
-                    ->toggleable(),
-                TextColumn::make('fecha_fin')
-                    ->label('Fecha de baja')
-                    ->date()
-                    ->placeholder('—')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('redes_sociales')
-                    ->label('Redes sociales')
-                    ->state(fn ($record) => collect($record->redes_sociales ?? [])
-                        ->pluck('plataforma')
-                        ->map(fn (?string $plataforma) => RedSocialPlataforma::tryFrom((string) $plataforma)?->getLabel() ?? $plataforma)
-                        ->all())
-                    ->badge()
-                    ->placeholder('—')
-                    ->toggleable(),
-                TextColumn::make('user.username')
-                    ->label('Usuario')
-                    ->placeholder('sin cuenta')
-                    ->toggleable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
+                TextColumn::make('estado')
+                    ->badge(),
             ])
             ->defaultSort('id', 'desc')
             ->filters([
@@ -87,12 +69,14 @@ class PersonalsTable
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
                 EditAction::make()->label('Ver')->visible(fn (Personal $record) => ! $record->trashed() && auth()->user()?->puede('editar')),
+                // Habilitar/Deshabilitar como botón directo (no escondido en
+                // el menú "..."), tanto en Vigentes como en Retirados.
+                PersonalActions::toggleEstado()->visible(fn (Personal $record) => ! $record->trashed()),
+                PersonalActions::restaurarYHabilitar()
+                    ->visible(fn (Personal $record) => $record->trashed() && auth()->user()?->puede('editar')),
                 ActionGroup::make([
-                    PersonalActions::toggleEstado(),
                     PersonalActions::asignarUsuario(),
                 ])->visible(fn (Personal $record) => ! $record->trashed()),
-                RestoreAction::make()
-                    ->visible(fn (Personal $record) => $record->trashed() && auth()->user()?->puede('editar')),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

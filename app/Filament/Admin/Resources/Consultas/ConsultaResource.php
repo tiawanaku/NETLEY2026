@@ -4,7 +4,9 @@ namespace App\Filament\Admin\Resources\Consultas;
 
 use App\Filament\Admin\Resources\Consultas\Pages\CreateConsulta;
 use App\Filament\Admin\Resources\Consultas\Pages\EditConsulta;
+use App\Filament\Admin\Resources\Consultas\Pages\FichaAgendamiento;
 use App\Filament\Admin\Resources\Consultas\Pages\ListConsultas;
+use App\Filament\Admin\Resources\Consultas\Pages\VerAgendado;
 use App\Filament\Admin\Resources\Consultas\Schemas\ConsultaForm;
 use App\Filament\Admin\Resources\Consultas\Tables\ConsultasTable;
 use App\Filament\Admin\Support\ModoMenu;
@@ -103,6 +105,11 @@ class ConsultaResource extends Resource
             'index' => ListConsultas::route('/'),
             'create' => CreateConsulta::route('/create'),
             'edit' => EditConsulta::route('/{record}/edit'),
+            'agendamiento' => FichaAgendamiento::route('/{record}/agendamiento'),
+            // Ficha aparte para la pestaña "Agendados" (ver ConsultasTable y
+            // VerAgendado): copia de 'edit' que se puede seguir modificando
+            // sin afectar la ficha normal.
+            'verAgendado' => VerAgendado::route('/{record}/agendado'),
         ];
     }
 }

@@ -10,6 +10,7 @@ use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -44,6 +45,11 @@ class CasosRelationManager extends RelationManager
                 TextColumn::make('especialidad')->label('Materia legal')->badge()->state(fn ($record) => $record->especialidad ?? $record->materia_texto),
                 TextColumn::make('delito.delito')->label('Delito')->limit(40)->placeholder(fn ($record) => $record->delito_texto ?: '-'),
                 TextColumn::make('estado')->badge(),
+                IconColumn::make('documentos_pendientes')
+                    ->label('Documento')
+                    ->icon(fn (bool $state) => $state ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-check-circle')
+                    ->color(fn (bool $state) => $state ? 'warning' : 'gray')
+                    ->tooltip(fn (bool $state) => $state ? 'Falta subir el documento del expediente' : 'Documento subido'),
                 TextColumn::make('saldo')->money('BOB'),
                 TextColumn::make('fecha_fin')->date()->label('Vencimiento'),
             ])

@@ -38,6 +38,7 @@ class Caso extends Model
         'fecha_fin',
         'estado',
         'ciudad',
+        'documentos_pendientes',
     ];
 
     protected function casts(): array
@@ -49,6 +50,7 @@ class Caso extends Model
             'saldo' => 'decimal:2',
             'pagado' => 'decimal:2',
             'patrocinio_hih' => 'boolean',
+            'documentos_pendientes' => 'boolean',
             'porcentaje_patrocinio' => 'decimal:2',
             'monto_patrocinio' => 'decimal:2',
             'comision_porcentaje' => 'decimal:2',

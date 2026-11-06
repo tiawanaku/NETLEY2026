@@ -13,6 +13,9 @@ class Origenes
 {
     public const TALLERES = 'Talleres';
 
+    /** Valor del select de Origen (Consultas) que habilita escribirlo a mano. */
+    public const OTRO = 'otro';
+
     /** @var array<int, string> */
     public const SUGERENCIAS = [
         'Cliente antiguo',
@@ -22,7 +25,6 @@ class Origenes
         'Facebook',
         'WhatsApp',
         'TikTok',
-        'Físico',
         self::TALLERES,
     ];
 

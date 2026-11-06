@@ -11,6 +11,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -32,6 +33,12 @@ class CasosTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('estado')
                     ->badge(),
+                IconColumn::make('documentos_pendientes')
+                    ->label('Documento')
+                    ->icon(fn (bool $state) => $state ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-check-circle')
+                    ->color(fn (bool $state) => $state ? 'warning' : 'gray')
+                    ->tooltip(fn (bool $state) => $state ? 'Falta subir el documento del expediente' : 'Documento subido')
+                    ->toggleable(),
                 TextColumn::make('saldo')->money('BOB')->sortable(),
                 TextColumn::make('personal.nombres')
                     ->label('Abogado(s)')

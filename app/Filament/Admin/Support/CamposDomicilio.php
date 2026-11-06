@@ -82,7 +82,9 @@ class CamposDomicilio
                 ->maxLength(500)
                 ->rows(2)
                 ->disabled($bloqueado)
-                ->columnSpanFull(),
+                ->columnSpanFull()
+                // Ver .netley-campo-ancho-alineado en admin-theme.css.
+                ->extraFieldWrapperAttributes(['class' => 'netley-campo-ancho-alineado']),
         ];
     }
 

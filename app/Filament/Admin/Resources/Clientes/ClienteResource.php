@@ -12,6 +12,7 @@ use App\Filament\Admin\Resources\Clientes\RelationManagers\PagosRelationManager;
 use App\Filament\Admin\Resources\Clientes\Schemas\ClienteForm;
 use App\Filament\Admin\Resources\Clientes\Tables\ClientesTable;
 use App\Filament\Admin\Support\ModoMenu;
+use App\Models\Caso;
 use App\Models\Cliente;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -48,6 +49,27 @@ class ClienteResource extends Resource
     public static function canCreate(): bool
     {
         return ! (auth()->user()?->hasRole(Rol::Pasante, Rol::Procurador) ?? false);
+    }
+
+    /**
+     * Número de casos con "documentos_pendientes" (ver ClienteCasoWizard),
+     * como aviso en el ítem del menú lateral — nada si no hay ninguno.
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        $pendientes = Caso::where('documentos_pendientes', true)->count();
+
+        return $pendientes > 0 ? (string) $pendientes : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Casos con documento pendiente de subir';
     }
 
     public static function form(Schema $schema): Schema

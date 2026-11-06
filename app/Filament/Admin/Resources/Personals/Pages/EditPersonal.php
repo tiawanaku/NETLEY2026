@@ -4,10 +4,13 @@ namespace App\Filament\Admin\Resources\Personals\Pages;
 
 use App\Filament\Admin\Resources\Personals\Actions\PersonalActions;
 use App\Filament\Admin\Resources\Personals\PersonalResource;
+use App\Models\Personal;
 use App\Support\PersonalEspecialidades;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Enums\Alignment;
 use Illuminate\Support\Carbon;
 
 class EditPersonal extends EditRecord
@@ -57,7 +60,27 @@ class EditPersonal extends EditRecord
                 ->label('Eliminar')
                 ->modalHeading('Eliminar '.$this->record->nombre_completo)
                 ->modalSubmitActionLabel('Eliminar')
-                ->visible(fn () => auth()->user()?->puede('eliminar')),
+                // Al requerir confirmación, Filament centra los botones
+                // invirtiendo su orden (Cancelar antes que Eliminar) — se fija
+                // el orden normal (Eliminar primero) y el centrado visual se
+                // hace por CSS (ver .netley-eliminar-personal en admin-theme.css).
+                ->modalFooterActionsAlignment(Alignment::Start)
+                ->extraModalWindowAttributes(['class' => 'netley-eliminar-personal'])
+                ->visible(fn () => auth()->user()?->puede('eliminar'))
+                ->schema([
+                    TextInput::make('motivo_baja')
+                        ->label('Motivo')
+                        ->required()
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
+                ])
+                // El motivo se guarda en la misma columna que usa
+                // "Deshabilitar" (ver PersonalActions::toggleEstado()): al
+                // eliminar, Personal::booted() ya deja estado=Inhabilitado
+                // solo, acá solo falta sumarle el motivo antes de borrar.
+                ->using(function (Personal $record, array $data): void {
+                    $record->motivo_baja = $data['motivo_baja'];
+                    $record->delete();
+                }),
         ];
     }
 

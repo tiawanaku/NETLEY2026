@@ -19,9 +19,16 @@ class Cita extends Model
         'hora',
         'detalle',
         'observaciones',
+        'observacion_cierre',
         'tipo',
         'origen',
         'anulada',
+        'bs_iguala',
+        'bs_anticipo',
+        'porcentaje_comision',
+        'bs_comision',
+        'confirmada',
+        'documentos',
     ];
 
     protected function casts(): array
@@ -29,6 +36,12 @@ class Cita extends Model
         return [
             'fecha' => 'date',
             'anulada' => 'boolean',
+            'confirmada' => 'boolean',
+            'bs_iguala' => 'decimal:2',
+            'bs_anticipo' => 'decimal:2',
+            'porcentaje_comision' => 'decimal:2',
+            'bs_comision' => 'decimal:2',
+            'documentos' => 'array',
         ];
     }
 

@@ -187,6 +187,128 @@
 .dark [x-data^="leafletMapPicker"] .text-gray-700,
 .dark [x-data^="leafletMapPicker"] .text-gray-500 { color: rgb(229 231 235); }
 
+/* Campos de ancho completo (columnSpanFull) con etiqueta en línea, ej.
+   "Dirección"/"Indicaciones" del wizard Cliente Ejecutivo (ver
+   ClienteCasoWizard y CamposDomicilio): por defecto Filament reparte el
+   campo en 3 partes iguales (etiqueta 1/3, cuadro 2/3) usando el ancho del
+   PROPIO campo — como este campo es el doble de ancho que uno normal de 2
+   columnas, la etiqueta queda también el doble de ancha, empujando el
+   cuadro hacia la derecha y desalineándolo del cuadro de datos de la fila
+   de arriba. Se fuerza la etiqueta a un ancho fijo (el mismo que una fila
+   normal) para que el cuadro arranque justo en esa misma columna de datos. */
+.netley-campo-ancho-alineado.fi-fo-field-has-inline-label {
+    grid-template-columns: 7.4rem 1fr !important;
+}
+
+.netley-campo-ancho-alineado.fi-fo-field-has-inline-label > .fi-fo-field-content-col {
+    grid-column: span 1 / span 1 !important;
+}
+
+/* Confirmación de "Agendar" (ConfirmarAgendarCitaAction): botones "Sí"/"No"
+   centrados y más anchos que el tamaño por defecto. El orden (Sí primero)
+   se fija en PHP con ->modalFooterActionsAlignment(Start) porque el
+   centrado nativo de Filament invierte el orden de los botones; el
+   centrado visual se hace acá para no perder ese orden. */
+.netley-confirmar-agendar .fi-modal-footer-actions {
+    justify-content: center;
+}
+
+.netley-confirmar-agendar .fi-modal-footer-actions button {
+    min-width: 9rem;
+}
+
+/* Eliminar personal (EditPersonal): mismo caso, botones "Eliminar"/"Cancelar"
+   centrados con "Eliminar" primero. */
+.netley-eliminar-personal .fi-modal-footer-actions {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100%;
+}
+
+/* Campo "clip" para adjuntar documentos (App\Filament\Admin\Support\AdjuntarDocumentosClip):
+   el FileUpload real queda reducido a solo un ícono de clip — el recuadro
+   grande de "arrastra y suelta" y la lista de previsualización se ocultan,
+   dejando solo el <label for="..."> nativo asociado al input de archivo
+   (por eso un clic real abre el explorador directo, sin JS de por medio). */
+.netley-adjuntar-documentos-clip {
+    width: 3rem !important;
+    margin: 0 auto !important;
+}
+
+.netley-adjuntar-documentos-clip .filepond--root,
+.netley-adjuntar-documentos-clip .filepond--drop-label,
+.netley-adjuntar-documentos-clip .filepond--drop-label label {
+    width: 3rem !important;
+    height: 3rem !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 3rem !important;
+    max-height: 3rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.netley-adjuntar-documentos-clip .filepond--root {
+    background: transparent !important;
+}
+
+.netley-adjuntar-documentos-clip .filepond--panel-root,
+.netley-adjuntar-documentos-clip .filepond--list-scroller {
+    display: none !important;
+}
+
+.netley-adjuntar-documentos-clip .filepond--drop-label label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1.5px solid #9ca3af;
+    cursor: pointer;
+    font-size: 0;
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.netley-adjuntar-documentos-clip .filepond--drop-label label:hover {
+    background: #f3f4f6;
+    border-color: #6b7280;
+}
+
+.netley-adjuntar-documentos-clip .filepond--drop-label label::before {
+    content: "\1F4CE";
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+/* Fila de un documento ya adjuntado (dentro del Repeater "documentos"): el
+   FileUpload de esa fila ya no se usa para elegir el archivo (eso lo hace
+   el clip de arriba) ni para previsualizarlo (ver AdjuntarDocumentosClip::nombreArchivo(),
+   que lo muestra como texto al lado de la descripción) — se oculta por
+   completo, pero sigue guardándose normalmente al guardar el formulario. */
+.netley-documento-oculto {
+    display: none !important;
+}
+
+/* Filament sigue reservando la columna de la cuadrícula para ese campo
+   aunque su contenido esté oculto (el oculto es el campo, no la celda que
+   lo envuelve) — se oculta también esa celda, para que la fila quede en
+   limpio solo con el nombre del archivo y la descripción. */
+.netley-fila-documento .fi-grid-col:has(.netley-documento-oculto) {
+    display: none !important;
+}
+
+/* Fila de un documento (Repeater "documentos"): nombre del archivo a la
+   izquierda y descripción a la derecha, forzado por CSS porque el ->columns(2)
+   de Filament no alcanza a aplicarse de forma confiable dentro del Repeater. */
+.netley-fila-documento .fi-fo-repeater-item-content,
+.netley-fila-documento .fi-fo-repeater-item-content > .fi-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1rem;
+    align-items: start;
+}
+
 /* Teléfono (App\Filament\Admin\Support\CamposTelefono): selector de código
    de país + número. El selector toma el ancho de lo elegido ("+591
    (Bolivia)", "+1 (EE. UU. / Canadá)"…) y el número ocupa el resto,
@@ -223,6 +345,35 @@
    completo aunque el selector sea angosto. */
 .campo-telefono .fi-select-input-ctn .fi-dropdown-panel {
     min-width: min(18rem, calc(100vw - 3rem));
+}
+
+/* Carnet de identidad (App\Filament\Admin\Support\CamposCi): mismo criterio
+   que .campo-telefono — el selector de "Expedido en" toma el ancho de lo
+   elegido ("Cochabamba", "QR"…) y el número de CI ocupa el resto. */
+.campo-ci > .fi-grid {
+    grid-template-columns: minmax(0, max-content) minmax(5.5rem, 1fr) !important;
+}
+
+.campo-ci > .fi-grid > .fi-grid-col {
+    grid-column: auto !important;
+    min-width: 0;
+}
+
+.campo-ci .fi-fo-select,
+.campo-ci .fi-fo-select .fi-input-wrp-content-ctn {
+    min-width: 0;
+}
+
+.campo-ci .fi-select-input-value-ctn {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.campo-ci .fi-select-input-value-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Interruptor "Menú simple" al pie del sidebar (ver AdminPanelProvider

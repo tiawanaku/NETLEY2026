@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Clientes\Tables;
 
 use App\Filament\Admin\Support\FiltrosContacto;
+use App\Filament\Admin\Support\IndicadoresCliente;
 use App\Filament\Admin\Support\TelefonoColumna;
 use App\Models\Cliente;
 use Filament\Actions\BulkActionGroup;
@@ -18,13 +19,20 @@ class ClientesTable
     public static function configure(Table $table): Table
     {
         return $table
-            // Abogado(s) y fechas del proceso salen del caso más reciente.
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('ultimoCaso.personal'))
+            // Abogado(s) y fechas del proceso salen del caso más reciente;
+            // los indicadores ($/balanza, ver IndicadoresCliente) miran
+            // TODOS los casos abiertos, con sus cuotas ya precargadas para
+            // no disparar una consulta por fila.
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['ultimoCaso.personal', 'casos.planesPago']))
             ->columns([
                 TextColumn::make('nro_cliente')
                     ->label('ID cliente')
                     ->sortable()
                     ->searchable(),
+                TextColumn::make('indicadores')
+                    ->label('Indicadores')
+                    ->html()
+                    ->state(fn (Cliente $record) => IndicadoresCliente::render($record)),
                 TextColumn::make('nombre_completo')
                     ->label('Nombre')
                     ->searchable(['nombres', 'ap_paterno', 'ap_materno'])

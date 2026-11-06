@@ -22,8 +22,6 @@ class CamposOrigen
 
         return TextInput::make('origen_detalle')
             ->label('Detalle del taller')
-            ->placeholder('Ej. Taller colegio San Calixto')
-            ->helperText('Qué taller: institución, lugar o fecha.')
             ->maxLength(255)
             ->datalist(fn (): array => self::detallesPrevios())
             ->visible($esTalleres)
