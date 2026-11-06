@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\Consultas\Actions\ConfirmarAgendarCitaAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReagendarCitaAction;
 use App\Filament\Admin\Support\AdjuntarDocumentosClip;
 use App\Filament\Admin\Support\AgendaPreview;
+use App\Filament\Admin\Support\CampoHora;
 use App\Models\Consulta;
 use App\Models\Personal;
 use App\Support\PersonalEspecialidades;
@@ -19,7 +20,6 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\TimePicker;
 use Filament\Schemas\Components\Utilities\Get;
 
 /**
@@ -80,14 +80,23 @@ class AgendarCitaAction
                     // que ya hace que se cierre solo.
                     ->afterStateUpdated(fn ($livewire) => $livewire->js('document.body.click()'))
                     ->extraAttributes(['data-enter-nav-field' => 'true']),
+                // Una vez elegidos fecha y hora, ya cumplió su función (evitar
+                // sobreponer horarios) — se oculta sola para dejar más
+                // espacio al resto del formulario.
                 Placeholder::make('agenda_personal')
                     ->label('Agenda (próximos 14 días)')
                     ->content(fn (Get $get) => AgendaPreview::render($get('personal')))
+                    ->visible(fn (Get $get): bool => blank($get('fecha')) || ! CampoHora::esValida($get('hora')))
                     ->columnSpanFull(),
                 // El id fijo lo usa agenda-preview.blade.php para escribir la
                 // fecha directo al hacer clic en un día del mini-calendario.
-                DatePicker::make('fecha')->required()->extraInputAttributes(['data-enter-nav' => 'true', 'id' => 'agendar-cita-fecha']),
-                TimePicker::make('hora')->seconds(false)->required()->extraInputAttributes(['data-enter-nav' => 'true']),
+                // ->live() (no onBlur): ese clic dispara un evento "change"
+                // sintético, no un blur real, y agenda_personal de arriba
+                // necesita enterarse al toque para poder ocultarse.
+                DatePicker::make('fecha')->required()->live()->extraInputAttributes(['data-enter-nav' => 'true', 'id' => 'agendar-cita-fecha']),
+                // onBlur: re-renderizar a cada tecla cortaría lo que se está
+                // escribiendo; basta con avisar al salir del campo.
+                CampoHora::make('hora')->label('Hora')->required()->live(onBlur: true),
                 Textarea::make('detalle')->label('Nota')->rows(3)->extraInputAttributes(['data-enter-nav' => 'true']),
                 // Datos de comisión del formulario de papel "Consultas directas".
                 TextInput::make('bs_iguala')->label('Bs. Iguala')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
@@ -170,6 +179,11 @@ class AgendarCitaAction
                     'bs_comision' => $anterior->bs_comision,
                 ];
             })
+            // Mismo formulario para agendar una cita nueva y para "Reagendar"
+            // desde Cerrar consulta (ver fillForm() arriba): el título deja
+            // en claro cuál de los dos es, para no parecer que reapareció el
+            // botón "Agendar" que se sacó de esta ficha.
+            ->modalHeading(fn (array $arguments): string => filled($arguments['copiarDeCitaId'] ?? null) ? 'Reagendar' : 'Agendar')
             ->modalWidth('4xl')
             ->modalSubmitActionLabel('Guardar')
             ->modalCancelActionLabel('Cancelar')
@@ -179,8 +193,11 @@ class AgendarCitaAction
             // formulario (Filament detecta que se montó otra acción dentro
             // de esta y no cierra el modal de los campos de golpe, lo
             // reemplaza por el de confirmación).
-            ->action(function (array $data, $livewire): void {
-                $livewire->mountAction('confirmarAgendarCita', ['data' => $data]);
+            ->action(function (array $data, array $arguments, $livewire): void {
+                $livewire->mountAction('confirmarAgendarCita', [
+                    'data' => $data,
+                    'copiarDeCitaId' => $arguments['copiarDeCitaId'] ?? null,
+                ]);
             });
     }
 }

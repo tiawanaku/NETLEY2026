@@ -3,7 +3,9 @@
 namespace App\Filament\Admin\Resources\Consultas\Actions;
 
 use App\Enums\EstadoConsulta;
+use App\Filament\Admin\Resources\Consultas\ConsultaResource;
 use App\Models\Consulta;
+use App\Support\FormularioCita;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Alignment;
@@ -35,10 +37,17 @@ class ConfirmarAgendarCitaAction
             // ese orden.
             ->modalFooterActionsAlignment(Alignment::Start)
             ->extraModalWindowAttributes(['data-enter-confirm' => 'true', 'class' => 'netley-confirmar-agendar'])
-            ->action(function (Consulta $record, array $arguments): void {
+            ->action(function (Consulta $record, array $arguments, $livewire): void {
                 $data = $arguments['data'];
 
-                DB::transaction(function () use ($record, $data): void {
+                // Reagendar (ver VerAgendado::guardarCierre()): la cita nueva
+                // conserva los documentos de la anterior (formularios y lo
+                // que se haya subido), y suma los que se adjunten ahora.
+                $anterior = filled($arguments['copiarDeCitaId'] ?? null)
+                    ? $record->citas()->find($arguments['copiarDeCitaId'])
+                    : null;
+
+                DB::transaction(function () use ($record, $data, $anterior): void {
                     $record->update([
                         'fecha_registro' => $data['fecha_registro'],
                         'atendido_por_id' => $data['atendido_por_id'],
@@ -53,7 +62,10 @@ class ConfirmarAgendarCitaAction
                         'porcentaje_comision' => $data['porcentaje_comision'] ?? null,
                         'bs_comision' => $data['bs_comision'] ?? null,
                         'confirmada' => $data['confirmada'] ?? false,
-                        'documentos' => $data['documentos'] ?? null,
+                        'documentos' => [
+                            ...($anterior?->documentos ?? []),
+                            ...array_values($data['documentos'] ?? []),
+                        ],
                     ]);
 
                     if (filled($data['personal'] ?? null)) {
@@ -63,9 +75,19 @@ class ConfirmarAgendarCitaAction
                     // Al agendar una cita, la consulta queda "Agendado" sin
                     // importar en qué estado estuviera antes.
                     $record->update(['estado' => EstadoConsulta::Agendado]);
+
+                    // Cada cita nueva genera su "Formulario N" ya llenado,
+                    // primero en la lista de documentos.
+                    FormularioCita::generar($cita->fresh());
                 });
 
                 Notification::make()->title('Cita agendada')->success()->send();
+
+                // Una vez registrada la cita, vuelve siempre a "Nuevas
+                // consultas" (sea cual sea la pantalla desde la que se
+                // agendó: EditConsulta o VerAgendado vía motivo "Reagendar")
+                // para seguir con la siguiente consulta pendiente.
+                $livewire->redirect(ConsultaResource::getUrl('index').'?tab=nuevas');
             });
     }
 }

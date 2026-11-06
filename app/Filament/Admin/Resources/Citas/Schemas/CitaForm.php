@@ -2,11 +2,11 @@
 
 namespace App\Filament\Admin\Resources\Citas\Schemas;
 
+use App\Filament\Admin\Support\CampoHora;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\TimePicker;
 use Filament\Schemas\Schema;
 
 class CitaForm
@@ -31,7 +31,7 @@ class CitaForm
                     ->multiple()
                     ->searchable(),
                 DatePicker::make('fecha')->required()->default(now()),
-                TimePicker::make('hora')->required(),
+                CampoHora::make('hora')->label('Hora')->required(),
                 TextInput::make('tipo'),
                 TextInput::make('origen'),
                 Textarea::make('detalle'),

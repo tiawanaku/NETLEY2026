@@ -195,9 +195,10 @@ class ClienteCasoWizard
                 ->integer()
                 ->minValue(1)
                 ->required()
+                // El N° de cuotas del paso 3 arranca en el máximo que permite
+                // esta duración (ver numeroCuotas()).
                 ->live(onBlur: true)
-                // El plan de pagos (paso 3) arranca con una cuota por mes.
-                ->afterStateUpdated(fn ($set, $state) => $set('numero_cuotas', filled($state) ? max((int) $state, 1) : null))
+                ->afterStateUpdated(fn ($set, $state) => $set('numero_cuotas', filled($state) ? self::numeroCuotas($state) : null))
                 ->extraInputAttributes(['data-enter-nav' => 'true']),
             Placeholder::make('fecha_fin_preview')
                 ->label('Fecha estimada de fin (aprox.)')
@@ -217,41 +218,40 @@ class ClienteCasoWizard
     public static function camposPago(): array
     {
         return [
+            // Todos los montos en bolivianos enteros, sin centavos (->integer()).
             TextInput::make('iguala')
                 ->label('Iguala profesional')
-                ->numeric()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)
+                ->numeric()->integer()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)
                 ->extraInputAttributes(self::atributosEnterPago()),
 
             Toggle::make('patrocinio_hih')
-                ->label('Patrocinio Hand in Hand (HIH)')
+                ->label('Patrocinio HIH')
                 ->default(false)
                 ->live(),
             // El monto se carga en bolivianos (como el resto del paso) y el
             // porcentaje que representa de la iguala profesional se calcula
-            // solo, al lado — antes era al revés (se cargaba el % a mano).
-            Group::make([
-                TextInput::make('monto_patrocinio_hih')
-                    ->label('Hand in Hand (HIH)')
-                    ->numeric()
-                    ->minValue(0)
-                    ->prefix('Bs.')
-                    ->maxValue(fn (Get $get) => (float) ($get('iguala') ?? 0))
-                    ->required(fn (Get $get) => (bool) $get('patrocinio_hih'))
-                    ->live(onBlur: true)
-                    ->extraInputAttributes(self::atributosEnterPago()),
-                Placeholder::make('porcentaje_patrocinio_preview')
-                    ->label('Porcentaje de la iguala')
-                    ->content(function (Get $get): string {
-                        $iguala = (float) ($get('iguala') ?? 0);
-                        $monto = (float) ($get('monto_patrocinio_hih') ?? 0);
+            // solo, en la misma línea (sufijo del cuadro). Fila completa (no
+            // en dos columnas) para que el cuadro empiece a la misma altura
+            // que el de la iguala.
+            TextInput::make('monto_patrocinio_hih')
+                ->label('Hand in Hand (HIH)')
+                ->numeric()
+                ->integer()
+                ->minValue(0)
+                ->prefix('Bs.')
+                ->maxValue(fn (Get $get) => (float) ($get('iguala') ?? 0))
+                ->required(fn (Get $get) => (bool) $get('patrocinio_hih'))
+                ->suffix(function (Get $get): ?string {
+                    $iguala = (float) ($get('iguala') ?? 0);
+                    $monto = (float) ($get('monto_patrocinio_hih') ?? 0);
 
-                        return $iguala > 0
-                            ? number_format(min($monto / $iguala * 100, 100), 2).'%'
-                            : '—';
-                    }),
-            ])
-                ->columns(2)
-                ->visible(fn (Get $get) => (bool) $get('patrocinio_hih')),
+                    return $iguala > 0
+                        ? rtrim(rtrim(number_format(min($monto / $iguala * 100, 100), 2), '0'), '.').'% de la iguala'
+                        : null;
+                })
+                ->visible(fn (Get $get) => (bool) $get('patrocinio_hih'))
+                ->live(onBlur: true)
+                ->extraInputAttributes(self::atributosEnterPago()),
 
             // Iguala Netley = iguala profesional menos el descuento que
             // cubre HIH: es el monto real que el cliente le debe a
@@ -260,7 +260,7 @@ class ClienteCasoWizard
             // Caso.iguala/saldo, no la iguala profesional completa.
             Placeholder::make('iguala_netley_preview')
                 ->label('Iguala Netley')
-                ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['monto_cliente'], 2)),
+                ->content(fn (Get $get) => self::bs(self::plan(self::datosPlan($get))['monto_cliente'])),
 
             // Primera cuota del plan de pagos (ver plan()): empieza vacío
             // (no en 0) y, si se carga, nunca puede ser 0 — un anticipo de
@@ -268,18 +268,14 @@ class ClienteCasoWizard
             TextInput::make('anticipo')
                 ->label('Anticipo')
                 ->numeric()
+                ->integer()
                 ->prefix('Bs.')
-                ->minValue(0.01)
+                ->minValue(1)
                 ->maxValue(fn (Get $get) => self::plan(self::datosPlan($get))['monto_cliente'])
                 ->validationMessages(['min' => 'El anticipo no puede ser 0; déjalo vacío si no hay anticipo.'])
                 ->live(onBlur: true)
+                ->rule(fn (Get $get) => self::reglaSaldoSinCuotas($get))
                 ->extraInputAttributes(self::atributosEnterPago()),
-
-            // Saldo Netley = Iguala Netley menos el anticipo; es lo que
-            // se reparte en las cuotas de abajo (plan de pagos).
-            Placeholder::make('saldo_netley_preview')
-                ->label('Saldo Netley')
-                ->content(fn (Get $get) => 'Bs. '.number_format(self::plan(self::datosPlan($get))['saldo_cliente'], 2)),
 
             // Comisión por un pago extra ocasional (ej. referido): dos
             // campos sueltos, sin relación entre sí ni con el resto —
@@ -289,26 +285,31 @@ class ClienteCasoWizard
                 ->numeric()
                 ->minValue(0)
                 ->maxValue(100)
-                ->suffix('%')
+                ->prefix('%')
                 ->extraInputAttributes(self::atributosEnterPago()),
             TextInput::make('comision_monto')
                 ->label('Comisión (Bs.)')
                 ->numeric()
+                ->integer()
                 ->minValue(0)
                 ->prefix('Bs.')
                 ->extraInputAttributes(self::atributosEnterPago()),
 
+            // Saldo Netley = Iguala Netley menos el anticipo; es lo que
+            // se reparte en las cuotas de abajo (plan de pagos).
+            Placeholder::make('saldo_netley_preview')
+                ->label('Saldo Netley')
+                ->content(fn (Get $get) => self::bs(self::plan(self::datosPlan($get))['saldo_cliente'])),
+
+            // Arranca en el máximo (meses del proceso menos 1, ver
+            // numeroCuotas()) y se puede bajar, nunca subir de ahí.
             TextInput::make('numero_cuotas')
                 ->label('N° de cuotas mensuales')
-                ->helperText(fn (Get $get) => filled($get('duracion_meses'))
-                    ? 'Según la duración del proceso: '.(int) $get('duracion_meses').' mes(es).'
-                    : null)
                 ->numeric()
                 ->integer()
                 ->minValue(1)
-                // No puede haber más cuotas que meses dure el proceso (paso "Proceso").
-                ->maxValue(fn (Get $get) => filled($get('duracion_meses')) ? (int) $get('duracion_meses') : null)
-                ->validationMessages(['max' => 'No puede exceder la duración del proceso (:max mes(es)).'])
+                ->maxValue(fn (Get $get) => self::numeroCuotas($get('duracion_meses')))
+                ->validationMessages(['max' => 'No puede haber más cuotas que la duración del proceso (máximo :max).'])
                 ->required(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->visible(fn (Get $get) => self::plan(self::datosPlan($get))['saldo_cliente'] > 0)
                 ->live(onBlur: true)
@@ -516,30 +517,36 @@ class ClienteCasoWizard
      *   solo), da la Iguala Netley (lo que el cliente le debe a Netley).
      * - El anticipo es la cuota 1 del plan de pagos (no una "cuota 0"
      *   aparte): se resta de la Iguala Netley y da el Saldo, que se reparte
-     *   en las cuotas mensuales siguientes (por defecto, una por mes de
-     *   duración del proceso), numeradas a partir de la 2 si hubo anticipo,
+     *   en las cuotas mensuales siguientes (las elegidas, como máximo los
+     *   meses del proceso menos 1, ver numeroCuotas()), numeradas a partir de la 2 si hubo anticipo,
      *   o desde la 1 si no lo hubo; la última cuota absorbe el redondeo
      *   para que la suma cuadre. Sin anticipo ni cuotas, el saldo queda
      *   pendiente sin más.
      *
      * @param  array<string, mixed>  $datos
-     * @return array{iguala: float, patrocinio: bool, porcentaje: float, monto_patrocinio: float, monto_cliente: float, pago_hoy: float, saldo_cliente: float, cuotas: array<int, array{numero: int, fecha: Carbon, monto: float, nuevo_saldo: float, pagada_hoy: bool}>}
+     * @return array{iguala: int, patrocinio: bool, porcentaje: float, monto_patrocinio: int, monto_cliente: int, pago_hoy: int, saldo_cliente: int, cuotas: array<int, array{numero: int, fecha: Carbon, monto: int, nuevo_saldo: int, pagada_hoy: bool}>}
      */
     public static function plan(array $datos): array
     {
-        $iguala = round(max((float) ($datos['iguala'] ?? 0), 0), 2);
+        // Bolivianos enteros: ningún monto lleva centavos.
+        $iguala = max((int) round((float) ($datos['iguala'] ?? 0)), 0);
         $patrocinio = (bool) ($datos['patrocinio_hih'] ?? false);
         $montoPatrocinio = $patrocinio
-            ? round(min(max((float) ($datos['monto_patrocinio_hih'] ?? 0), 0), $iguala), 2)
-            : 0.0;
+            ? min(max((int) round((float) ($datos['monto_patrocinio_hih'] ?? 0)), 0), $iguala)
+            : 0;
         $porcentaje = ($patrocinio && $iguala > 0) ? round(min($montoPatrocinio / $iguala * 100, 100), 2) : 0.0;
 
-        $montoCliente = round($iguala - $montoPatrocinio, 2);
+        $montoCliente = $iguala - $montoPatrocinio;
 
-        $pagoHoy = round(min(max((float) ($datos['anticipo'] ?? 0), 0), $montoCliente), 2);
+        $pagoHoy = min(max((int) round((float) ($datos['anticipo'] ?? 0)), 0), $montoCliente);
 
-        $saldoCliente = round($montoCliente - $pagoHoy, 2);
-        $numeroCuotas = max((int) ($datos['numero_cuotas'] ?? 0), 0);
+        $saldoCliente = $montoCliente - $pagoHoy;
+        // El N° elegido, sin pasarse del máximo de la duración; si no se
+        // eligió, el máximo.
+        $maximoCuotas = self::numeroCuotas($datos['duracion_meses'] ?? null);
+        $numeroCuotas = filled($datos['numero_cuotas'] ?? null)
+            ? min(max((int) $datos['numero_cuotas'], 0), $maximoCuotas)
+            : $maximoCuotas;
 
         $cuotas = [];
         $siguienteNumero = 1;
@@ -556,7 +563,8 @@ class ClienteCasoWizard
         }
 
         if ($numeroCuotas > 0 && $saldoCliente > 0) {
-            $montoCuota = round($saldoCliente / $numeroCuotas, 2);
+            // Cuotas enteras; la última absorbe lo que sobre de la división.
+            $montoCuota = intdiv($saldoCliente, $numeroCuotas);
             $primera = filled($datos['fecha_primera_cuota'] ?? null)
                 ? Carbon::parse($datos['fecha_primera_cuota'])
                 : now()->addMonth();
@@ -564,7 +572,7 @@ class ClienteCasoWizard
 
             for ($i = 0; $i < $numeroCuotas; $i++) {
                 $monto = $i === $numeroCuotas - 1 ? $restante : $montoCuota;
-                $restante = round($restante - $monto, 2);
+                $restante -= $monto;
 
                 $cuotas[] = [
                     'numero' => $siguienteNumero + $i,
@@ -593,9 +601,35 @@ class ClienteCasoWizard
      */
     protected static function datosPlan(Get $get): array
     {
-        return collect(['iguala', 'patrocinio_hih', 'monto_patrocinio_hih', 'anticipo', 'numero_cuotas', 'fecha_primera_cuota'])
+        return collect(['iguala', 'patrocinio_hih', 'monto_patrocinio_hih', 'anticipo', 'duracion_meses', 'numero_cuotas', 'fecha_primera_cuota'])
             ->mapWithKeys(fn (string $campo) => [$campo => $get($campo)])
             ->all();
+    }
+
+    /** Cuotas mensuales del plan = meses que dura el proceso menos 1 (el primer mes es el anticipo). */
+    public static function numeroCuotas(mixed $duracionMeses): int
+    {
+        return max((int) $duracionMeses - 1, 0);
+    }
+
+    protected static function bs(int | float $monto): string
+    {
+        return 'Bs. '.number_format($monto);
+    }
+
+    /**
+     * Proceso de 1 mes = 0 cuotas: no queda dónde repartir saldo, así que el
+     * anticipo tiene que cubrir toda la Iguala Netley.
+     */
+    protected static function reglaSaldoSinCuotas(Get $get): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
+            if (filled($get('duracion_meses'))
+                && self::numeroCuotas($get('duracion_meses')) === 0
+                && self::plan(self::datosPlan($get))['saldo_cliente'] > 0) {
+                $fail('Con un proceso de 1 mes no hay cuotas: el anticipo debe cubrir toda la Iguala Netley.');
+            }
+        };
     }
 
     /**
@@ -630,52 +664,48 @@ class ClienteCasoWizard
      */
     protected static function resumenPlanHtml(array $plan): HtmlString
     {
-        $bs = fn (float $monto): string => 'Bs. '.number_format($monto, 2);
+        $bs = fn (int | float $monto): string => self::bs($monto);
 
-        // Todo en tabla (resumen y cuotas) para que los montos queden
-        // alineados a la derecha en vez de sueltos en una lista.
+        // Una sola tabla de 4 columnas, todo alineado a la izquierda: las
+        // filas del resumen usan las 2 primeras (las otras 2 quedan vacías)
+        // y las cuotas las 4 — así resumen y cuotas comparten columnas y
+        // quedan parejos.
+        $celda = 'padding:4px 8px;text-align:left;';
+        $fila = fn (array $valores, string $estilo = ''): string => '<tr>'
+            .implode('', array_map(fn (string $valor) => '<td style="'.$celda.$estilo.'">'.e($valor).'</td>', array_pad($valores, 4, '')))
+            .'</tr>';
         $filaResumen = fn (string $etiqueta, string $valor, bool $fuerte = false): string => '<tr>'
-            .'<td style="padding:4px 8px;color:#666;">'.e($etiqueta).'</td>'
-            .'<td style="padding:4px 8px;text-align:right;'.($fuerte ? 'font-weight:bold;' : '').'">'.e($valor).'</td></tr>';
+            .'<td style="'.$celda.'color:#666;">'.e($etiqueta).'</td>'
+            .'<td style="'.$celda.($fuerte ? 'font-weight:bold;' : '').'">'.e($valor).'</td>'
+            .'<td style="'.$celda.'"></td><td style="'.$celda.'"></td></tr>';
 
-        $resumen = '<table style="border-collapse:collapse;font-size:.875rem;">';
-        $resumen .= $filaResumen('Iguala profesional', $bs($plan['iguala']));
+        $html = '<table style="border-collapse:collapse;font-size:.875rem;"><tbody>';
+        $html .= $filaResumen('Iguala profesional', $bs($plan['iguala']));
 
         if ($plan['patrocinio']) {
             $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
-            $resumen .= $filaResumen('Hand in Hand ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
+            $html .= $filaResumen('Hand in Hand ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
         }
 
-        $resumen .= $filaResumen('Iguala Netley', $bs($plan['monto_cliente']), fuerte: true);
-        $resumen .= $filaResumen('Anticipo', $bs($plan['pago_hoy']));
-        $resumen .= $filaResumen('Saldo', $bs($plan['saldo_cliente']), fuerte: true);
-        $resumen .= '</table>';
-
-        $tablaCuotas = '';
+        $html .= $filaResumen('Iguala Netley', $bs($plan['monto_cliente']), fuerte: true);
+        $html .= $filaResumen('Anticipo', $bs($plan['pago_hoy']));
+        $html .= $filaResumen('Saldo', $bs($plan['saldo_cliente']), fuerte: true);
 
         if ($plan['cuotas'] !== []) {
-            $filaCuota = fn (string $a, string $b, string $c, string $d): string => '<tr>'
-                .'<td style="padding:4px 8px;">'.e($a).'</td>'
-                .'<td style="padding:4px 8px;">'.e($b).'</td>'
-                .'<td style="padding:4px 8px;text-align:right;">'.e($c).'</td>'
-                .'<td style="padding:4px 8px;text-align:right;">'.e($d).'</td></tr>';
-
-            $tablaCuotas = '<table style="margin-top:.75rem;border-collapse:collapse;font-size:.875rem;">'
-                .'<thead><tr style="text-align:left;border-bottom:1px solid rgb(128 128 128 / .3);">'
-                .'<th style="padding:4px 8px;">Cuota</th><th style="padding:4px 8px;">Fecha</th>'
-                .'<th style="padding:4px 8px;text-align:right;">Monto</th><th style="padding:4px 8px;text-align:right;">Saldo</th></tr></thead><tbody>';
+            $html .= '<tr><td colspan="4" style="padding:6px 0;"></td></tr>';
+            $html .= '<tr style="border-bottom:1px solid rgb(128 128 128 / .3);">'
+                .implode('', array_map(fn (string $titulo) => '<th style="'.$celda.'">'.$titulo.'</th>', ['Cuota', 'Fecha', 'Monto', 'Saldo']))
+                .'</tr>';
 
             foreach ($plan['cuotas'] as $cuota) {
                 // La cuota 1 es el anticipo pagado hoy (ver plan()): se
                 // marca acá para distinguirla, no es una fila aparte.
                 $numero = $cuota['numero'].($cuota['pagada_hoy'] ? ' (anticipo, hoy)' : '');
-                $tablaCuotas .= $filaCuota($numero, $cuota['fecha']->format('d/m/Y'), $bs($cuota['monto']), $bs($cuota['nuevo_saldo']));
+                $html .= $fila([$numero, $cuota['fecha']->format('d/m/Y'), $bs($cuota['monto']), $bs($cuota['nuevo_saldo'])]);
             }
-
-            $tablaCuotas .= '</tbody></table>';
         }
 
-        return new HtmlString($resumen.$tablaCuotas);
+        return new HtmlString($html.'</tbody></table>');
     }
 
     /**

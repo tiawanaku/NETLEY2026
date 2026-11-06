@@ -58,7 +58,8 @@ class EditPersonal extends EditRecord
             PersonalActions::asignarAbogados(),
             DeleteAction::make()
                 ->label('Eliminar')
-                ->modalHeading('Eliminar '.$this->record->nombre_completo)
+                ->modalHeading('¿Seguro que desea eliminar a:')
+                ->modalDescription(fn (Personal $record) => PersonalActions::nombreDestacado($record))
                 ->modalSubmitActionLabel('Eliminar')
                 // Al requerir confirmación, Filament centra los botones
                 // invirtiendo su orden (Cancelar antes que Eliminar) — se fija

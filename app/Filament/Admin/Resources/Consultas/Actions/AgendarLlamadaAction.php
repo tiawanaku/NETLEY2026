@@ -2,13 +2,13 @@
 
 namespace App\Filament\Admin\Resources\Consultas\Actions;
 
+use App\Filament\Admin\Support\CampoHora;
 use App\Models\Consulta;
 use App\Support\PersonalEspecialidades;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\TimePicker;
 use Filament\Notifications\Notification;
 
 /**
@@ -31,7 +31,7 @@ class AgendarLlamadaAction
                     ->searchable()
                     ->extraAttributes(['data-enter-nav-field' => 'true']),
                 DatePicker::make('fecha')->required()->default(now())->extraInputAttributes(['data-enter-nav' => 'true']),
-                TimePicker::make('hora')->seconds(false)->required()->extraInputAttributes(['data-enter-nav' => 'true']),
+                CampoHora::make('hora')->label('Hora')->required(),
                 TextInput::make('accion')->label('Acción')->extraInputAttributes(['data-enter-nav' => 'true']),
             ])
             ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))

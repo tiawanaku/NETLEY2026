@@ -59,6 +59,19 @@ class Consulta extends Model
     {
         static::saving(function (self $model): void {
             $model->origen_detalle = Origenes::limpiarDetalle($model->origen, $model->origen_detalle);
+
+            // Sea cual sea la pantalla que la cierre, queda la fecha en que
+            // pasó a un estado cerrado; al volver a abrirse (reactivar), se
+            // borra.
+            if ($model->isDirty('estado') && $model->estado) {
+                $abierta = in_array($model->estado, EstadoConsulta::abiertos(), true);
+
+                if ($abierta) {
+                    $model->fecha_cierre = null;
+                } elseif (! $model->isDirty('fecha_cierre')) {
+                    $model->fecha_cierre = now();
+                }
+            }
         });
     }
 
@@ -70,6 +83,7 @@ class Consulta extends Model
             'designacion' => Especialidad::class,
             'fecha_consulta' => 'datetime',
             'fecha_contacto' => 'date',
+            'fecha_cierre' => 'date',
             'fecha_registro' => 'date',
             'ubicacion' => 'array',
         ];

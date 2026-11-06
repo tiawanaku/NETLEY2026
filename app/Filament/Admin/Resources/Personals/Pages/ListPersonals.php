@@ -19,7 +19,9 @@ class ListPersonals extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()->label('Agregar personal'),
+            CreateAction::make()
+                ->label('Agregar personal')
+                ->visible(fn (): bool => ! in_array($this->activeTab, ['retirados', 'eliminados'], true)),
         ];
     }
 

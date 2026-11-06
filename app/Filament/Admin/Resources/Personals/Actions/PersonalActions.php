@@ -12,8 +12,10 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Support\Enums\Alignment;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\HtmlString;
 
 class PersonalActions
 {
@@ -23,6 +25,12 @@ class PersonalActions
         return $record->estado === EstadoPersonal::Habilitado
             && $record->fecha_fin !== null
             && $record->fecha_fin->gt(now()->startOfDay());
+    }
+
+    /** Nombre del personal para el texto de las ventanas de confirmación. */
+    public static function nombreDestacado(Personal $record): HtmlString
+    {
+        return new HtmlString('<strong style="font-size:1rem;">'.e($record->nombre_completo).'</strong>?');
     }
 
     public static function toggleEstado(): Action
@@ -50,6 +58,17 @@ class PersonalActions
                 return $record->estado === EstadoPersonal::Habilitado ? 'danger' : 'success';
             })
             ->requiresConfirmation()
+            ->modalHeading(fn (Personal $record): string => $record->estado === EstadoPersonal::Habilitado
+                ? '¿Seguro que desea deshabilitar a:'
+                : '¿Seguro que desea habilitar a:')
+            ->modalDescription(fn (Personal $record): HtmlString => self::nombreDestacado($record))
+            // Igual que "Eliminar" en EditPersonal: Filament invierte el orden
+            // al pedir confirmación (Cancelar primero); acá se deja
+            // Deshabilitar/Habilitar a la izquierda y Cancelar a la derecha,
+            // y el centrado lo hace .netley-eliminar-personal (admin-theme.css).
+            ->modalSubmitActionLabel(fn (Personal $record): string => $record->estado === EstadoPersonal::Habilitado ? 'Deshabilitar' : 'Habilitar')
+            ->modalFooterActionsAlignment(Alignment::Start)
+            ->extraModalWindowAttributes(['class' => 'netley-eliminar-personal'])
             // Si la fecha de baja es hoy o anterior, se inhabilita de una
             // vez; si es a futuro, sigue Habilitado hasta esa fecha, cuando
             // el comando programado lo inhabilita solo (ver
@@ -59,7 +78,15 @@ class PersonalActions
                     // Input nativo (no Flatpickr): se puede escribir la fecha con el
                     // teclado y participa en la cadena de Enter de enter-navigation.js,
                     // igual que el resto de los DatePicker del sistema.
-                    DatePicker::make('fecha_fin')->label('Fecha de baja')->required()->default(now())->extraInputAttributes(['data-enter-nav' => 'true']),
+                    // minDate: bloquea en el calendario y valida en el servidor
+                    // (zona horaria America/La_Paz, ver config/app.php).
+                    DatePicker::make('fecha_fin')
+                        ->label('Fecha de baja')
+                        ->required()
+                        ->default(now())
+                        ->minDate(fn () => today())
+                        ->validationMessages(['after_or_equal' => 'La fecha de baja no puede ser anterior a hoy.'])
+                        ->extraInputAttributes(['data-enter-nav' => 'true']),
                     TextInput::make('motivo_baja')->label('Motivo')->required()->extraInputAttributes(['data-enter-nav' => 'true']),
                 ]
                 : [])

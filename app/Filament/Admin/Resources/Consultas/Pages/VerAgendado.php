@@ -6,11 +6,11 @@ use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Resources\Consultas\Actions\AgendarCitaAction;
 use App\Filament\Admin\Resources\Consultas\Actions\AscenderCasoAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReactivarConsultaAction;
-use App\Filament\Admin\Resources\Consultas\Actions\ReagendarCitaAction;
 use App\Filament\Admin\Resources\Consultas\ConsultaResource;
 use App\Filament\Admin\Resources\Consultas\Schemas\ConsultaForm;
 use App\Models\Cita;
 use App\Models\Consulta;
+use App\Support\FormularioCita;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
@@ -25,7 +25,6 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * Ficha que se abre al hacer clic en una fila de Consultas > "Agendados"
@@ -52,6 +51,27 @@ class VerAgendado extends EditRecord
         parent::mount($record);
 
         $this->editando = request()->boolean('editar') && auth()->user()?->puede('editar');
+
+        // Motivo "Reagendar" (ver guardarCierre()): monta "agendarCita" acá,
+        // de entrada en la carga de la página, en vez de anidado dentro de
+        // la propia acción "guardarCierreConsulta" — montada así, Filament
+        // no engancha bien el botón Guardar del modal (el click no llega al
+        // backend) porque guardarCierreConsulta es una acción de un
+        // componente de schema (la Section "Cerrar consulta"), y anidar dos
+        // niveles de acciones dentro de ese tipo de acción no funciona.
+        if ($citaId = request()->integer('reagendarCitaId')) {
+            $this->mountAction('agendarCita', ['copiarDeCitaId' => $citaId]);
+        }
+    }
+
+    /**
+     * Método de acción de página (no en getHeaderActions(), no es un botón):
+     * así Filament la resuelve ya desde mount() -- ver más arriba -- sin
+     * depender de que el caché de acciones del encabezado ya esté armado.
+     */
+    protected function agendarCitaAction(): Action
+    {
+        return AgendarCitaAction::make();
     }
 
     public function getTitle(): string
@@ -125,14 +145,13 @@ class VerAgendado extends EditRecord
                 Action::make('guardarCierreConsulta')
                     ->label('Guardar')
                     ->color('primary')
-                    // "ascenderCaso" (motivo "Cliente ejecutivo") y
-                    // "agendarCita" (motivo "Reagendar": anula la cita
-                    // vigente y abre esta para cargar una nueva, ver
-                    // guardarCierre()) se montan DESDE DENTRO de esta misma
-                    // acción; sin registrarlas acá como hijas, Filament no
-                    // las encuentra en ese contexto anidado y mountAction()
-                    // no hace nada.
-                    ->registerModalActions([AscenderCasoAction::make(), AgendarCitaAction::make()])
+                    // "ascenderCaso" (motivo "Cliente ejecutivo") se monta
+                    // DESDE DENTRO de esta misma acción; sin registrarla acá
+                    // como hija, Filament no la encuentra en ese contexto
+                    // anidado y mountAction() no hace nada. "agendarCita"
+                    // (motivo "Reagendar") NO se registra acá a propósito:
+                    // ver guardarCierre() y mount().
+                    ->registerModalActions([AscenderCasoAction::make()])
                     ->action(fn (Get $get) => $this->guardarCierre($get('cierre_motivo'), $get('cierre_detalle'))),
                 Action::make('cancelarCierreConsulta')
                     ->label('Cancelar')
@@ -220,7 +239,14 @@ class VerAgendado extends EditRecord
                 'observaciones' => $vigente->observacionesCon('Anulada', 'Reagendada: se creó una nueva cita'),
             ]);
 
-            $this->mountAction('agendarCita', ['copiarDeCitaId' => $vigente->id]);
+            // No $this->mountAction('agendarCita', ...) acá: esta acción
+            // (guardarCierreConsulta) es la de un componente de schema (la
+            // Section "Cerrar consulta"), y Filament no engancha bien el
+            // botón Guardar de un modal anidado dos niveles dentro de ese
+            // tipo de acción (el clic no llega al backend). En cambio, se
+            // recarga la página con el id de la cita anulada, y mount() la
+            // monta ahí, a nivel de página (ver getHeaderActions()).
+            $this->redirect(ConsultaResource::getUrl('verAgendado', ['record' => $record]).'?reagendarCitaId='.$vigente->id);
 
             return;
         }
@@ -302,88 +328,34 @@ class VerAgendado extends EditRecord
     }
 
     /**
-     * Cada vez que se guarda una edición, queda una "foto" en PDF de cómo
-     * estaba el formulario en ese momento, numerada en orden (Formulario 1,
-     * Formulario 2...) y guardada junto con el resto de documentos de la
-     * cita vigente — así "Ver documentos" también sirve de historial de
-     * ediciones. Si no hay cita vigente (no debería pasar en esta ficha, ver
-     * ConsultasTable) no se genera nada.
+     * Cada edición guardada deja otra "foto" numerada del formulario en los
+     * documentos de la cita vigente (ver FormularioCita).
      */
     protected function guardarFormularioPdf(): void
     {
-        $vigente = $this->citaVigente();
-
-        if (! $vigente) {
-            return;
+        if ($vigente = $this->citaVigente()) {
+            FormularioCita::generar($vigente);
         }
-
-        $record = $this->getRecord();
-        $documentos = $vigente->documentos ?? [];
-
-        $numero = collect($documentos)
-            ->map(fn ($documento) => preg_match('/^Formulario (\d+)$/', (string) ($documento['descripcion'] ?? ''), $coincidencia)
-                ? (int) $coincidencia[1]
-                : 0)
-            ->max() + 1;
-
-        $pdf = Pdf::loadView('pdf.ficha-agendamiento', [
-            'consulta' => $record,
-            'citas' => $record->citas()->with('personal')->orderBy('fecha')->orderBy('hora')->get(),
-        ])->output();
-
-        $ruta = 'documentos-citas/formulario-'.$record->id.'-'.$numero.'-'.Str::random(8).'.pdf';
-        Storage::disk(config('filament.default_filesystem_disk'))->put($ruta, $pdf);
-
-        $documentos[] = ['ruta' => $ruta, 'descripcion' => "Formulario {$numero}"];
-
-        $vigente->update(['documentos' => $documentos]);
     }
 
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('esClienteEjecutivo')
-                ->label('Cliente Ejecutivo')
-                ->icon('heroicon-o-check-badge')
-                ->color('success')
-                ->disabled()
-                ->visible(fn (Consulta $record) => $record->caso_id !== null),
-            // Botón directo para reagendar la cita vigente, sin pasar por el
-            // listado de citas (que acá no se muestra). "reagendarCita" (el
-            // formulario de verdad) se monta DESDE DENTRO de esta misma
-            // acción con el id de la cita vigente ya resuelto; sin
-            // registrarla acá como hija, Filament no la encuentra en ese
-            // contexto anidado y mountAction() no hace nada (mismo caso que
-            // guardarCierreConsulta/ascenderCaso en cerrarConsultaSection()).
-            Action::make('reagendarCitaVigente')
-                ->label('Reagendar')
-                ->icon('heroicon-o-arrow-path')
-                ->color('warning')
-                ->visible(fn () => $this->citaVigente() !== null)
-                ->registerModalActions([ReagendarCitaAction::make()])
-                ->action(function (): void {
-                    $vigente = $this->citaVigente();
-
-                    if ($vigente) {
-                        $this->mountAction('reagendarCita', ['cita' => $vigente->id]);
-                    }
-                }),
+            // Solo "Editar" y "Ver documentos": reagendar se hace desde
+            // "Cerrar consulta" (motivo "Reagendar") y el formulario ya
+            // queda como documento ("Formulario N", ver FormularioCita).
             Action::make('editarConsulta')
                 ->label('Editar')
                 ->icon('heroicon-o-pencil-square')
                 ->color('warning')
                 ->visible(fn () => ! $this->editando && auth()->user()?->puede('editar'))
                 ->action(fn () => $this->redirect($this->urlFicha(editar: true))),
-            Action::make('verFormulario')
-                ->label('Ver formulario')
-                ->icon('heroicon-o-document-text')
-                ->color('info')
-                ->url(fn (Consulta $record): string => ConsultaResource::getUrl('agendamiento', ['record' => $record])),
             Action::make('verDocumentos')
                 ->label('Ver documentos')
                 ->icon('heroicon-o-folder-open')
                 ->color('primary')
                 ->modalHeading('Documentos adjuntos')
+                ->modalWidth('3xl')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Cerrar')
                 // "descargarDocumentoCita" se invoca desde dentro del modal

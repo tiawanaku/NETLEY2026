@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Llamadas\Schemas;
 
 use App\Filament\Admin\Forms\Components\DelitoSelect;
+use App\Filament\Admin\Support\CampoHora;
 use App\Filament\Admin\Support\CamposOrigen;
 use App\Filament\Admin\Support\CamposTelefono;
 use App\Support\Origenes;
@@ -10,7 +11,6 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\TimePicker;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -57,8 +57,8 @@ class LlamadaForm
                             ->searchable(),
                         TextInput::make('accion'),
                         DatePicker::make('fecha'),
-                        TimePicker::make('hora'),
-                        TimePicker::make('duracion'),
+                        CampoHora::make('hora')->label('Hora'),
+                        CampoHora::make('duracion')->label('Duración'),
                     ]),
 
                 Section::make('Datos económicos')

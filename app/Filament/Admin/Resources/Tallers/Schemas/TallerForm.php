@@ -3,11 +3,11 @@
 namespace App\Filament\Admin\Resources\Tallers\Schemas;
 
 use App\Filament\Admin\Forms\Components\DelitoSelect;
+use App\Filament\Admin\Support\CampoHora;
 use App\Filament\Admin\Support\CamposTelefono;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\TimePicker;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -33,7 +33,7 @@ class TallerForm
                 Section::make('Taller / consulta')
                     ->schema([
                         DatePicker::make('fecha_programada'),
-                        TimePicker::make('hora_programada'),
+                        CampoHora::make('hora_programada')->label('Hora programada'),
                         ...DelitoSelect::make(areaField: 'materia_legal', delitoField: 'delito_id', required: false),
                         Textarea::make('motivo'),
                         Textarea::make('consulta'),

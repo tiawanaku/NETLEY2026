@@ -16,6 +16,8 @@ use Filament\Actions\RestoreAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Collection;
+use Illuminate\Support\HtmlString;
 
 class PersonalsTable
 {
@@ -52,6 +54,11 @@ class PersonalsTable
                     ->label('Fecha inicio')
                     ->date()
                     ->sortable(),
+                TextColumn::make('fecha_fin')
+                    ->label('Fecha fin')
+                    ->date()
+                    ->sortable()
+                    ->visible(fn ($livewire): bool => ($livewire->activeTab ?? null) === 'retirados'),
                 TextColumn::make('estado')
                     ->badge(),
             ])
@@ -80,7 +87,12 @@ class PersonalsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->visible(fn () => auth()->user()?->puede('eliminar')),
+                    DeleteBulkAction::make()
+                        ->modalHeading('¿Seguro que desea eliminar a:')
+                        ->modalDescription(fn (Collection $records): HtmlString => new HtmlString(
+                            '<strong style="font-size:1rem;">'.$records->map(fn (Personal $p) => e($p->nombre_completo))->join(', ').'</strong>?'
+                        ))
+                        ->visible(fn () => auth()->user()?->puede('eliminar')),
                 ]),
             ]);
     }

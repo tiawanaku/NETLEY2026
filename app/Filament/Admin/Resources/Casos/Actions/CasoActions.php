@@ -6,6 +6,7 @@ use App\Enums\EstadoCaso;
 use App\Filament\Admin\Resources\Casos\Schemas\CierreCasoSchema;
 use App\Filament\Admin\Resources\Clientes\ClienteResource;
 use App\Filament\Admin\Support\AgendaPreview;
+use App\Filament\Admin\Support\CampoHora;
 use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\CamposPago;
 use App\Filament\Admin\Support\PlanPagoRecalculo;
@@ -20,7 +21,6 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\TimePicker;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Facades\DB;
@@ -129,7 +129,7 @@ class CasoActions
                 // El id fijo lo usa agenda-preview.blade.php para escribir la
                 // fecha directo al hacer clic en un día del mini-calendario.
                 DatePicker::make('fecha')->required()->default(now())->extraInputAttributes(['id' => 'agendar-cita-fecha']),
-                TimePicker::make('hora')->required(),
+                CampoHora::make('hora')->label('Hora')->required(),
                 Textarea::make('detalle')->rows(3),
                 // Se guardan en el caso (no en la cita).
                 CamposDenuncia::denunciado()

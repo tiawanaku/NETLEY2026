@@ -15,6 +15,7 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ConsultasTable
 {
@@ -71,33 +72,48 @@ class ConsultasTable
                 default => $state->getColor(),
             });
 
-        // "Agendados" necesita datos de la cita (fecha, hora, abogado) que
-        // las demás pestañas no usan, y en un orden distinto al resto —
-        // por eso arma su propio arreglo de columnas en vez de solo
-        // esconder/mostrar con ->visible().
-        $columnas = (($table->getLivewire()->activeTab ?? null) === 'agendados')
-            ? [
+        // Cada pestaña con su propio juego y orden de columnas ("Agendados"
+        // usa datos de la cita, "Cerradas" la fecha de cierre), en vez de
+        // solo esconder/mostrar con ->visible().
+        $pestana = $table->getLivewire()->activeTab ?? null;
+        $esAgendados = $pestana === 'agendados';
+
+        $columnas = match ($pestana) {
+            'agendados' => [
                 $columnaId,
-                $columnaNombre,
-                $columnaWhatsapp,
-                $columnaTelefono,
-                $columnaCiudad,
-                $columnaOrigen,
-                $columnaFechaConsulta,
                 TextColumn::make('citaVigente.fecha')
                     ->label('F.Cita')
                     ->date('d/m/Y'),
                 TextColumn::make('citaVigente.hora')
                     ->label('Hora')
                     ->formatStateUsing(fn (?string $state): ?string => filled($state) ? substr($state, 0, 5) : null),
+                $columnaNombre,
+                $columnaWhatsapp,
+                $columnaTelefono,
+                $columnaCiudad,
+                $columnaOrigen,
                 TextColumn::make('abogado')
                     ->label('Abogado')
                     ->state(fn (Consulta $record): string => $record->citaVigente?->personal
                         ->pluck('nombre_completo')
                         ->join(', ') ?: '—'),
                 $columnaEstado,
-            ]
-            : [
+            ],
+            'cerradas' => [
+                $columnaId,
+                $columnaNombre,
+                $columnaWhatsapp,
+                $columnaTelefono,
+                $columnaCiudad,
+                $columnaOrigen,
+                $columnaFechaConsulta,
+                TextColumn::make('fecha_cierre')
+                    ->label('F.Cierre')
+                    ->date('d/m/Y')
+                    ->sortable(),
+                $columnaEstado,
+            ],
+            default => [
                 $columnaId,
                 $columnaFechaConsulta,
                 $columnaNombre,
@@ -106,11 +122,19 @@ class ConsultasTable
                 $columnaCiudad,
                 $columnaOrigen,
                 $columnaEstado,
-            ];
+            ],
+        };
 
         return $table
             ->columns($columnas)
-            ->defaultSort('fecha_consulta', 'desc')
+            // Agendados: de la cita más próxima a la más lejana, según la
+            // misma cita vigente que muestran F.Cita/Hora (Consulta::citaVigente:
+            // la última no anulada).
+            ->defaultSort($esAgendados
+                ? fn (Builder $query): Builder => $query->orderByRaw(
+                    '(select timestamp(c.fecha, c.hora) from citas c where c.consulta_id = consultas.id and c.anulada = 0 order by c.id desc limit 1) asc'
+                )
+                : 'fecha_consulta', $esAgendados ? 'asc' : 'desc')
             ->filters([
                 SelectFilter::make('estado')->options(EstadoConsulta::class),
                 ...FiltrosContacto::make(),
