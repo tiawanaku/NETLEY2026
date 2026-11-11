@@ -39,7 +39,7 @@
                 <td style="border:1px solid #000;padding:5px 10px;width:25%;"><span style="margin-right:3px;">{{ $esRedesSociales ? '☑' : '☐' }}</span>Redes Sociales</td>
                 <td style="border:1px solid #000;padding:5px 10px;width:25%;"><span style="margin-right:3px;">{{ $esPsicologia ? '☑' : '☐' }}</span>Psicología</td>
                 <td style="border:1px solid #000;padding:5px 10px;width:25%;"><span style="margin-right:3px;">{{ $esTaller ? '☑' : '☐' }}</span>Taller</td>
-                <td style="border:1px solid #000;padding:5px 10px;width:25%;"><span style="margin-right:3px;">{{ $esOtros ? '☑' : '☐' }}</span>Otros{{ $esOtros ? ': '.$origenTexto : '' }}</td>
+                <td style="border:1px solid #000;padding:5px 10px;width:25%;"><span style="margin-right:3px;">{{ $esOtros ? '☑' : '☐' }}</span>Otros{{ $esOtros ? ': '.\App\Support\Origenes::texto($consulta->origen, $consulta->origen_detalle) : '' }}</td>
             </tr>
             <tr>
                 <td style="border:1px solid #000;padding:5px 10px;">
@@ -48,7 +48,7 @@
                 </td>
                 <td style="border:1px solid #000;padding:5px 10px;" colspan="3">
                     <span style="display:block;font-size:9px;color:#444;">Nombre colegio / otros</span>
-                    <strong>{{ $consulta->origen_detalle ?: '—' }}</strong>
+                    <strong>{{ ($esTaller ? $consulta->origen_detalle : null) ?: '—' }}</strong>
                 </td>
             </tr>
         </table>

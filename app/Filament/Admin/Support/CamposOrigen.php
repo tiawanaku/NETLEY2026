@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Support;
 
+use App\Models\Personal;
 use App\Support\Origenes;
 use Closure;
 use Filament\Forms\Components\TextInput;
@@ -18,16 +19,37 @@ class CamposOrigen
 {
     public static function detalle(bool|Closure $deshabilitado = false, string $campoOrigen = 'origen'): TextInput
     {
-        $esTalleres = fn (Get $get): bool => Origenes::esTalleres($get($campoOrigen));
+        $llevaDetalle = fn (Get $get): bool => Origenes::llevaDetalle($get($campoOrigen));
+        $esReferido = fn (Get $get): bool => Origenes::esReferido($get($campoOrigen));
 
+        // Mismo campo para los dos casos: con "Referido" sugiere al personal
+        // registrado, pero se puede escribir cualquier otro nombre a mano.
         return TextInput::make('origen_detalle')
-            ->label('Detalle del taller')
+            ->label(fn (Get $get): string => $esReferido($get) ? 'Referido por' : 'Detalle del taller')
             ->maxLength(255)
-            ->datalist(fn (): array => self::detallesPrevios())
-            ->visible($esTalleres)
-            ->required($esTalleres)
+            ->datalist(fn (Get $get): array => $esReferido($get) ? self::personalRegistrado() : self::detallesPrevios())
+            ->visible($llevaDetalle)
+            ->required($llevaDetalle)
             ->disabled($deshabilitado)
             ->extraInputAttributes(['data-enter-nav' => 'true', 'autocomplete' => 'off']);
+    }
+
+    /**
+     * Personal vigente (no retirado), para "Referido por".
+     *
+     * @return array<int, string>
+     */
+    public static function personalRegistrado(): array
+    {
+        return Personal::query()
+            ->orderBy('nombres')
+            ->orderBy('ap_paterno')
+            ->get(['nombres', 'ap_paterno', 'ap_materno'])
+            ->map(fn (Personal $p): string => trim($p->nombre_completo))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

@@ -15,6 +15,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class PersonalResource extends Resource
 {
@@ -46,6 +48,13 @@ class PersonalResource extends Resource
         return PersonalForm::configure($schema);
     }
 
+    /** La ficha también abre a los retirados (borrado lógico), solo para verla. */
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
+    }
+
     public static function table(Table $table): Table
     {
         return PersonalsTable::configure($table);
@@ -60,7 +69,8 @@ class PersonalResource extends Resource
 
     /**
      * En modo simple (ver ModoMenu), el único ítem "Personal" se reemplaza
-     * por 3: Vigentes / Retirados / Eliminados, cada uno apuntando a su
+     * por 2: Vigentes (habilitados y deshabilitados) / Retirados
+     * (eliminados), cada uno apuntando a su
      * propia pestaña de ListPersonals (?tab=...). En modo completo queda el
      * único ítem de siempre.
      *
@@ -87,12 +97,6 @@ class PersonalResource extends Resource
                 ->sort(static::getNavigationSort() + 1)
                 ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab') === 'retirados')
                 ->url("{$base}?tab=retirados"),
-            NavigationItem::make('Eliminados')
-                ->group(static::getNavigationGroup())
-                ->icon(static::getNavigationIcon())
-                ->sort(static::getNavigationSort() + 2)
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab') === 'eliminados')
-                ->url("{$base}?tab=eliminados"),
         ];
     }
 

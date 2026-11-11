@@ -2,7 +2,6 @@
 
 namespace App\Filament\Admin\Resources\Personals\Pages;
 
-use App\Enums\EstadoPersonal;
 use App\Filament\Admin\Resources\Personals\PersonalResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -21,12 +20,12 @@ class ListPersonals extends ListRecords
         return [
             CreateAction::make()
                 ->label('Agregar personal')
-                ->visible(fn (): bool => ! in_array($this->activeTab, ['retirados', 'eliminados'], true)),
+                ->visible(fn (): bool => $this->activeTab !== 'retirados'),
         ];
     }
 
     /**
-     * Las pestañas Vigentes/Retirados/Eliminados solo se navegan desde el
+     * Las pestañas Vigentes/Retirados solo se navegan desde el
      * menú lateral (ver PersonalResource::getNavigationItems()); acá se
      * omite el componente de pestañas para no repetirlas arriba de la
      * tabla. getTabs() se mantiene igual: sigue filtrando la tabla según el
@@ -45,11 +44,11 @@ class ListPersonals extends ListRecords
     public function getTabs(): array
     {
         return [
+            // Vigentes: todo el personal no eliminado, habilitado o
+            // deshabilitado. Retirados: los eliminados (borrado lógico).
             'vigentes' => Tab::make('Vigentes')
-                ->modifyQueryUsing(fn ($query) => $query->where('estado', EstadoPersonal::Habilitado->value)),
+                ->modifyQueryUsing(fn ($query) => $query->withoutTrashed()),
             'retirados' => Tab::make('Retirados')
-                ->modifyQueryUsing(fn ($query) => $query->where('estado', EstadoPersonal::Inhabilitado->value)),
-            'eliminados' => Tab::make('Eliminados')
                 ->modifyQueryUsing(fn ($query) => $query->onlyTrashed()),
         ];
     }

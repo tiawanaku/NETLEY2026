@@ -78,14 +78,13 @@ class PersonalActions
                     // Input nativo (no Flatpickr): se puede escribir la fecha con el
                     // teclado y participa en la cadena de Enter de enter-navigation.js,
                     // igual que el resto de los DatePicker del sistema.
-                    // minDate: bloquea en el calendario y valida en el servidor
-                    // (zona horaria America/La_Paz, ver config/app.php).
+                    // Arranca con la fecha local (America/La_Paz, ver
+                    // config/app.php) pero es libre: se puede poner hacia
+                    // atrás o a futuro.
                     DatePicker::make('fecha_fin')
                         ->label('Fecha de baja')
                         ->required()
                         ->default(now())
-                        ->minDate(fn () => today())
-                        ->validationMessages(['after_or_equal' => 'La fecha de baja no puede ser anterior a hoy.'])
                         ->extraInputAttributes(['data-enter-nav' => 'true']),
                     TextInput::make('motivo_baja')->label('Motivo')->required()->extraInputAttributes(['data-enter-nav' => 'true']),
                 ]
@@ -94,7 +93,7 @@ class PersonalActions
             // para poder ajustarlos, en vez de reiniciar con la fecha de hoy.
             ->fillForm(fn (Personal $record): array => self::tieneBajaProgramada($record)
                 ? ['fecha_fin' => $record->fecha_fin, 'motivo_baja' => $record->motivo_baja]
-                : [])
+                : ['fecha_fin' => now()->toDateString()])
             ->action(function (Personal $record, array $data): void {
                 if ($record->estado === EstadoPersonal::Habilitado) {
                     $fechaFin = Carbon::parse($data['fecha_fin']);
@@ -119,7 +118,7 @@ class PersonalActions
     }
 
     /**
-     * Para la pestaña "Eliminados": restaura el registro (deshace el borrado
+     * Para la pestaña "Retirados": restaura el registro (deshace el borrado
      * lógico) y de una lo deja Habilitado, en vez de dejarlo Inhabilitado
      * (como queda al eliminarlo, ver Personal::booted()) y obligar a un
      * segundo clic en "Habilitar" aparte.

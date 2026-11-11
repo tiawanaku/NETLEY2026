@@ -184,7 +184,7 @@ class SeguimientoDiario extends Page
 
                 return 'Seguimiento de hoy — Caso #'.$this->casoIndividualId.' — '.($caso?->cliente?->nombre_completo ?? 'Sin cliente');
             })
-            ->modalSubmitActionLabel('Guardar seguimiento')
+            ->modalSubmitActionLabel('Guardar')
             ->fillForm(fn () => [
                 'observaciones' => $this->miSeguimientoHoyDe($this->casoIndividualId)?->observaciones,
             ])
@@ -216,7 +216,7 @@ class SeguimientoDiario extends Page
                 ->disabled(fn () => empty($this->seleccionados))
                 ->modalHeading('Informe diario de seguimiento')
                 ->modalDescription('Detalle de los casos marcados: si ya tienen seguimiento hoy, se muestra su nota para revisarla o editarla.')
-                ->modalSubmitActionLabel('Guardar informe')
+                ->modalSubmitActionLabel('Guardar')
                 ->schema(fn () => collect($this->seleccionados)
                     ->map(function (int $id) {
                         $caso = Caso::find($id);

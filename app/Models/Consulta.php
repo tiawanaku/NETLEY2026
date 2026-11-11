@@ -52,7 +52,7 @@ class Consulta extends Model
     ];
 
     /**
-     * El detalle del origen solo se guarda con origen "Talleres" (ver
+     * El detalle del origen solo se guarda con origen "Talleres" o "Referido" (ver
      * App\Support\Origenes); con otro origen se descarta.
      */
     protected static function booted(): void

@@ -20,7 +20,7 @@ class Personal extends Model
     protected $table = 'personal';
 
     /**
-     * Al eliminar (pasa a la clasificación "Eliminados", ver SoftDeletes):
+     * Al eliminar (pasa a "Retirados", ver SoftDeletes y ListPersonals):
      * queda Inhabilitado también, para que pierda el acceso al sistema de
      * inmediato (ver User::canAccessPanel()), no solo cuando alguien entre
      * a deshabilitarlo aparte.

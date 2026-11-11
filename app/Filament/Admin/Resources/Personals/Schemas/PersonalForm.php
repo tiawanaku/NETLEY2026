@@ -23,6 +23,8 @@ use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 class PersonalForm
 {
@@ -172,6 +174,7 @@ class PersonalForm
                                 Select::make('cargo')
                                     ->label('Profesión')
                                     ->multiple()
+                                    ->required()
                                     ->searchable()
                                     ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
                                 opciones: collect(PersonalEspecialidades::cargos())->mapWithKeys(fn ($v) => [$v => $v])->all(),
@@ -202,16 +205,33 @@ class PersonalForm
                         // Solo se pide la fecha; la hora se registra sola por dentro (ver
                         // CreatePersonal/EditPersonal), no se le pregunta al usuario.
                         DatePicker::make('fecha_inicio')->label('Fecha de inicio')->default(now())->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
-                        DatePicker::make('fecha_fin')->label('Fecha de baja')->disabled($isEditing)->extraInputAttributes(['data-enter-nav' => 'true']),
+                        // En un retirado, fecha y motivo van en el recuadro
+                        // resaltado de abajo (no repetidos acá).
+                        DatePicker::make('fecha_fin')->label('Fecha de baja')->disabled($isEditing)->hidden(fn (?Personal $record) => (bool) $record?->trashed())->extraInputAttributes(['data-enter-nav' => 'true']),
                         Textarea::make('motivo_baja')
                             ->label('Motivo de baja')
-                            ->visible(fn (Get $get) => $get('estado') === EstadoPersonal::Inhabilitado->value)
+                            ->visible(fn (Get $get, ?Personal $record) => $get('estado') === EstadoPersonal::Inhabilitado->value && ! $record?->trashed())
                             ->disabled($isEditing)
                             ->extraInputAttributes(['data-enter-nav' => 'true']),
                         Textarea::make('nota')
                             ->label('Nota interna')
                             ->disabled($isEditing)
                             ->extraInputAttributes(['data-enter-nav' => 'true']),
+                        // Solo para retirados (pestaña Retirados → Ver).
+                        Section::make('Personal retirado')
+                            ->icon('heroicon-o-archive-box-x-mark')
+                            ->iconColor('danger')
+                            ->visible(fn (?Personal $record) => (bool) $record?->trashed())
+                            ->extraAttributes(['style' => 'border:2px solid rgb(220 38 38);background:rgba(220,38,38,.07);'])
+                            ->columnSpanFull()
+                            ->schema([
+                                Placeholder::make('bajaFecha')
+                                    ->label('Fecha de baja')
+                                    ->content(fn (?Personal $record) => new HtmlString('<strong>'.e($record?->fecha_fin?->format('d/m/Y') ?? '—').'</strong>')),
+                                Placeholder::make('bajaMotivo')
+                                    ->label('Motivo')
+                                    ->content(fn (?Personal $record) => new HtmlString('<strong>'.e($record?->motivo_baja ?: '—').'</strong>')),
+                            ]),
                     ]),
 
                     Section::make('Documentos')
@@ -224,8 +244,13 @@ class PersonalForm
                                 ->circleCropper()
                                 ->disabled($isEditing)
                                 ->directory('personal/fotos'),
+                            // Solo muestra los que se adjuntan ahora con el
+                            // clip: los ya subidos se ven y gestionan en
+                            // "Ver documentos" (EditPersonal). Al guardar,
+                            // Filament solo borra registros que trajo esta
+                            // consulta, así que los existentes no se tocan.
                             Repeater::make('documentos')
-                                ->relationship()
+                                ->relationship(modifyQueryUsing: fn (Builder $query) => $query->whereRaw('0 = 1'))
                                 ->label('Adjuntar documentos')
                                 ->extraAttributes(['class' => 'netley-fila-documento'])
                                 ->schema([

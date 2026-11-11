@@ -19,6 +19,14 @@ class DocumentoPersonal extends Model
         'fecha',
     ];
 
+    /** Los que se suben con el clip llegan sin fecha: queda la del día en que se subió. */
+    protected static function booted(): void
+    {
+        static::creating(function (self $documento): void {
+            $documento->fecha ??= today();
+        });
+    }
+
     protected function casts(): array
     {
         return [

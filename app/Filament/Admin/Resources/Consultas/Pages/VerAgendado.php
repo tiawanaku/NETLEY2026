@@ -111,7 +111,7 @@ class VerAgendado extends EditRecord
      * para que se vean exactamente igual que el resto del formulario.
      * "Guardar"/"Cancelar" van en el pie de la sección (->footer()) y leen
      * el valor actual de los campos con Get, sin pasar por el botón
-     * "Guardar cambios" general de la ficha (ver guardarCierre()).
+     * "Guardar" general de la ficha (ver guardarCierre()).
      */
     protected function cerrarConsultaSection(): Section
     {
@@ -392,9 +392,9 @@ class VerAgendado extends EditRecord
     {
         if ($this->editando) {
             return [
-                $this->getSaveFormAction()->label('Guardar cambios'),
+                $this->getSaveFormAction()->label('Guardar'),
                 Action::make('cancelarEdicion')
-                    ->label('Cancelar edición')
+                    ->label('Cancelar')
                     ->color('gray')
                     ->action(fn () => $this->redirect($this->urlFicha())),
             ];

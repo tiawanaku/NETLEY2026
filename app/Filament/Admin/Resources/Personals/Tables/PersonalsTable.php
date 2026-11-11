@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Personals\Tables;
 
 use App\Enums\EstadoPersonal;
 use App\Filament\Admin\Resources\Personals\Actions\PersonalActions;
+use App\Filament\Admin\Resources\Personals\PersonalResource;
 use App\Filament\Admin\Support\FiltrosContacto;
 use App\Filament\Admin\Support\TelefonoColumna;
 use App\Models\Personal;
@@ -16,6 +17,7 @@ use Filament\Actions\RestoreAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 
@@ -62,7 +64,11 @@ class PersonalsTable
                 TextColumn::make('estado')
                     ->badge(),
             ])
-            ->defaultSort('id', 'desc')
+            // Habilitados primero, después deshabilitados; dentro de cada
+            // grupo, de mayor a menor N° de item.
+            ->defaultSort(fn (Builder $query): Builder => $query
+                ->orderByRaw('estado = ? desc', [EstadoPersonal::Habilitado->value])
+                ->orderBy('id', 'desc'))
             ->filters([
                 SelectFilter::make('estado')->options(EstadoPersonal::class),
                 SelectFilter::make('especialidades')
@@ -75,10 +81,15 @@ class PersonalsTable
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
-                EditAction::make()->label('Ver')->visible(fn (Personal $record) => ! $record->trashed() && auth()->user()?->puede('editar')),
+                // También en Retirados: abre la ficha de solo lectura con el
+                // recuadro de la baja (ver PersonalForm).
+                EditAction::make()->label('Ver')->visible(fn () => auth()->user()?->puede('editar')),
                 // Habilitar/Deshabilitar como botón directo (no escondido en
-                // el menú "..."), tanto en Vigentes como en Retirados.
-                PersonalActions::toggleEstado()->visible(fn (Personal $record) => ! $record->trashed()),
+                // el menú "..."), en Vigentes (habilitados y deshabilitados).
+                // Tras deshabilitar/habilitar o retirar, vuelve a Vigentes.
+                PersonalActions::toggleEstado()
+                    ->visible(fn (Personal $record) => ! $record->trashed())
+                    ->after(fn ($livewire) => $livewire->redirect(PersonalResource::getUrl('index', ['tab' => 'vigentes']))),
                 PersonalActions::restaurarYHabilitar()
                     ->visible(fn (Personal $record) => $record->trashed() && auth()->user()?->puede('editar')),
                 ActionGroup::make([
@@ -88,11 +99,15 @@ class PersonalsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->modalHeading('¿Seguro que desea eliminar a:')
+                        ->label('Retirar seleccionados')
+                        ->modalHeading('¿Seguro que desea retirar a:')
+                        ->modalSubmitActionLabel('Retirar')
+                        ->successNotificationTitle('Personal retirado')
                         ->modalDescription(fn (Collection $records): HtmlString => new HtmlString(
                             '<strong style="font-size:1rem;">'.$records->map(fn (Personal $p) => e($p->nombre_completo))->join(', ').'</strong>?'
                         ))
-                        ->visible(fn () => auth()->user()?->puede('eliminar')),
+                        ->visible(fn () => auth()->user()?->puede('eliminar'))
+                        ->after(fn ($livewire) => $livewire->redirect(PersonalResource::getUrl('index', ['tab' => 'vigentes']))),
                 ]),
             ]);
     }

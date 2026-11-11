@@ -51,11 +51,11 @@
             <td style="width:25%;"><span class="check">{{ $esRedesSociales ? '☑' : '☐' }}</span>Redes Sociales</td>
             <td style="width:25%;"><span class="check">{{ $esPsicologia ? '☑' : '☐' }}</span>Psicología</td>
             <td style="width:25%;"><span class="check">{{ $esTaller ? '☑' : '☐' }}</span>Taller</td>
-            <td style="width:25%;"><span class="check">{{ $esOtros ? '☑' : '☐' }}</span>Otros{{ $esOtros ? ': '.$origenTexto : '' }}</td>
+            <td style="width:25%;"><span class="check">{{ $esOtros ? '☑' : '☐' }}</span>Otros{{ $esOtros ? ': '.\App\Support\Origenes::texto($consulta->origen, $consulta->origen_detalle) : '' }}</td>
         </tr>
         <tr>
             <td><span class="label">Ciudad</span><span class="valor">{{ $consulta->ciudad ?: '—' }}</span></td>
-            <td colspan="3"><span class="label">Nombre colegio / otros</span><span class="valor">{{ $consulta->origen_detalle ?: '—' }}</span></td>
+            <td colspan="3"><span class="label">Nombre colegio / otros</span><span class="valor">{{ ($esTaller ? $consulta->origen_detalle : null) ?: '—' }}</span></td>
         </tr>
     </table>
 

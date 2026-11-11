@@ -125,19 +125,19 @@ class EditConsulta extends EditRecord
      * En la vista normal todos los campos están deshabilitados (ver
      * ConsultaForm), así que solo se ofrece, si la consulta ya está cerrada,
      * descargar el informe de cierre en PDF. En modo edición (ver
-     * urlFicha()) se ofrecen "Guardar cambios" y "Cancelar edición".
+     * urlFicha()) se ofrecen "Guardar" y "Cancelar".
      *
      * Filament arma estos botones antes de ejecutar la acción del clic, así
      * que cambiar $this->editando en un clic no los actualiza: por eso
-     * "Editar", "Cancelar edición" y "Guardar cambios" recargan la ficha.
+     * "Editar", "Cancelar" y "Guardar" recargan la ficha.
      */
     protected function getFormActions(): array
     {
         if ($this->editando) {
             return [
-                $this->getSaveFormAction()->label('Guardar cambios'),
+                $this->getSaveFormAction()->label('Guardar'),
                 Action::make('cancelarEdicion')
-                    ->label('Cancelar edición')
+                    ->label('Cancelar')
                     ->color('gray')
                     ->action(fn () => $this->redirect($this->urlFicha())),
             ];
