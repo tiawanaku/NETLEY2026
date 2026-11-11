@@ -47,6 +47,16 @@ class Pago extends Model
         return User::where('username', $this->registrado_por)->first()?->personal;
     }
 
+    /** "Anticipo", "Cuota N° 3" o "A cuenta": qué se pagó (tablas y recibo). */
+    public function getConceptoAttribute(): string
+    {
+        if ($this->tipo_pago === 'anticipo') {
+            return 'Anticipo';
+        }
+
+        return $this->nro_cuota > 0 ? 'Cuota N° '.$this->nro_cuota : 'A cuenta';
+    }
+
     public function getRegistradoPorNombreAttribute(): ?string
     {
         return $this->registradoPorPersonal()?->nombre_completo ?? $this->registrado_por;

@@ -11,6 +11,22 @@ class EditCliente extends EditRecord
 {
     protected static string $resource = ClienteResource::class;
 
+    /** El formulario va como primera pestaña, junto a "Casos". */
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
+
+    public function getContentTabLabel(): ?string
+    {
+        return 'Datos personales';
+    }
+
+    public function getContentTabIcon(): string
+    {
+        return 'heroicon-o-user';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

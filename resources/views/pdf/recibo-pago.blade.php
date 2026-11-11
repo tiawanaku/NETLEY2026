@@ -60,7 +60,7 @@
         <table>
             <tr>
                 <td style="width: 27%;">
-                    <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/netley-logo.png'))) }}" style="width: 200px;" alt="NETLEY">
+                    <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/netley-logo-pdf.png'))) }}" style="width: 200px;" alt="NETLEY">
                 </td>
                 <td style="width: 36%; padding-top: 2px;">
                     <table style="width: auto;">
@@ -122,7 +122,7 @@
             </tr>
             <tr>
                 <td class="campo-etiqueta" style="padding-bottom: 8px;">Por concepto de:</td>
-                <td class="campo-valor" style="padding-bottom: 8px;">Cuota N° {{ $pago->nro_cuota }} — Caso N° {{ $pago->caso_id }} ({{ $pago->caso->materia_legal }})</td>
+                <td class="campo-valor" style="padding-bottom: 8px;">{{ $pago->concepto }} — Caso N° {{ $pago->caso_id }} ({{ $pago->caso->materia_legal }})</td>
             </tr>
         </table>
 

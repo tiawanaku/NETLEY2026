@@ -41,7 +41,11 @@ class PagosRelationManager extends RelationManager
             ->recordTitleAttribute('nro_recibo')
             ->columns([
                 TextColumn::make('nro_recibo')->label('Recibo #'),
-                TextColumn::make('nro_cuota')->label('Cuota #'),
+                // El anticipo (cobrado al crear el caso) se distingue de las cuotas.
+                TextColumn::make('concepto')
+                    ->label('Concepto')
+                    ->badge()
+                    ->color(fn (Pago $record) => $record->tipo_pago === 'anticipo' ? 'success' : 'gray'),
                 TextColumn::make('monto')->money('BOB'),
                 TextColumn::make('fecha_pago')->date(),
                 TextColumn::make('registrado_por'),
@@ -77,9 +81,10 @@ class PagosRelationManager extends RelationManager
                         );
                     }),
             ])
+            ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
                 Action::make('recibo')
-                    ->label('Recibo PDF')
+                    ->label('Recibo')
                     ->icon('heroicon-o-document-arrow-down')
                     ->action(fn (Pago $record) => response()->streamDownload(
                         fn () => print (Pdf::loadView('pdf.recibo-pago', ['pago' => $record->load(['cliente', 'caso'])])->output()),

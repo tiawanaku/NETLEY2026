@@ -36,12 +36,24 @@ class PlanesPagoRelationManager extends RelationManager
         ]);
     }
 
+    /** ¿Esta cuota se pagó con el pago marcado como anticipo? */
+    protected static function esAnticipo(PlanPago $record): bool
+    {
+        return Pago::where('caso_id', $record->caso_id)
+            ->where('nro_cuota', $record->numero)
+            ->where('tipo_pago', 'anticipo')
+            ->exists();
+    }
+
     public function table(Table $table): Table
     {
         return $table
             ->recordTitleAttribute('numero')
             ->columns([
-                TextColumn::make('numero')->label('Cuota #')->formatStateUsing(fn (int $state) => $state === 0 ? 'Anticipo' : $state),
+                // La cuota pagada con el anticipo (al crear el caso) se marca como tal.
+                TextColumn::make('numero')
+                    ->label('Cuota #')
+                    ->formatStateUsing(fn (int $state, PlanPago $record) => match (true) { $state === 0 => 'Anticipo', self::esAnticipo($record) => $state.' · Anticipo', default => $state }),
                 TextColumn::make('fecha')->date(),
                 TextColumn::make('monto')->money('BOB'),
                 TextColumn::make('nuevo_saldo')->money('BOB')->label('Saldo restante'),

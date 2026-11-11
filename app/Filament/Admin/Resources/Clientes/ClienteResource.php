@@ -7,8 +7,6 @@ use App\Filament\Admin\Resources\Clientes\Pages\CreateCliente;
 use App\Filament\Admin\Resources\Clientes\Pages\EditCliente;
 use App\Filament\Admin\Resources\Clientes\Pages\ListClientes;
 use App\Filament\Admin\Resources\Clientes\RelationManagers\CasosRelationManager;
-use App\Filament\Admin\Resources\Clientes\RelationManagers\DocumentosRelationManager;
-use App\Filament\Admin\Resources\Clientes\RelationManagers\PagosRelationManager;
 use App\Filament\Admin\Resources\Clientes\Schemas\ClienteForm;
 use App\Filament\Admin\Resources\Clientes\Tables\ClientesTable;
 use App\Filament\Admin\Support\ModoMenu;
@@ -84,10 +82,11 @@ class ClienteResource extends Resource
 
     public static function getRelations(): array
     {
+        // Ficha organizada en pestañas: "Datos personales" (el formulario,
+        // ver EditCliente) y "Casos". Pagos, documentación y seguimiento van
+        // DENTRO de cada caso (ver CasoResource::getRelations()).
         return [
             CasosRelationManager::class,
-            PagosRelationManager::class,
-            DocumentosRelationManager::class,
         ];
     }
 

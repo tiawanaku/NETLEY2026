@@ -20,6 +20,8 @@ class CasosRelationManager extends RelationManager
 
     protected static ?string $title = 'Casos';
 
+    protected static string|\BackedEnum|null $icon = 'heroicon-o-briefcase';
+
     /**
      * Mismos campos que los pasos "Proceso" y "Pago y plan de cuotas" del
      * wizard de Cliente Ejecutivo (ClienteCasoWizard) — aquí en un solo

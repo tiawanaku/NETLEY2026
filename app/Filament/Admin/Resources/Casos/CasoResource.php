@@ -19,6 +19,7 @@ use App\Filament\Admin\Resources\Casos\Schemas\CasoForm;
 use App\Filament\Admin\Resources\Casos\Tables\CasosTable;
 use App\Models\Caso;
 use BackedEnum;
+use Filament\Resources\RelationManagers\RelationGroup;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -69,14 +70,22 @@ class CasoResource extends Resource
 
     public static function getRelations(): array
     {
+        // Pestañas de la ficha del caso, después de "Datos del caso" (ver
+        // EditCaso): cada grupo muestra sus tablas una debajo de otra.
         return [
-            PlanesPagoRelationManager::class,
-            PagosRelationManager::class,
-            DocumentosRelationManager::class,
-            FiscaliasRelationManager::class,
-            JuzgadosRelationManager::class,
-            OtrosSeguimientosRelationManager::class,
-            SeguimientosRelationManager::class,
+            RelationGroup::make('Pagos', [
+                PlanesPagoRelationManager::class,
+                PagosRelationManager::class,
+            ])->icon('heroicon-o-banknotes'),
+            RelationGroup::make('Documentación', [
+                DocumentosRelationManager::class,
+            ])->icon('heroicon-o-document-text'),
+            RelationGroup::make('Seguimiento', [
+                SeguimientosRelationManager::class,
+                FiscaliasRelationManager::class,
+                JuzgadosRelationManager::class,
+                OtrosSeguimientosRelationManager::class,
+            ])->icon('heroicon-o-clipboard-document-list'),
         ];
     }
 

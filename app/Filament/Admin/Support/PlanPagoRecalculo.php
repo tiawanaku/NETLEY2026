@@ -9,6 +9,9 @@ use App\Models\Caso;
  * descuenta del saldo pendiente; esto redistribuye ese saldo actualizado en
  * partes iguales entre las cuotas pendientes restantes, para que el plan
  * de pagos siga reflejando exactamente lo que falta cobrar.
+ *
+ * Cuotas en bolivianos enteros (sin centavos): la última absorbe el resto
+ * de la división (y los centavos del saldo, si quedaron de pagos antiguos).
  */
 class PlanPagoRecalculo
 {
@@ -22,13 +25,11 @@ class PlanPagoRecalculo
 
         $saldoActual = max((float) $caso->fresh()->saldo, 0);
         $cantidad = $pendientes->count();
-        $montoCuota = round($saldoActual / $cantidad, 2);
+        $montoCuota = intdiv((int) floor($saldoActual), $cantidad);
         $restante = $saldoActual;
 
         foreach ($pendientes as $indice => $plan) {
             $esUltima = $indice === $cantidad - 1;
-            // La última cuota absorbe el residuo de redondeo, para que el
-            // saldo final quede exactamente en 0.
             $monto = $esUltima ? round($restante, 2) : $montoCuota;
             $restante = round($restante - $monto, 2);
 
