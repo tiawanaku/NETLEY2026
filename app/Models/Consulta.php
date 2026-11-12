@@ -73,6 +73,25 @@ class Consulta extends Model
                 }
             }
         });
+
+        // Al cerrarse (sea cual sea la pantalla), su cita vigente queda
+        // anulada: así, si se reactiva, vuelve como Pendiente sin cita y
+        // no queda una cita "fantasma" en la agenda. Las citas ya ligadas a
+        // un caso (cliente ejecutivo) no se tocan, ni tampoco al pasar a
+        // cliente ejecutivo (Caso iniciado): esa cita, con sus servicios
+        // requeridos, es la que sigue sirviendo para el caso.
+        static::updated(function (self $model): void {
+            if (! $model->wasChanged('estado') || ! $model->estado
+                || $model->estado === EstadoConsulta::CasoIniciado
+                || in_array($model->estado, EstadoConsulta::abiertos(), true)) {
+                return;
+            }
+
+            $model->citas()
+                ->where('anulada', false)
+                ->whereNull('caso_id')
+                ->update(['anulada' => true]);
+        });
     }
 
     protected function casts(): array

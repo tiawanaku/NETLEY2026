@@ -15,7 +15,11 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\EmbeddedTable;
+use Filament\Schemas\Components\RenderHook;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
+use Filament\View\PanelsRenderHook;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -34,6 +38,70 @@ class PlanesPagoRelationManager extends RelationManager
             TextInput::make('nuevo_saldo')->numeric()->prefix('Bs.')->label('Saldo tras esta cuota'),
             Select::make('estado')->options(EstadoCuota::class)->default(EstadoCuota::Pendiente)->required(),
         ]);
+    }
+
+    /**
+     * Arriba de la tabla, el resumen completo del paso 3 ("Pago y plan de
+     * cuotas") con el que se creó el caso (ver resumen-pago.blade.php).
+     */
+    public function content(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                $this->getTabsContentComponent(),
+                RenderHook::make(PanelsRenderHook::RESOURCE_RELATION_MANAGER_BEFORE),
+                View::make('filament.admin.casos.resumen-pago')
+                    ->viewData(fn (): array => $this->resumenPago()),
+                EmbeddedTable::make(),
+                RenderHook::make(PanelsRenderHook::RESOURCE_RELATION_MANAGER_AFTER),
+            ]);
+    }
+
+    /** @return array{filas: array<int, array<string, string>>, servicios: array<int, array<string, string>>} */
+    protected function resumenPago(): array
+    {
+        /** @var Caso $caso */
+        $caso = $this->getOwnerRecord()->refresh();
+        $bs = fn ($monto): string => 'Bs. '.(fmod((float) $monto, 1.0) == 0.0
+            ? number_format((float) $monto, 0, '.', '')
+            : number_format((float) $monto, 2, '.', ''));
+        $porcentaje = fn ($valor): string => rtrim(rtrim(number_format((float) $valor, 2, '.', ''), '0'), '.').'%';
+
+        $hih = $caso->patrocinio_hih ? (float) $caso->monto_patrocinio : 0.0;
+        $anticipo = (float) $caso->pagos()->where('tipo_pago', 'anticipo')->sum('monto');
+        $cuotasAnticipo = $caso->pagos()->where('tipo_pago', 'anticipo')->pluck('nro_cuota')->map(fn ($n) => (int) $n)->all();
+        $cuotas = $caso->planesPago()->orderBy('numero')->get()
+            ->reject(fn (PlanPago $cuota) => (int) $cuota->numero === 0 || in_array((int) $cuota->numero, $cuotasAnticipo, true));
+        $verde = 'color:#16a34a;';
+        $naranja = 'color:#d97706;';
+
+        $filas = [
+            ['etiqueta' => 'Iguala profesional', 'valor' => $bs((float) $caso->iguala + $hih)],
+            ['etiqueta' => 'Patrocinio HiH', 'valor' => $caso->patrocinio_hih
+                ? $bs($hih).($caso->porcentaje_patrocinio ? ' ('.$porcentaje($caso->porcentaje_patrocinio).')' : '')
+                : 'No'],
+            ['etiqueta' => 'Iguala Netley', 'valor' => $bs($caso->iguala)],
+            ['etiqueta' => 'Anticipo', 'valor' => $anticipo > 0 ? $bs($anticipo) : 'Sin anticipo'],
+            ['etiqueta' => 'Saldo Netley', 'valor' => $bs((float) $caso->iguala - $anticipo)],
+            ['etiqueta' => 'N° de cuotas mensuales', 'valor' => (string) $cuotas->count()],
+            ['etiqueta' => 'Fecha de la primera cuota', 'valor' => $cuotas->first()?->fecha?->format('d/m/Y') ?? '—'],
+            ['etiqueta' => 'Comisión (%)', 'valor' => (float) $caso->comision_porcentaje > 0 ? $porcentaje($caso->comision_porcentaje) : '—'],
+            ['etiqueta' => 'Comisión (Bs.)', 'valor' => (float) $caso->comision_monto > 0 ? $bs($caso->comision_monto) : '—'],
+            ['etiqueta' => 'Pagado a la fecha', 'valor' => $bs($caso->pagado), 'color' => $verde],
+            ['etiqueta' => 'Saldo actual', 'valor' => $bs($caso->saldo), 'color' => $naranja],
+        ];
+
+        $servicios = collect([
+            [$caso->servicio_psicologia, 'Psicología', $caso->monto_servicio_psicologia],
+            [$caso->servicio_trabajo_social, 'Trabajo social', $caso->monto_servicio_trabajo_social],
+            [$caso->servicio_otro, 'Otro'.($caso->servicio_otro_detalle ? ': '.$caso->servicio_otro_detalle : ''), $caso->monto_servicio_otro],
+        ])
+            ->filter(fn (array $servicio) => (bool) $servicio[0])
+            ->map(fn (array $servicio) => ['nombre' => $servicio[1], 'monto' => $servicio[2] !== null ? $bs($servicio[2]) : '—'])
+            ->values()
+            ->all();
+
+        return ['filas' => $filas, 'servicios' => $servicios];
     }
 
     /** ¿Esta cuota se pagó con el pago marcado como anticipo? */
@@ -75,6 +143,23 @@ class PlanesPagoRelationManager extends RelationManager
                                 'planes' => $caso->planesPago()->orderBy('numero')->get(),
                             ])->output()),
                             "plan-pago-caso-{$caso->id}.pdf"
+                        );
+                    }),
+                // Pasó acá desde la tabla "Pagos", que se quitó.
+                Action::make('historialPagos')
+                    ->label('Imprimir historial de pagos')
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->action(function (): mixed {
+                        /** @var Caso $caso */
+                        $caso = $this->getOwnerRecord()->load('cliente');
+
+                        return response()->streamDownload(
+                            fn () => print (Pdf::loadView('pdf.historial-pagos-caso', [
+                                'caso' => $caso,
+                                'pagos' => $caso->pagos()->orderBy('fecha_pago')->get(),
+                            ])->output()),
+                            "historial-pagos-caso-{$caso->id}.pdf"
                         );
                     }),
             ])

@@ -49,6 +49,12 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_END,
                 fn (): HtmlString => new HtmlString('<script>'.File::get(resource_path('js/filament/dual-scrollbar.js')).'</script>'),
             )
+            // "Nuevo proceso" en la barra de pestañas de la ficha del cliente
+            // (ver EditCliente::getRelationManagersContentComponent()).
+            ->renderHook(
+                \App\Filament\Admin\Resources\Clientes\Pages\EditCliente::HOOK_FIN_PESTANAS,
+                fn () => view('filament.admin.clientes.boton-nuevo-proceso'),
+            )
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn (): HtmlString => new HtmlString('<script>'.File::get(resource_path('js/filament/enter-navigation.js')).'</script>'),

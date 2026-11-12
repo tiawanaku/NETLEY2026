@@ -12,7 +12,7 @@ use App\Filament\Admin\Resources\Casos\RelationManagers\DocumentosRelationManage
 use App\Filament\Admin\Resources\Casos\RelationManagers\FiscaliasRelationManager;
 use App\Filament\Admin\Resources\Casos\RelationManagers\JuzgadosRelationManager;
 use App\Filament\Admin\Resources\Casos\RelationManagers\OtrosSeguimientosRelationManager;
-use App\Filament\Admin\Resources\Casos\RelationManagers\PagosRelationManager;
+use App\Filament\Admin\Resources\Casos\RelationManagers\CronologiaRelationManager;
 use App\Filament\Admin\Resources\Casos\RelationManagers\PlanesPagoRelationManager;
 use App\Filament\Admin\Resources\Casos\RelationManagers\SeguimientosRelationManager;
 use App\Filament\Admin\Resources\Casos\Schemas\CasoForm;
@@ -74,8 +74,10 @@ class CasoResource extends Resource
         // EditCaso): cada grupo muestra sus tablas una debajo de otra.
         return [
             RelationGroup::make('Pagos', [
+                // Solo el plan de pagos (con su resumen arriba): la tabla de
+                // pagos sueltos se quitó a pedido; cada cuota se paga y su
+                // recibo se imprime desde su fila.
                 PlanesPagoRelationManager::class,
-                PagosRelationManager::class,
             ])->icon('heroicon-o-banknotes'),
             RelationGroup::make('Documentación', [
                 DocumentosRelationManager::class,
@@ -86,6 +88,8 @@ class CasoResource extends Resource
                 JuzgadosRelationManager::class,
                 OtrosSeguimientosRelationManager::class,
             ])->icon('heroicon-o-clipboard-document-list'),
+            // Línea de tiempo con todo lo anterior junto (solo lectura).
+            CronologiaRelationManager::class,
         ];
     }
 

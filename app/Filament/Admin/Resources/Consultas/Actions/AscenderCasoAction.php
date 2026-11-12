@@ -5,7 +5,9 @@ namespace App\Filament\Admin\Resources\Consultas\Actions;
 use App\Enums\EstadoConsulta;
 use App\Enums\Rol;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
+use App\Filament\Admin\Resources\Clientes\ClienteResource;
 use App\Filament\Admin\Support\CamposDomicilio;
+use App\Filament\Admin\Support\CamposServicios;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Consulta;
 use App\Models\Personal;
@@ -37,6 +39,10 @@ class AscenderCasoAction
                 // citas agendadas de esta consulta, para no volver a
                 // capturarlos manualmente en el paso "Proceso".
                 $ultimaRespuesta = $record->respuestas()->latest('fecha_respuesta')->first();
+
+                // Cita vigente de la consulta: sus "Servicios requeridos" y su
+                // Nota pasan al paso "Proceso" (interruptores y Descripción).
+                $cita = $record->citas()->where('anulada', false)->orderByDesc('fecha')->orderByDesc('hora')->first();
 
                 $personalIds = collect();
 
@@ -87,21 +93,24 @@ class AscenderCasoAction
                             : null),
                     'delito_texto' => $ultimaRespuesta?->delito_id ? null : $ultimaRespuesta?->delito_texto,
                     'personal' => $personalIds->unique()->values()->all(),
+                    ...CamposServicios::desde($cita),
+                    'descripcion' => $cita?->detalle,
                 ];
             })
-            ->schema([
-                Wizard::make(ClienteCasoWizard::steps())
-                    // Marca compartida con el botón real de guardar (más abajo):
-                    // el de navegación con Enter hace clic en el que esté
-                    // visible — "Siguiente" en los primeros pasos (el de
-                    // Guardar queda oculto por el wizard hasta no ser así) y,
-                    // en el último paso, al estar "Siguiente" oculto, cae en
-                    // el de Guardar.
-                    ->nextAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true'])),
-            ])
+            // ->steps() (asistente propio de la acción, no un Wizard dentro
+            // del formulario): así el botón Guardar va dentro del asistente y
+            // solo aparece en el último paso (4, "Adjuntar documentos"), y no
+            // hay botón Cancelar (se cierra con la X del encabezado).
+            ->steps(ClienteCasoWizard::steps())
+            // Marca compartida con el botón de guardar (más abajo): la
+            // navegación con Enter hace clic en el que esté visible —
+            // "Siguiente" en los pasos 1 a 3 y Guardar en el 4.
+            ->modifyWizardUsing(fn (Wizard $wizard): Wizard => $wizard
+                ->nextAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true'])))
+            ->modalCancelAction(false)
             ->modalSubmitActionLabel('Guardar')
             ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))
-            ->action(function (Consulta $record, array $data): void {
+            ->action(function (Consulta $record, array $data, $livewire): void {
                 $resultado = ClienteCasoWizard::crear($data);
 
                 $record->update([
@@ -110,6 +119,9 @@ class AscenderCasoAction
                 ]);
 
                 Notification::make()->title('Consulta ascendida a caso')->success()->send();
+
+                // Lleva al listado de Clientes ejecutivos, donde queda ahora.
+                $livewire->redirect(ClienteResource::getUrl('index'));
             });
     }
 }

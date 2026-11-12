@@ -95,6 +95,9 @@
                 <td colspan="2"><span class="check">{{ $cita->confirmada ? '☑' : '☐' }}</span>Cita confirmada</td>
                 <td colspan="2"><span class="check">{{ $cita->anulada ? '☑' : '☐' }}</span>Cita anulada</td>
             </tr>
+            <tr class="fila-check">
+                <td colspan="5"><span class="label">Servicios requeridos</span><span class="check">{{ $cita->servicio_psicologia ? '☑' : '☐' }}</span>Psicología &nbsp;&nbsp; <span class="check">{{ $cita->servicio_trabajo_social ? '☑' : '☐' }}</span>Trabajo social &nbsp;&nbsp; <span class="check">{{ $cita->servicio_otro ? '☑' : '☐' }}</span>Otro{{ $cita->servicio_otro && $cita->servicio_otro_detalle ? ': '.$cita->servicio_otro_detalle : '' }}</td>
+            </tr>
             <tr>
                 <td colspan="5"><span class="label">Nota</span><div class="nota-caja">{{ $cita->detalle ?: '—' }}</div></td>
             </tr>

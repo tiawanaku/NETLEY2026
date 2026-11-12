@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Casos\Schemas;
 use App\Enums\EstadoCaso;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
 use App\Filament\Admin\Support\CamposDenuncia;
+use App\Filament\Admin\Support\CamposServicios;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Caso;
 use App\Support\Telefono;
@@ -12,6 +13,8 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -25,7 +28,8 @@ class CasoForm
         // editando estos campos directamente. Las pestañas de seguimiento,
         // documentación, pagos, fiscalías y juzgados siguen funcionando
         // normal, son RelationManagers aparte.
-        $isEditing = fn (string $operation): bool => $operation === 'edit';
+        // Con "Editar" en la ficha (EditCaso::$editando) se habilitan.
+        $isEditing = fn (string $operation, $livewire): bool => $operation === 'edit' && ! ($livewire->editando ?? false);
 
         return $schema
             ->inlineLabel()
@@ -105,28 +109,44 @@ class CasoForm
                         // Mismas opciones que el wizard; un valor fuera de la lista
                         // (casos legacy, o "Otros" especificado a mano) se agrega
                         // para que se siga viendo en la ficha.
-                        Select::make('apersonamiento')
-                            ->options(fn (?string $state) => collect(ClienteCasoWizard::APERSONAMIENTOS)
-                                ->when(filled($state), fn ($opciones) => $opciones->push($state))
-                                ->unique()
-                                ->mapWithKeys(fn ($v) => [$v => $v])
-                                ->all())
-                            ->native(false)
-                            ->disabled($isEditing),
+                        // Apersonamiento, estado y ciudad a la izquierda;
+                        // "Servicios requeridos" al lado, a su misma altura.
+                        Grid::make(['default' => 1, 'lg' => 2])
+                            ->schema([
+                                Group::make([
+                                    Select::make('apersonamiento')
+                                        ->options(fn (?string $state) => collect(ClienteCasoWizard::APERSONAMIENTOS)
+                                            ->when(filled($state), fn ($opciones) => $opciones->push($state))
+                                            ->unique()
+                                            ->mapWithKeys(fn ($v) => [$v => $v])
+                                            ->all())
+                                        ->native(false)
+                                        ->disabled($isEditing),
+                                    Select::make('estado')
+                                        ->options(EstadoCaso::class)
+                                        ->default(EstadoCaso::ActivoPendiente)
+                                        ->required()
+                                        ->disabled($isEditing),
+                                    TextInput::make('ciudad')->disabled($isEditing),
+                                ]),
+                                CamposServicios::campo(disabled: $isEditing),
+                            ])
+                            ->columnSpanFull(),
                         // En la ficha quedan de solo lectura; se actualizan
                         // desde la acción "Agendar cita".
                         CamposDenuncia::denunciado()->disabled($isEditing),
                         CamposDenuncia::denuncias(conRelacion: true)->disabled($isEditing),
-                        TextInput::make('ciudad')->disabled($isEditing),
-                        Select::make('estado')
-                            ->options(EstadoCaso::class)
-                            ->default(EstadoCaso::ActivoPendiente)
-                            ->required()
-                            ->disabled($isEditing),
-                        Textarea::make('descripcion')->disabled($isEditing),
-                    ]),
+                        Textarea::make('descripcion')->disabled($isEditing)->columnSpanFull(),
+                    ])
+                    // En dos columnas (a pedido): cliente | abogados,
+                    // materia | delito, denunciado | denuncias...
+                    ->columns(['default' => 1, 'lg' => 2])
+                    ->columnSpanFull(),
 
+                // Solo al crear un caso suelto: en la ficha no se muestra (a
+                // pedido) — los montos se ven en la pestaña Pagos.
                 Section::make('Finanzas')
+                    ->visible(fn (string $operation): bool => $operation === 'create')
                     ->schema([
                         DatePicker::make('fecha_inicio')->required()->default(now())->disabled($isEditing),
                         DatePicker::make('fecha_fin')->label('Vencimiento')->disabled($isEditing),

@@ -100,7 +100,7 @@ class CasoActions
             ->color('gray')
             ->action(fn (Caso $record) => response()->streamDownload(
                 fn () => print(Pdf::loadView('pdf.informe-rapido-caso', [
-                    'caso' => $record->load(['cliente', 'personal', 'delito']),
+                    'caso' => $record->load(['cliente', 'personal', 'delito', 'delitosDenunciados', 'planesPago', 'pagos']),
                 ])->output()),
                 "informe-rapido-caso-{$record->id}.pdf"
             ));

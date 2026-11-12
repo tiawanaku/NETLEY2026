@@ -275,6 +275,17 @@
     border-color: #6b7280;
 }
 
+/* Ficha en solo lectura: el clip se ve, pero apagado y sin responder al clic
+   hasta pulsar "Editar" (ver PersonalForm). */
+.netley-clip-deshabilitado {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.netley-clip-deshabilitado .filepond--drop-label label {
+    cursor: not-allowed;
+}
+
 .netley-adjuntar-documentos-clip .filepond--drop-label label::before {
     content: "\1F4CE";
     font-size: 1.4rem;

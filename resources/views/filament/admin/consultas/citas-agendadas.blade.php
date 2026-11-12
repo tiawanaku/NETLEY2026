@@ -45,6 +45,10 @@
 
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 16px;font-size:14px;margin-top:10px;">
                     <div>
+                        <div style="font-size:12px;opacity:.6;margin-bottom:2px;">Servicios requeridos</div>
+                        <div>{{ $cita->servicios_requeridos ?: '—' }}</div>
+                    </div>
+                    <div>
                         <div style="font-size:12px;opacity:.6;margin-bottom:2px;">Nota</div>
                         <div style="white-space:pre-line;">{{ $cita->detalle ?: '—' }}</div>
                     </div>

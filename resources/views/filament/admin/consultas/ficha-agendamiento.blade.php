@@ -111,6 +111,14 @@
                 </tr>
                 <tr>
                     <td style="border:1px solid #000;padding:5px 10px;" colspan="5">
+                        <span style="display:block;font-size:9px;color:#444;">Servicios requeridos</span>
+                        <span style="margin-right:3px;">{{ $cita->servicio_psicologia ? '☑' : '☐' }}</span>Psicología &nbsp;&nbsp;
+                        <span style="margin-right:3px;">{{ $cita->servicio_trabajo_social ? '☑' : '☐' }}</span>Trabajo social &nbsp;&nbsp;
+                        <span style="margin-right:3px;">{{ $cita->servicio_otro ? '☑' : '☐' }}</span>Otro{{ $cita->servicio_otro && $cita->servicio_otro_detalle ? ': '.$cita->servicio_otro_detalle : '' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border:1px solid #000;padding:5px 10px;" colspan="5">
                         <span style="display:block;font-size:9px;color:#444;">Nota</span>
                         <div style="white-space:pre-line;min-height:20px;">{{ $cita->detalle ?: '—' }}</div>
                     </td>

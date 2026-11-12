@@ -29,6 +29,10 @@ class Cita extends Model
         'bs_comision',
         'confirmada',
         'documentos',
+        'servicio_psicologia',
+        'servicio_trabajo_social',
+        'servicio_otro',
+        'servicio_otro_detalle',
     ];
 
     protected function casts(): array
@@ -42,7 +46,20 @@ class Cita extends Model
             'porcentaje_comision' => 'decimal:2',
             'bs_comision' => 'decimal:2',
             'documentos' => 'array',
+            'servicio_psicologia' => 'boolean',
+            'servicio_trabajo_social' => 'boolean',
+            'servicio_otro' => 'boolean',
         ];
+    }
+
+    /** Servicios requeridos marcados, para mostrar ("Psicología, Trabajo social, Otro: ..."). */
+    public function getServiciosRequeridosAttribute(): string
+    {
+        return collect([
+            $this->servicio_psicologia ? 'Psicología' : null,
+            $this->servicio_trabajo_social ? 'Trabajo social' : null,
+            $this->servicio_otro ? 'Otro'.($this->servicio_otro_detalle ? ': '.$this->servicio_otro_detalle : '') : null,
+        ])->filter()->join(', ');
     }
 
     public function observacionesCon(string $accion, string $texto): string

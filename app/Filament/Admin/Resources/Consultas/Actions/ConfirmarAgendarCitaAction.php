@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Consultas\Actions;
 
 use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Resources\Consultas\ConsultaResource;
+use App\Filament\Admin\Support\CamposServicios;
 use App\Models\Consulta;
 use App\Support\FormularioCita;
 use Filament\Actions\Action;
@@ -62,9 +63,13 @@ class ConfirmarAgendarCitaAction
                         'porcentaje_comision' => $data['porcentaje_comision'] ?? null,
                         'bs_comision' => $data['bs_comision'] ?? null,
                         'confirmada' => $data['confirmada'] ?? false,
+                        ...CamposServicios::datos($data),
                         'documentos' => [
                             ...($anterior?->documentos ?? []),
-                            ...array_values($data['documentos'] ?? []),
+                            ...collect($data['documentos'] ?? [])
+                                ->map(fn (array $documento) => [...$documento, 'fecha' => now()->toDateString()])
+                                ->values()
+                                ->all(),
                         ],
                     ]);
 
@@ -83,11 +88,12 @@ class ConfirmarAgendarCitaAction
 
                 Notification::make()->title('Cita agendada')->success()->send();
 
-                // Una vez registrada la cita, vuelve siempre a "Nuevas
-                // consultas" (sea cual sea la pantalla desde la que se
-                // agendó: EditConsulta o VerAgendado vía motivo "Reagendar")
-                // para seguir con la siguiente consulta pendiente.
-                $livewire->redirect(ConsultaResource::getUrl('index').'?tab=nuevas');
+                // Al reagendar (cita anterior en 'copiarDeCitaId') vuelve a
+                // "Agendados", donde queda la consulta con su cita nueva; al
+                // agendar una consulta nueva, a "Nuevas consultas" para
+                // seguir con la siguiente pendiente.
+                $pestana = filled($arguments['copiarDeCitaId'] ?? null) ? 'agendados' : 'nuevas';
+                $livewire->redirect(ConsultaResource::getUrl('index').'?tab='.$pestana);
             });
     }
 }

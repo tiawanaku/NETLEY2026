@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Consultas\Actions;
 
 use App\Filament\Admin\Support\CampoHora;
+use App\Filament\Admin\Support\CamposServicios;
 use App\Models\Consulta;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -23,6 +24,7 @@ class ReagendarCitaAction
             ->schema([
                 DatePicker::make('fecha')->required()->extraInputAttributes(['data-enter-nav' => 'true']),
                 CampoHora::make('hora')->label('Hora')->required(),
+                CamposServicios::make(),
                 TextInput::make('bs_iguala')->label('Bs. Iguala')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
                 TextInput::make('bs_anticipo')->label('Bs. Anticipo')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
                 TextInput::make('porcentaje_comision')->label('% Comisión')->numeric()->prefix('%')->extraInputAttributes(['data-enter-nav' => 'true']),
@@ -45,6 +47,7 @@ class ReagendarCitaAction
                     'porcentaje_comision' => $cita->porcentaje_comision,
                     'bs_comision' => $cita->bs_comision,
                     'confirmada' => $cita->confirmada,
+                    ...CamposServicios::desde($cita),
                 ];
             })
             ->modalSubmitActionLabel('Guardar')
@@ -61,6 +64,7 @@ class ReagendarCitaAction
                     'porcentaje_comision' => $data['porcentaje_comision'] ?? null,
                     'bs_comision' => $data['bs_comision'] ?? null,
                     'confirmada' => $data['confirmada'] ?? false,
+                    ...CamposServicios::datos($data),
                     'observaciones' => $cita->observacionesCon('Reagendada', $data['observacion']),
                 ]);
 

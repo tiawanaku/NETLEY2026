@@ -4,10 +4,7 @@ namespace App\Filament\Admin\Resources\Clientes\RelationManagers;
 
 use App\Filament\Admin\Resources\Casos\CasoResource;
 use App\Filament\Admin\Support\ClienteCasoWizard;
-use App\Models\Caso;
-use App\Models\Cliente;
 use Filament\Actions\Action;
-use Filament\Actions\CreateAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -55,23 +52,8 @@ class CasosRelationManager extends RelationManager
                 TextColumn::make('saldo')->money('BOB'),
                 TextColumn::make('fecha_fin')->date()->label('Vencimiento'),
             ])
-            ->headerActions([
-                CreateAction::make()
-                    ->label('Nuevo proceso')
-                    ->modalSubmitActionLabel('Guardar')
-                    ->createAnother(false)
-                    // El guardado real no es un simple $relationship->create():
-                    // replica la misma lógica financiera (Iguala Netley, pago
-                    // del anticipo, plan de cuotas) que ClienteCasoWizard usa
-                    // al dar de alta un cliente nuevo, pero sobre el cliente
-                    // ya existente de esta ficha.
-                    ->using(function (array $data): Caso {
-                        /** @var Cliente $cliente */
-                        $cliente = $this->getOwnerRecord();
-
-                        return ClienteCasoWizard::crearCaso($cliente, $data);
-                    }),
-            ])
+            // Sin botón de crear acá: "Añadir caso" está al lado de las
+            // pestañas de la ficha del cliente (EditCliente::anadirCasoAction()).
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
                 // A diferencia de un EditAction normal (que abriría un modal

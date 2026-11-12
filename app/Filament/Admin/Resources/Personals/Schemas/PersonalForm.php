@@ -287,8 +287,13 @@ class PersonalForm
                                 ->reorderable(false)
                                 ->defaultItems(0)
                                 ->columnSpanFull(),
+                            // Visible siempre, pero bloqueado (como el resto de
+                            // la ficha) hasta que se pulse "Editar".
                             AdjuntarDocumentosClip::make('documentos', 'documentos-personal')
-                                ->visible($puedeEditar),
+                                ->disabled($isEditing)
+                                ->extraAttributes(fn (FileUpload $component): array => $component->isDisabled()
+                                    ? ['class' => 'netley-clip-deshabilitado']
+                                    : [], merge: true),
                         ]),
                 ]),
             ]);

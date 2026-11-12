@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Consultas\Actions;
 
 use App\Enums\EstadoConsulta;
+use App\Filament\Admin\Resources\Consultas\ConsultaResource;
 use App\Models\Consulta;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -50,7 +51,7 @@ class CerrarConsultaAction
                     ->extraInputAttributes(['data-enter-nav' => 'true']),
             ])
             ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))
-            ->action(function (Consulta $record, array $data): void {
+            ->action(function (Consulta $record, array $data, $livewire): void {
                 $nota = trim((string) $record->nota_interna);
                 $detalle = trim((string) ($data['detalles'] ?? ''));
 
@@ -66,6 +67,9 @@ class CerrarConsultaAction
                 ]);
 
                 Notification::make()->title('Consulta cerrada')->success()->send();
+
+                // Lleva a "Consultas cerradas", donde queda ahora.
+                $livewire->redirect(ConsultaResource::getUrl('index').'?tab=cerradas');
             });
     }
 }

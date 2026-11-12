@@ -35,7 +35,7 @@ class FormularioCita
         $ruta = 'documentos-citas/formulario-'.$consulta->id.'-'.$numero.'-'.Str::random(8).'.pdf';
         Storage::disk(config('filament.default_filesystem_disk'))->put($ruta, $pdf);
 
-        $documentos[] = ['ruta' => $ruta, 'descripcion' => "Formulario {$numero}"];
+        $documentos[] = ['ruta' => $ruta, 'descripcion' => "Formulario {$numero}", 'fecha' => now()->toDateString()];
 
         $cita->update(['documentos' => self::ordenar($documentos)]);
     }

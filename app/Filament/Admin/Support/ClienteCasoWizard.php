@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Support;
 use App\Enums\EstadoCaso;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
 use App\Filament\Admin\Support\CamposPago;
+use App\Filament\Admin\Support\CamposServicios;
 use App\Models\Caso;
 use App\Models\Cliente;
 use App\Models\DocumentoCliente;
@@ -18,6 +19,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
@@ -162,17 +165,29 @@ class ClienteCasoWizard
             // Materia legal y delito, por separado: primero se elige la
             // materia legal (área), que filtra las opciones de delito.
             ...DelitoSelect::make(delitoLabel: 'Tipo de proceso', conOtros: true),
-            Select::make('apersonamiento')
-                ->options(array_combine(self::APERSONAMIENTOS, self::APERSONAMIENTOS))
-                ->native(false)
-                ->live()
-                ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
-            TextInput::make('apersonamiento_otro')
-                ->label('Apersonamiento (especificar)')
-                ->maxLength(60)
-                ->required(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
-                ->visible(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
-                ->extraInputAttributes(['data-enter-nav' => 'true']),
+            // Fila propia: Apersonamiento (y su "especificar") a la
+            // izquierda y "Servicios requeridos" al lado, sin importar
+            // cuántos campos de materia/delito haya visibles arriba. En
+            // Cliente ejecutivo los servicios llegan precargados desde la
+            // cita de la consulta (AscenderCasoAction).
+            Grid::make(['default' => 1, 'md' => 2])
+                ->schema([
+                    Group::make([
+                        Select::make('apersonamiento')
+                            ->options(array_combine(self::APERSONAMIENTOS, self::APERSONAMIENTOS))
+                            ->native(false)
+                            ->live()
+                            ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
+                        TextInput::make('apersonamiento_otro')
+                            ->label('Apersonamiento (especificar)')
+                            ->maxLength(60)
+                            ->required(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
+                            ->visible(fn (Get $get) => $get('apersonamiento') === self::APERSONAMIENTO_OTROS)
+                            ->extraInputAttributes(['data-enter-nav' => 'true']),
+                    ]),
+                    CamposServicios::campo(),
+                ])
+                ->columnSpanFull(),
             Textarea::make('descripcion')->label('Descripción')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
             Select::make('personal')
                 ->label('Abogado(s) asignado(s)')
@@ -225,7 +240,7 @@ class ClienteCasoWizard
                 ->extraInputAttributes(self::atributosEnterPago()),
 
             Toggle::make('patrocinio_hih')
-                ->label('Patrocinio HIH')
+                ->label('Patrocinio HiH')
                 ->default(false)
                 ->live(),
             // El monto se carga en bolivianos (como el resto del paso) y el
@@ -234,7 +249,7 @@ class ClienteCasoWizard
             // en dos columnas) para que el cuadro empiece a la misma altura
             // que el de la iguala.
             TextInput::make('monto_patrocinio_hih')
-                ->label('Hand in Hand (HIH)')
+                ->label('HiH')
                 ->numeric()
                 ->integer()
                 ->minValue(0)
@@ -330,11 +345,41 @@ class ClienteCasoWizard
                 ->columns(2)
                 ->columnSpanFull(),
 
-            Placeholder::make('plan_preview')
-                ->label('Resumen')
-                ->content(fn (Get $get) => self::resumenPlanHtml(self::plan(self::datosPlan($get))))
-                ->columnSpanFull()
-                ->inlineLabel(false),
+            // Resumen a la izquierda y, al lado, "Pago de servicios extra"
+            // con un monto por cada servicio requerido del paso 2. Esos
+            // montos solo se guardan en el caso: no entran en la iguala, el
+            // saldo ni las cuotas (no los lee plan()).
+            Grid::make(['default' => 1, 'lg' => 2])
+                ->schema([
+                    Placeholder::make('plan_preview')
+                        ->label('Resumen')
+                        ->content(fn (Get $get) => self::resumenPlanHtml(self::plan(self::datosPlan($get))))
+                        ->inlineLabel(false),
+                    Fieldset::make('Pago de servicios extra')
+                        ->schema([
+                            Placeholder::make('sin_servicios_extra')
+                                ->hiddenLabel()
+                                ->content('No se solicitaron servicios extra (ver "Servicios requeridos" en el paso 2).')
+                                ->visible(fn (Get $get): bool => ! $get('servicio_psicologia') && ! $get('servicio_trabajo_social') && ! $get('servicio_otro')),
+                            TextInput::make('monto_servicio_psicologia')
+                                ->label('Psicología')
+                                ->numeric()->integer()->minValue(0)->prefix('Bs.')
+                                ->visible(fn (Get $get): bool => (bool) $get('servicio_psicologia'))
+                                ->extraInputAttributes(self::atributosEnterPago()),
+                            TextInput::make('monto_servicio_trabajo_social')
+                                ->label('Trabajo social')
+                                ->numeric()->integer()->minValue(0)->prefix('Bs.')
+                                ->visible(fn (Get $get): bool => (bool) $get('servicio_trabajo_social'))
+                                ->extraInputAttributes(self::atributosEnterPago()),
+                            TextInput::make('monto_servicio_otro')
+                                ->label(fn (Get $get): string => filled($get('servicio_otro_detalle')) ? 'Otro: '.$get('servicio_otro_detalle') : 'Otro')
+                                ->numeric()->integer()->minValue(0)->prefix('Bs.')
+                                ->visible(fn (Get $get): bool => (bool) $get('servicio_otro'))
+                                ->extraInputAttributes(self::atributosEnterPago()),
+                        ])
+                        ->columns(1),
+                ])
+                ->columnSpanFull(),
         ];
     }
 
@@ -451,6 +496,12 @@ class ClienteCasoWizard
                 'apersonamiento' => ($data['apersonamiento'] ?? null) === self::APERSONAMIENTO_OTROS
                     ? ($data['apersonamiento_otro'] ?? null)
                     : ($data['apersonamiento'] ?? null),
+                ...CamposServicios::datos($data),
+                // Montos de "Pago de servicios extra" (solo el de los
+                // servicios marcados; aparte de la iguala y las cuotas).
+                'monto_servicio_psicologia' => ($data['servicio_psicologia'] ?? false) && filled($data['monto_servicio_psicologia'] ?? null) ? (float) $data['monto_servicio_psicologia'] : null,
+                'monto_servicio_trabajo_social' => ($data['servicio_trabajo_social'] ?? false) && filled($data['monto_servicio_trabajo_social'] ?? null) ? (float) $data['monto_servicio_trabajo_social'] : null,
+                'monto_servicio_otro' => ($data['servicio_otro'] ?? false) && filled($data['monto_servicio_otro'] ?? null) ? (float) $data['monto_servicio_otro'] : null,
                 'denunciado' => filled($data['denunciado'] ?? null) ? $data['denunciado'] : null,
                 'iguala' => $iguala,
                 'saldo' => $iguala,
@@ -614,7 +665,8 @@ class ClienteCasoWizard
 
     protected static function bs(int | float $monto): string
     {
-        return 'Bs. '.number_format($monto);
+        // Sin separador de miles (Bs. 15000, no Bs. 15,000).
+        return 'Bs. '.number_format($monto, 0, '', '');
     }
 
     /**
@@ -684,7 +736,7 @@ class ClienteCasoWizard
 
         if ($plan['patrocinio']) {
             $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
-            $html .= $filaResumen('Hand in Hand ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
+            $html .= $filaResumen('HiH ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
         }
 
         $html .= $filaResumen('Iguala Netley', $bs($plan['monto_cliente']), fuerte: true);

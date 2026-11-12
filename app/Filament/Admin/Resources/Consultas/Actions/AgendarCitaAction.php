@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\Consultas\Actions\ConfirmarAgendarCitaAction;
 use App\Filament\Admin\Resources\Consultas\Actions\ReagendarCitaAction;
 use App\Filament\Admin\Support\AdjuntarDocumentosClip;
 use App\Filament\Admin\Support\AgendaPreview;
+use App\Filament\Admin\Support\CamposServicios;
 use App\Filament\Admin\Support\CampoHora;
 use App\Models\Consulta;
 use App\Models\Personal;
@@ -41,8 +42,12 @@ class AgendarCitaAction
                     ->extraInputAttributes(['data-enter-nav' => 'true']),
                 Select::make('atendido_por_id')
                     ->label('Atendido por')
-                    ->options(fn () => Personal::query()
-                        ->where('estado', EstadoPersonal::Habilitado)
+                    // Personal habilitado, más el que ya figura en la consulta
+                    // aunque hoy esté deshabilitado (si no, reagendar falla
+                    // con "el valor seleccionado no es válido").
+                    ->options(fn ($state) => Personal::query()
+                        ->where(fn ($q) => $q->where('estado', EstadoPersonal::Habilitado)
+                            ->when(filled($state), fn ($q) => $q->orWhere('id', $state)))
                         ->orderBy('nombres')
                         ->get()
                         ->mapWithKeys(fn (Personal $personal) => [$personal->id => $personal->nombre_completo]))
@@ -97,6 +102,7 @@ class AgendarCitaAction
                 // onBlur: re-renderizar a cada tecla cortaría lo que se está
                 // escribiendo; basta con avisar al salir del campo.
                 CampoHora::make('hora')->label('Hora')->required()->live(onBlur: true),
+                CamposServicios::make(),
                 Textarea::make('detalle')->label('Nota')->rows(3)->extraInputAttributes(['data-enter-nav' => 'true']),
                 // Datos de comisión del formulario de papel "Consultas directas".
                 TextInput::make('bs_iguala')->label('Bs. Iguala')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
@@ -167,11 +173,12 @@ class AgendarCitaAction
                 if (! $anterior) {
                     $valores['fecha'] = now();
 
-                    return $valores;
+                    return [...$valores, ...CamposServicios::desde(null)];
                 }
 
                 return [
                     ...$valores,
+                    ...CamposServicios::desde($anterior),
                     'personal' => $anterior->personal->pluck('id')->all(),
                     'bs_iguala' => $anterior->bs_iguala,
                     'bs_anticipo' => $anterior->bs_anticipo,

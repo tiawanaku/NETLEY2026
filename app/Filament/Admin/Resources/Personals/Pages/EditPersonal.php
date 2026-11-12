@@ -46,9 +46,8 @@ class EditPersonal extends EditRecord
 
         $this->editando = false;
 
-        // Recarga la ficha en vista normal (los botones del pie no se
-        // actualizan solos, ver getFormActions()).
-        $this->redirect($this->urlFicha());
+        // Tras guardar, vuelve al listado de Vigentes.
+        $this->redirect(PersonalResource::getUrl('index', ['tab' => 'vigentes']));
     }
 
     /** Documento de ESTE personal (nunca de otro, aunque se cambie el id). */
@@ -148,7 +147,7 @@ class EditPersonal extends EditRecord
                 ->label('Retirar')
                 ->modalHeading('¿Seguro que desea retirar a:')
                 ->modalDescription(fn (Personal $record) => PersonalActions::nombreDestacado($record))
-                ->modalSubmitActionLabel('Retirar')
+                ->modalSubmitActionLabel('Guardar')
                 ->successNotificationTitle('Personal retirado')
                 // Al requerir confirmación, Filament centra los botones
                 // invirtiendo su orden (Cancelar antes que Eliminar) — se fija

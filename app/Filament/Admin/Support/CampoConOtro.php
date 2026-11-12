@@ -73,7 +73,9 @@ class CampoConOtro
                     $otros = array_values(array_filter($valores, fn ($v) => ! array_key_exists($v, $opciones)));
 
                     if ($otros !== []) {
-                        $component->state([...array_values(array_diff($valores, $otros)), $valorOtro]);
+                        // Sin repetir "Otros" si ya venía guardado junto al
+                        // texto (un valor repetido hace fallar la validación).
+                        $component->state(array_values(array_unique([...array_diff($valores, $otros), $valorOtro])));
                         $set($campoTexto, implode(', ', $otros));
                     }
                 })

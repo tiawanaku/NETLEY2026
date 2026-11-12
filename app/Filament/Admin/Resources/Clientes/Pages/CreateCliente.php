@@ -24,7 +24,7 @@ class CreateCliente extends CreateRecord
         return $schema->components([
             Wizard::make(ClienteCasoWizard::steps())
                 ->nextAction(fn ($action) => $action->extraAttributes(['data-enter-submit' => 'true']))
-                ->submitAction($this->getCreateFormAction())
+                ->submitAction($this->getCreateFormAction()->label('Guardar'))
                 ->columnSpanFull(),
         ]);
     }
@@ -34,20 +34,17 @@ class CreateCliente extends CreateRecord
         return ClienteCasoWizard::crear($data)['cliente'];
     }
 
-    // El botón de crear ya lo pone el wizard en su último paso (submitAction);
-    // aquí solo se deja "Cancelar" para no duplicar el botón debajo.
+    // El botón Guardar ya lo pone el wizard solo en su último paso
+    // (submitAction); sin "Cancelar" (a pedido), igual que en "Cliente
+    // ejecutivo" desde una consulta (AscenderCasoAction).
     protected function getFormActions(): array
     {
-        return [
-            $this->getCancelFormAction(),
-        ];
+        return [];
     }
 
     protected function getRedirectUrl(): string
     {
-        /** @var Cliente $record */
-        $record = $this->getRecord();
-
-        return ClienteResource::getUrl('edit', ['record' => $record]);
+        // Al listado de Clientes ejecutivos (igual que desde una consulta).
+        return ClienteResource::getUrl('index');
     }
 }

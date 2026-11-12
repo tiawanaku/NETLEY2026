@@ -15,6 +15,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\RestoreAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Support\Enums\Alignment;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -61,8 +62,13 @@ class PersonalsTable
                     ->date()
                     ->sortable()
                     ->visible(fn ($livewire): bool => ($livewire->activeTab ?? null) === 'retirados'),
+                // Ordenable: ascendente = habilitados primero; descendente =
+                // deshabilitados primero (dentro de cada grupo, mayor N° primero).
                 TextColumn::make('estado')
-                    ->badge(),
+                    ->badge()
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query
+                        ->orderByRaw('estado = ? '.($direction === 'asc' ? 'desc' : 'asc'), [EstadoPersonal::Habilitado->value])
+                        ->orderBy('id', 'desc')),
             ])
             // Habilitados primero, después deshabilitados; dentro de cada
             // grupo, de mayor a menor N° de item.
@@ -101,7 +107,11 @@ class PersonalsTable
                     DeleteBulkAction::make()
                         ->label('Retirar seleccionados')
                         ->modalHeading('¿Seguro que desea retirar a:')
-                        ->modalSubmitActionLabel('Retirar')
+                        ->modalSubmitActionLabel('Guardar')
+                        // Guardar a la izquierda y Cancelar a la derecha, igual
+                        // que en la ficha (ver .netley-eliminar-personal).
+                        ->modalFooterActionsAlignment(Alignment::Start)
+                        ->extraModalWindowAttributes(['class' => 'netley-eliminar-personal'])
                         ->successNotificationTitle('Personal retirado')
                         ->modalDescription(fn (Collection $records): HtmlString => new HtmlString(
                             '<strong style="font-size:1rem;">'.$records->map(fn (Personal $p) => e($p->nombre_completo))->join(', ').'</strong>?'

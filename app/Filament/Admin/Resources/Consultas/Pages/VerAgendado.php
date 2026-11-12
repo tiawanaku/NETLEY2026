@@ -16,6 +16,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Section;
@@ -24,7 +25,9 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 
 /**
  * Ficha que se abre al hacer clic en una fila de Consultas > "Agendados"
@@ -157,6 +160,14 @@ class VerAgendado extends EditRecord
                     ->label('Cancelar')
                     ->color('gray')
                     ->action(function (Set $set): void {
+                        // En edición también descarta lo modificado en la
+                        // ficha (no hay otro "Cancelar", ver getFormActions()).
+                        if ($this->editando) {
+                            $this->redirect($this->urlFicha());
+
+                            return;
+                        }
+
                         $set('cierre_motivo', $this->motivoInicial());
                         $set('cierre_detalle', null);
                     }),
@@ -175,6 +186,16 @@ class VerAgendado extends EditRecord
         $estadoActual = $record->estado?->value;
 
         return array_key_exists($estadoActual, self::opcionesMotivoCierre()) ? $estadoActual : null;
+    }
+
+    /** Documento (por índice) de la cita vigente de ESTA consulta. */
+    protected function documentoCita(array $arguments): array
+    {
+        $documento = ($this->citaVigente()?->documentos ?? [])[$arguments['indice'] ?? -1] ?? null;
+
+        abort_unless(is_array($documento) && filled($documento['ruta'] ?? null), 404);
+
+        return $documento;
     }
 
     /** La cita vigente (no anulada, la más reciente) de esta consulta, o null si no tiene ninguna. */
@@ -213,7 +234,21 @@ class VerAgendado extends EditRecord
         $record = $this->getRecord();
         $observacion = trim((string) $detalle);
 
+        // En edición (?editar=1) este mismo Guardar guarda también todo lo
+        // modificado en la ficha (ver getFormActions()); sin motivo elegido,
+        // solo eso.
+        if (blank($motivoSeleccionado)) {
+            if ($this->editando) {
+                $this->guardarEdicion();
+                Notification::make()->title('Guardado')->success()->send();
+                $this->redirect($this->urlFicha());
+            }
+
+            return;
+        }
+
         if ($motivoSeleccionado === self::OPCION_CLIENTE_EJECUTIVO) {
+            $this->guardarEdicion();
             $this->mountAction('ascenderCaso');
 
             return;
@@ -234,6 +269,7 @@ class VerAgendado extends EditRecord
             // abogado(s) y datos de comisión — pero la fecha/hora quedan en
             // blanco, las vuelve a elegir la persona (ver
             // AgendarCitaAction::make(), argumento 'copiarDeCitaId').
+            $this->guardarEdicion();
             $vigente->update([
                 'anulada' => true,
                 'observaciones' => $vigente->observacionesCon('Anulada', 'Reagendada: se creó una nueva cita'),
@@ -266,6 +302,7 @@ class VerAgendado extends EditRecord
                 return;
             }
 
+            $this->guardarEdicion();
             $vigente->update([
                 'anulada' => true,
                 'observaciones' => $vigente->observacionesCon('Anulada', $observacion),
@@ -281,6 +318,7 @@ class VerAgendado extends EditRecord
         $motivo = EstadoConsulta::tryFrom((string) $motivoSeleccionado);
 
         if ($motivo && array_key_exists($motivo->value, self::opcionesMotivoCierre())) {
+            $this->guardarEdicion();
             $nota = trim((string) $record->nota_interna);
 
             if ($observacion !== '') {
@@ -293,11 +331,10 @@ class VerAgendado extends EditRecord
 
             Notification::make()->title('Consulta cerrada')->success()->send();
 
-            // Cualquier motivo salvo "Cliente ejecutivo" (manejado arriba,
-            // que en cambio abre el asistente) vuelve al listado de Nuevas
-            // consultas — esta ya no sigue abierta, no hay nada más que
-            // hacer acá.
-            $this->redirect(ConsultaResource::getUrl('index').'?tab=nuevas');
+            // Cualquier motivo de cierre (salvo "Cliente ejecutivo",
+            // manejado arriba, que abre el asistente) lleva a "Consultas
+            // cerradas", donde queda ahora esta consulta.
+            $this->redirect(ConsultaResource::getUrl('index').'?tab=cerradas');
         }
     }
 
@@ -312,6 +349,22 @@ class VerAgendado extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         return ConsultaForm::resolverOrigen($data);
+    }
+
+    /**
+     * Si la ficha está en edición, guarda lo modificado (validando el
+     * formulario) sin redirigir: lo usa guardarCierre(), que después sigue
+     * con el motivo de cierre elegido.
+     */
+    protected function guardarEdicion(): void
+    {
+        if (! $this->editando) {
+            return;
+        }
+
+        parent::save(shouldRedirect: false, shouldSendSavedNotification: false);
+
+        $this->guardarFormularioPdf();
     }
 
     public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void
@@ -355,22 +408,19 @@ class VerAgendado extends EditRecord
                 ->icon('heroicon-o-folder-open')
                 ->color('primary')
                 ->modalHeading('Documentos adjuntos')
-                ->modalWidth('3xl')
+                ->modalWidth('4xl')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Cerrar')
-                // "descargarDocumentoCita" se invoca desde dentro del modal
-                // de esta misma acción (ver el blade) — sin registrarla acá
-                // como hija, Filament no la encuentra en ese contexto
-                // anidado y mountAction() no hace nada (mismo caso que
-                // guardarCierreConsulta/ascenderCaso en cerrarConsultaSection()).
+                // Misma tabla que "Ver documentos" de Personal: Fecha /
+                // Descripción / Documento con Descargar, Editar (solo la
+                // descripción) y Eliminar (documentos-cita.blade.php). Esas
+                // 3 se invocan desde dentro del modal: sin registrarlas acá
+                // como hijas, Filament no las encuentra en ese contexto
+                // anidado y mountAction() no hace nada.
                 ->registerModalActions([
                     Action::make('descargarDocumentoCita')
                         ->action(function (array $arguments) {
-                            $documentos = $this->citaVigente()?->documentos ?? [];
-                            $documento = $documentos[$arguments['indice']] ?? null;
-
-                            abort_unless($documento, 404);
-
+                            $documento = $this->documentoCita($arguments);
                             $disk = Storage::disk(config('filament.default_filesystem_disk'));
 
                             abort_unless($disk->exists($documento['ruta']), 404);
@@ -380,16 +430,92 @@ class VerAgendado extends EditRecord
                                 basename($documento['ruta'])
                             );
                         }),
+                    Action::make('editarDocumentoCita')
+                        ->modalHeading('Editar descripción')
+                        ->modalWidth('md')
+                        ->modalSubmitActionLabel('Guardar')
+                        ->visible(fn () => auth()->user()?->puede('editar'))
+                        ->fillForm(fn (array $arguments): array => ['descripcion' => $this->documentoCita($arguments)['descripcion'] ?? null])
+                        ->schema([
+                            TextInput::make('descripcion')
+                                ->label('Descripción')
+                                ->required()
+                                ->maxLength(100)
+                                ->extraInputAttributes(['data-enter-nav' => 'true']),
+                        ])
+                        ->action(function (array $arguments, array $data): void {
+                            $this->documentoCita($arguments);
+                            $cita = $this->citaVigente();
+                            $documentos = $cita->documentos;
+                            $documentos[$arguments['indice']]['descripcion'] = $data['descripcion'];
+                            $cita->update(['documentos' => $documentos]);
+
+                            Notification::make()->title('Descripción actualizada')->success()->send();
+                        }),
+                    Action::make('eliminarDocumentoCita')
+                        ->requiresConfirmation()
+                        ->color('danger')
+                        ->modalHeading('¿Seguro que desea eliminar el documento:')
+                        ->modalDescription(fn (array $arguments): HtmlString => new HtmlString(
+                            '<strong style="font-size:1rem;">'.e(($this->documentoCita($arguments)['descripcion'] ?? null) ?: basename($this->documentoCita($arguments)['ruta'])).'</strong>?'
+                        ))
+                        ->modalSubmitActionLabel('Eliminar')
+                        ->modalFooterActionsAlignment(Alignment::Start)
+                        ->extraModalWindowAttributes(['class' => 'netley-eliminar-personal'])
+                        ->visible(fn () => auth()->user()?->puede('editar'))
+                        ->action(function (array $arguments): void {
+                            $documento = $this->documentoCita($arguments);
+                            $cita = $this->citaVigente();
+                            $documentos = $cita->documentos;
+                            unset($documentos[$arguments['indice']]);
+                            $cita->update(['documentos' => array_values($documentos)]);
+
+                            // Al reagendar, la cita nueva hereda los documentos
+                            // de la anterior (mismo archivo): solo se borra del
+                            // disco si ninguna otra cita lo sigue usando.
+                            $enUso = $this->getRecord()->citas()->where('id', '!=', $cita->id)->get()
+                                ->contains(fn (Cita $otra) => collect($otra->documentos ?? [])->contains('ruta', $documento['ruta']));
+
+                            if (! $enUso) {
+                                Storage::disk(config('filament.default_filesystem_disk'))->delete($documento['ruta']);
+                            }
+
+                            Notification::make()->title('Documento eliminado')->success()->send();
+                        }),
                 ])
-                ->modalContent(fn (): View => view('filament.admin.consultas.documentos-cita', [
-                    'documentos' => $this->citaVigente()?->documentos ?? [],
-                ])),
+                ->modalContent(function (): View {
+                    $disk = Storage::disk(config('filament.default_filesystem_disk'));
+
+                    return view('filament.admin.consultas.documentos-cita', [
+                        // Fecha: la guardada con el documento o, en los más
+                        // antiguos que no la tienen, la del archivo.
+                        'documentos' => collect($this->citaVigente()?->documentos ?? [])
+                            ->map(fn (array $documento) => [
+                                ...$documento,
+                                'fecha' => filled($documento['fecha'] ?? null)
+                                    ? Carbon::parse($documento['fecha'])
+                                    : (filled($documento['ruta'] ?? null) && $disk->exists($documento['ruta'])
+                                        ? Carbon::createFromTimestamp($disk->lastModified($documento['ruta']))
+                                        : null),
+                            ])
+                            ->all(),
+                        'puedeEditar' => (bool) auth()->user()?->puede('editar'),
+                    ]);
+                }),
             ReactivarConsultaAction::make(),
         ];
     }
 
     protected function getFormActions(): array
     {
+        // En edición, el "Guardar"/"Cancelar" de la sección "Cerrar
+        // consulta" guarda/descarta también todo lo modificado (ver
+        // guardarCierre()), así que no se repiten abajo. Solo quedan si esa
+        // sección no tiene botones (consulta ya cerrada o cliente ejecutivo).
+        if ($this->editando && $this->puedeCerrar()) {
+            return [];
+        }
+
         if ($this->editando) {
             return [
                 $this->getSaveFormAction()->label('Guardar'),
