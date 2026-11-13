@@ -47,7 +47,7 @@ class Permisos
      */
     public static function rolesConfigurables(): array
     {
-        return [Rol::Finanzas, Rol::Abogado, Rol::Secretaria, Rol::Pasante, Rol::Procurador];
+        return [Rol::Finanzas, Rol::Abogado, Rol::Secretaria, Rol::Pasante, Rol::Procurador, Rol::Psicologo, Rol::TrabajadorSocial];
     }
 
     public static function tiene(Rol $rol, string $clave): bool
