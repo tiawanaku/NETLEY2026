@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Consultas;
 
+use App\Enums\EstadoConsulta;
 use App\Filament\Admin\Resources\Consultas\Pages\CreateConsulta;
 use App\Filament\Admin\Resources\Consultas\Pages\EditConsulta;
 use App\Filament\Admin\Resources\Consultas\Pages\FichaAgendamiento;
@@ -82,21 +83,62 @@ class ConsultaResource extends Resource
                 ->group(static::getNavigationGroup())
                 ->icon(static::getNavigationIcon())
                 ->sort(static::getNavigationSort())
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab', 'nuevas') === 'nuevas')
+                ->isActiveWhen(fn (): bool => static::pestanaActual() === 'nuevas')
                 ->url("{$base}?tab=nuevas"),
             NavigationItem::make('Agendados')
                 ->group(static::getNavigationGroup())
                 ->icon(static::getNavigationIcon())
                 ->sort(static::getNavigationSort() + 1)
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab') === 'agendados')
+                ->isActiveWhen(fn (): bool => static::pestanaActual() === 'agendados')
                 ->url("{$base}?tab=agendados"),
             NavigationItem::make('Consultas cerradas')
                 ->group(static::getNavigationGroup())
                 ->icon(static::getNavigationIcon())
                 ->sort(static::getNavigationSort() + 2)
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab') === 'cerradas')
+                ->isActiveWhen(fn (): bool => static::pestanaActual() === 'cerradas')
                 ->url("{$base}?tab=cerradas"),
         ];
+    }
+
+    /**
+     * A qué ítem del menú lateral (Nuevas / Agendados / Cerradas) pertenece
+     * la pantalla actual: en el listado, el ?tab= de la URL; dentro de una
+     * ficha (que no lleva ?tab=), según la consulta abierta — con el mismo
+     * criterio que las pestañas de ListConsultas::getTabs(). Fuera de
+     * Consultas, ninguno.
+     */
+    public static function pestanaActual(): ?string
+    {
+        if (! request()->routeIs(static::getRouteBaseName().'.*')) {
+            return null;
+        }
+
+        if (filled($tab = request()->query('tab'))) {
+            return (string) $tab;
+        }
+
+        if (request()->routeIs(static::getRouteBaseName().'.verAgendado')) {
+            return 'agendados';
+        }
+
+        $record = request()->route('record');
+        $consulta = $record instanceof Consulta ? $record : (filled($record) ? Consulta::find($record) : null);
+
+        if (! $consulta) {
+            return 'nuevas';
+        }
+
+        $abierta = in_array($consulta->estado, EstadoConsulta::abiertos(), true);
+
+        if (! $abierta && $consulta->estado !== EstadoConsulta::CasoIniciado && $consulta->caso_id === null) {
+            return 'cerradas';
+        }
+
+        if ($abierta && $consulta->caso_id === null && $consulta->citas()->where('anulada', false)->exists()) {
+            return 'agendados';
+        }
+
+        return 'nuevas';
     }
 
     public static function getPages(): array

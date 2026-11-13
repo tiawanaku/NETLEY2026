@@ -19,6 +19,8 @@ enum EstadoConsulta: string implements HasColor, HasLabel
     case RemitirPsicologia = 'remitir_psicologia';
     case RemitirSocial = 'remitir_social';
     case Reactivado = 'reactivado';
+    // Cerrada desde Agendados con el motivo "Cita anulada" (ver VerAgendado::guardarCierre()).
+    case CitaAnulada = 'cita_anulada';
 
     public function getLabel(): string
     {
@@ -35,6 +37,7 @@ enum EstadoConsulta: string implements HasColor, HasLabel
             self::RemitirPsicologia => 'Remitir a Psicología',
             self::RemitirSocial => 'Remitir a Social',
             self::Reactivado => 'Reactivado',
+            self::CitaAnulada => 'Cita Anulada',
         };
     }
 
@@ -51,7 +54,7 @@ enum EstadoConsulta: string implements HasColor, HasLabel
             self::Reactivado => 'orange',
             self::CasoIniciado => 'info',
             self::NoContesta, self::NoResponde, self::NoAsistio, self::NoRequiereServicios,
-            self::SoloConsulta, self::RemitirPsicologia, self::RemitirSocial => 'danger',
+            self::SoloConsulta, self::RemitirPsicologia, self::RemitirSocial, self::CitaAnulada => 'danger',
         };
     }
 

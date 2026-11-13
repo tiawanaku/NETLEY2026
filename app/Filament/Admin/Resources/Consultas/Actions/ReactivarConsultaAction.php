@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Consultas\Actions;
 
 use App\Enums\EstadoConsulta;
+use App\Filament\Admin\Resources\Consultas\ConsultaResource;
 use App\Models\Consulta;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -25,11 +26,14 @@ class ReactivarConsultaAction
             ->modalCancelActionLabel('Cancelar')
             ->modalFooterActionsAlignment(Alignment::Start)
             ->extraModalWindowAttributes(['class' => 'netley-eliminar-personal'])
-            ->action(function (Consulta $record): void {
+            ->action(function (Consulta $record, $livewire): void {
                 // Vuelve como Pendiente (su cita se anuló al cerrarse, ver
                 // Consulta::booted()), lista para agendar de nuevo.
                 $record->update(['estado' => EstadoConsulta::Pendiente]);
                 Notification::make()->title('Consulta reactivada')->success()->send();
+
+                // Vuelve como Pendiente sin cita: al listado de Nuevas consultas.
+                $livewire->redirect(ConsultaResource::getUrl('index').'?tab=nuevas');
             });
     }
 }

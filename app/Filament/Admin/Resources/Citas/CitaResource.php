@@ -2,6 +2,8 @@
 
 namespace App\Filament\Admin\Resources\Citas;
 
+use App\Filament\Admin\Pages\AgendaCalendario;
+use Filament\Navigation\NavigationItem;
 use App\Filament\Admin\Concerns\ScopesToAssignedAbogado;
 use App\Filament\Admin\Resources\Citas\Pages\CreateCita;
 use App\Filament\Admin\Resources\Citas\Pages\EditCita;
@@ -37,6 +39,23 @@ class CitaResource extends Resource
     public static function canAccess(): bool
     {
         return auth()->user()?->puede('agenda') ?? false;
+    }
+
+    /**
+     * "Agenda" del menú lateral abre primero el calendario (AgendaCalendario);
+     * desde ahí, "Ver lista" lleva a este listado (y "Ver calendario" de
+     * vuelta). Queda marcado en las dos pantallas.
+     *
+     * @return array<NavigationItem>
+     */
+    public static function getNavigationItems(): array
+    {
+        return collect(parent::getNavigationItems())
+            ->map(fn (NavigationItem $item) => $item
+                ->url(fn (): string => AgendaCalendario::getUrl())
+                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*')
+                    || request()->routeIs(AgendaCalendario::getRouteName())))
+            ->all();
     }
 
     public static function form(Schema $schema): Schema

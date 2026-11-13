@@ -10,6 +10,7 @@ use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Caso;
 use App\Support\Telefono;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -17,6 +18,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 class CasoForm
 {
@@ -73,8 +75,34 @@ class CasoForm
                     ->columnSpanFull()
                     ->visible(fn (?Caso $record) => $record?->cliente !== null),
 
-                Section::make('Caso')
+                // Caso eliminado: fecha y justificación, resaltadas (como
+                // "Personal retirado").
+                Section::make('Caso eliminado')
+                    ->icon('heroicon-o-trash')
+                    ->iconColor('danger')
+                    ->visible(fn (?Caso $record) => (bool) $record?->trashed())
+                    ->extraAttributes(['style' => 'border:2px solid rgb(220 38 38);background:rgba(220,38,38,.07);'])
+                    ->columnSpanFull()
+                    ->columns(['default' => 1, 'lg' => 2])
                     ->schema([
+                        Placeholder::make('eliminacionFecha')
+                            ->label('Fecha')
+                            ->content(fn (?Caso $record) => new HtmlString('<strong>'.e(($record?->fecha_eliminacion ?? $record?->deleted_at)?->format('d/m/Y') ?? '—').'</strong>')),
+                        Placeholder::make('eliminacionMotivo')
+                            ->label('Motivo')
+                            ->content(fn (?Caso $record) => new HtmlString('<strong>'.e($record?->motivo_eliminacion ?: '—').'</strong>')),
+                        Placeholder::make('eliminacionDocumento')
+                            ->label('Documento')
+                            ->content(fn (?Caso $record) => \App\Filament\Admin\Support\Eliminacion::enlaceDocumento($record?->documento_eliminacion)),
+                    ]),
+
+                // Mismos campos, orden y disposición que el paso 2
+                // ("Proceso") del formulario de Cliente ejecutivo
+                // (ClienteCasoWizard::camposProceso()).
+                Section::make('Datos del proceso')
+                    ->schema([
+                        // Solo al crear un caso suelto; en la ficha el cliente
+                        // ya se ve arriba, en "Datos del cliente".
                         Select::make('cliente_id')
                             ->label('Cliente')
                             ->relationship('cliente', 'nombres')
@@ -82,36 +110,25 @@ class CasoForm
                             ->searchable(['nombres', 'ap_paterno', 'ci'])
                             ->preload()
                             ->required()
-                            ->disabled($isEditing),
-                        Select::make('personal')
-                            ->label('Abogado(s) asignado(s)')
-                            ->relationship(
-                                'personal',
-                                'nombres',
-                                modifyQueryUsing: fn ($query) => $query->where('profesion', 'Abogado'),
-                            )
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->disabled($isEditing),
-                        ...array_map(fn ($field) => $field->disabled($isEditing), DelitoSelect::make()),
-                        // Casos creados con materia "Otros" desde el wizard.
+                            ->visibleOn('create')
+                            ->columnSpanFull(),
+                        ...array_map(fn ($field) => $field->disabled($isEditing), DelitoSelect::make(delitoLabel: 'Tipo de proceso')),
+                        // Casos creados con materia / delito "Otros" (escritos a mano).
                         TextInput::make('materia_texto')
                             ->label('Materia legal (especificar)')
                             ->disabled()
                             ->dehydrated(false)
                             ->visible(fn (?string $state) => filled($state)),
                         TextInput::make('delito_texto')
-                            ->label('Delito (especificar)')
+                            ->label('Tipo de proceso (especificar)')
                             ->disabled()
                             ->dehydrated(false)
                             ->visible(fn (?string $state) => filled($state)),
-                        // Mismas opciones que el wizard; un valor fuera de la lista
-                        // (casos legacy, o "Otros" especificado a mano) se agrega
-                        // para que se siga viendo en la ficha.
-                        // Apersonamiento, estado y ciudad a la izquierda;
-                        // "Servicios requeridos" al lado, a su misma altura.
-                        Grid::make(['default' => 1, 'lg' => 2])
+                        // Apersonamiento a la izquierda y "Servicios
+                        // requeridos" al lado, como en el paso 2. Un valor
+                        // fuera de la lista (casos antiguos, u "Otros"
+                        // especificado a mano) se agrega para que se vea.
+                        Grid::make(['default' => 1, 'md' => 2])
                             ->schema([
                                 Group::make([
                                     Select::make('apersonamiento')
@@ -122,24 +139,51 @@ class CasoForm
                                             ->all())
                                         ->native(false)
                                         ->disabled($isEditing),
-                                    Select::make('estado')
-                                        ->options(EstadoCaso::class)
-                                        ->default(EstadoCaso::ActivoPendiente)
-                                        ->required()
-                                        ->disabled($isEditing),
-                                    TextInput::make('ciudad')->disabled($isEditing),
                                 ]),
                                 CamposServicios::campo(disabled: $isEditing),
                             ])
                             ->columnSpanFull(),
-                        // En la ficha quedan de solo lectura; se actualizan
-                        // desde la acción "Agendar cita".
+                        Textarea::make('descripcion')->label('Nota')->columnSpanFull()->inlineLabel(false)->disabled($isEditing),
+                        Select::make('personal')
+                            ->label('Abogado(s) asignado(s)')
+                            ->relationship(
+                                'personal',
+                                'nombres',
+                                modifyQueryUsing: fn ($query) => $query->where('profesion', 'Abogado'),
+                            )
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->nombre_completo)
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->disabled($isEditing),
+                        DatePicker::make('fecha_inicio')->required()->default(now())->disabled($isEditing),
+                        TextInput::make('duracion_meses')
+                            ->label('Duración del proceso (meses)')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->disabled($isEditing),
+                        DatePicker::make('fecha_fin')->label('Fecha estimada de fin (aprox.)')->disabled($isEditing),
+                    ])
+                    ->columns(['default' => 1, 'lg' => 2])
+                    ->columnSpanFull(),
+
+                // Lo que no está en el paso 2: solo al crear un caso suelto
+                // (en la ficha se quitó a pedido). El estado se cambia con
+                // Cerrar / Reactivar caso.
+                Section::make('Otros datos del caso')
+                    ->visible(fn (string $operation): bool => $operation === 'create')
+                    ->schema([
+                        Select::make('estado')
+                            // "Eliminado" no se elige a mano: lo pone eliminar el caso.
+                            ->options([EstadoCaso::Activo->value => EstadoCaso::Activo->getLabel(), EstadoCaso::Cerrado->value => EstadoCaso::Cerrado->getLabel()])
+                            ->default(EstadoCaso::Activo)
+                            ->required()
+                            ->disabled($isEditing),
+                        TextInput::make('ciudad')->disabled($isEditing),
                         CamposDenuncia::denunciado()->disabled($isEditing),
                         CamposDenuncia::denuncias(conRelacion: true)->disabled($isEditing),
-                        Textarea::make('descripcion')->disabled($isEditing)->columnSpanFull(),
                     ])
-                    // En dos columnas (a pedido): cliente | abogados,
-                    // materia | delito, denunciado | denuncias...
                     ->columns(['default' => 1, 'lg' => 2])
                     ->columnSpanFull(),
 
@@ -148,8 +192,6 @@ class CasoForm
                 Section::make('Finanzas')
                     ->visible(fn (string $operation): bool => $operation === 'create')
                     ->schema([
-                        DatePicker::make('fecha_inicio')->required()->default(now())->disabled($isEditing),
-                        DatePicker::make('fecha_fin')->label('Vencimiento')->disabled($isEditing),
                         TextInput::make('iguala')->numeric()->prefix('Bs.')->default(0)->required()->disabled($isEditing),
                         TextInput::make('saldo')->numeric()->prefix('Bs.')->default(0)->required()->disabled($isEditing),
                         TextInput::make('pagado')->numeric()->prefix('Bs.')->default(0)->required()->disabled($isEditing),

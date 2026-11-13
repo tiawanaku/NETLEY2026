@@ -36,7 +36,8 @@ class SeguimientoDiario extends Page
 
     protected static \UnitEnum|string|null $navigationGroup = 'Cliente Ejecutivo';
 
-    protected static ?int $navigationSort = 35;
+    // Al final del grupo, después de Casos cerrados / Casos eliminados (31 + 10 y 11).
+    protected static ?int $navigationSort = 50;
 
     protected static ?string $slug = 'seguimiento-diario';
 

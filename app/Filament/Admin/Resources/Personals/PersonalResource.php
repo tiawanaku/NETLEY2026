@@ -89,15 +89,38 @@ class PersonalResource extends Resource
                 ->group(static::getNavigationGroup())
                 ->icon(static::getNavigationIcon())
                 ->sort(static::getNavigationSort())
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab', 'vigentes') === 'vigentes')
+                ->isActiveWhen(fn (): bool => static::pestanaActual() === 'vigentes')
                 ->url("{$base}?tab=vigentes"),
             NavigationItem::make('Retirados')
                 ->group(static::getNavigationGroup())
                 ->icon(static::getNavigationIcon())
                 ->sort(static::getNavigationSort() + 1)
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*') && request()->query('tab') === 'retirados')
+                ->isActiveWhen(fn (): bool => static::pestanaActual() === 'retirados')
                 ->url("{$base}?tab=retirados"),
         ];
+    }
+
+    /**
+     * Ítem del menú lateral (Vigentes / Retirados) de la pantalla actual: en
+     * el listado, el ?tab= de la URL; dentro de una ficha, Retirados si la
+     * persona está retirada y Vigentes si no.
+     */
+    public static function pestanaActual(): ?string
+    {
+        if (! request()->routeIs(static::getRouteBaseName().'.*')) {
+            return null;
+        }
+
+        if (filled($tab = request()->query('tab'))) {
+            return (string) $tab;
+        }
+
+        $record = request()->route('record');
+        $personal = $record instanceof Personal
+            ? $record
+            : (filled($record) ? Personal::withTrashed()->find($record) : null);
+
+        return $personal?->trashed() ? 'retirados' : 'vigentes';
     }
 
     public static function getPages(): array

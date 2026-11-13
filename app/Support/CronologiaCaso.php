@@ -81,6 +81,24 @@ class CronologiaCaso
                 collect([$bs($pago->monto), $pago->nro_recibo ? 'Recibo N° '.$pago->nro_recibo : null, $pago->forma_pago ? ucfirst($pago->forma_pago) : null])->filter()->join(' · '));
         }
 
+        // Correcciones de pagos ("Editar pago"), con su justificación.
+        foreach (\App\Models\PagoCorreccion::where('caso_id', $caso->id)->with('pago')->get() as $correccion) {
+            $cambios = collect($correccion->despues)
+                ->filter(fn ($valor, $campo) => ($correccion->antes[$campo] ?? null) != $valor)
+                ->map(fn ($valor, $campo) => match ($campo) {
+                    'monto' => 'monto '.$bs($correccion->antes['monto'] ?? 0).' → '.$bs($valor),
+                    'fecha_pago' => 'fecha '.\Illuminate\Support\Carbon::parse($correccion->antes['fecha_pago'])->format('d/m/Y').' → '.\Illuminate\Support\Carbon::parse($valor)->format('d/m/Y'),
+                    'forma_pago' => 'forma de pago '.ucfirst((string) ($correccion->antes['forma_pago'] ?? '—')).' → '.ucfirst((string) $valor),
+                    default => $campo.' corregido',
+                })
+                ->join(', ');
+
+            $agregar($correccion->created_at, 'correccion',
+                'Pago corregido'.($correccion->pago?->nro_recibo ? ' (recibo N° '.$correccion->pago->nro_recibo.')' : ''),
+                collect([$cambios ?: null, 'Justificación: '.$correccion->justificacion, $correccion->corregido_por ? 'Por: '.$correccion->corregido_por : null])->filter()->join(' · '),
+                $correccion->created_at->format('H:i'));
+        }
+
         foreach ($caso->documentos as $documento) {
             $agregar($documento->fecha_origen ?? $documento->created_at, 'documento',
                 'Documento añadido'.($documento->subido_por_cliente ? ' por el cliente' : ''),
@@ -144,6 +162,7 @@ class CronologiaCaso
             'cita' => ['heroicon-o-calendar-days', '#0ea5e9'],
             'inicio' => ['heroicon-o-scale', '#1a2537'],
             'pago' => ['heroicon-o-banknotes', '#16a34a'],
+            'correccion' => ['heroicon-o-pencil-square', '#ea580c'],
             'documento' => ['heroicon-o-document-text', '#7c3aed'],
             'seguimiento' => ['heroicon-o-clipboard-document-list', '#d97706'],
             'instancia' => ['heroicon-o-building-library', '#2563eb'],

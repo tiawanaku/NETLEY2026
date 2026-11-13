@@ -8,7 +8,6 @@ use App\Models\Cita;
 use App\Models\Personal;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Carbon;
 
@@ -41,7 +40,8 @@ class ListCitas extends ListRecords
                 ->icon('heroicon-o-printer')
                 ->color('gray')
                 ->action(fn () => $this->imprimirAgenda()),
-            CreateAction::make(),
+            // Sin "Crear cita" (a pedido): las citas se agendan desde la consulta
+            // o desde la pestaña Citas de la ficha del caso.
         ];
     }
 

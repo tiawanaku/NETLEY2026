@@ -9,7 +9,9 @@ use App\Filament\Admin\Support\FiltrosContacto;
 use App\Models\Caso;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\BulkAction;
+use App\Filament\Admin\Support\Eliminacion;
+use Filament\Notifications\Notification;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -45,6 +47,16 @@ class CasosTable
                     ->listWithLineBreaks()
                     ->limitList(2)
                     ->toggleable(isToggledHiddenByDefault: true),
+                // Solo en "Casos eliminados".
+                TextColumn::make('fecha_eliminacion')
+                    ->label('Eliminado el')
+                    ->date('d/m/Y')
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) === 'eliminados'),
+                TextColumn::make('motivo_eliminacion')
+                    ->label('Motivo')
+                    ->wrap()
+                    ->limit(80)
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) === 'eliminados'),
                 TextColumn::make('fecha_fin')
                     ->label('Vencimiento')
                     ->date()
@@ -54,24 +66,45 @@ class CasosTable
             ->defaultSort('id', 'desc')
             ->filters([
                 SelectFilter::make('especialidad')->options(Especialidad::class),
-                SelectFilter::make('estado')->options(EstadoCaso::class),
+                SelectFilter::make('estado')->options([EstadoCaso::Activo->value => EstadoCaso::Activo->getLabel(), EstadoCaso::Cerrado->value => EstadoCaso::Cerrado->getLabel()]),
                 // Datos de contacto del cliente del caso.
                 ...FiltrosContacto::make(relacion: 'cliente'),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
-                CasoActions::verCliente(),
+                CasoActions::verCliente()->label('Ver cliente')->hidden(fn (Caso $record) => $record->trashed()),
+                // La ficha (también la de un caso eliminado, para revisarlo).
+                EditAction::make()->label('Ver caso')->icon('heroicon-o-eye'),
+                CasoActions::descargarDocumentoEliminacion()->label('Documento'),
+                CasoActions::restaurar(),
                 ActionGroup::make([
-                    EditAction::make()->visible(fn () => auth()->user()?->puede('editar')),
                     CasoActions::informeRapido(),
                     CasoActions::cerrar(),
                     CasoActions::reactivar(),
                     CasoActions::informeCierrePdf(),
-                ]),
+                    CasoActions::eliminar(),
+                ])->hidden(fn (Caso $record) => $record->trashed()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->visible(fn () => auth()->user()?->puede('eliminar')),
+                    // Borrado lógico: van a "Casos eliminados".
+                    // Misma fecha y justificación para todos los seleccionados.
+                    BulkAction::make('eliminarSeleccionados')
+                        ->label('Eliminar seleccionados')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->visible(fn ($livewire) => auth()->user()?->puede('eliminar') && ($livewire->activeTab ?? null) !== 'eliminados')
+                        ->modalHeading('¿Eliminar los casos seleccionados?')
+                        ->modalDescription('Pasan a "Casos eliminados" y se pueden restaurar desde ahí.')
+                        ->modalSubmitActionLabel('Eliminar')
+                        ->modalCancelActionLabel('Cancelar')
+                        ->fillForm(fn (): array => Eliminacion::valoresIniciales())
+                        ->schema(Eliminacion::campos())
+                        ->action(function ($records, array $data): void {
+                            $records->each(fn (Caso $caso) => Eliminacion::eliminar($caso, $data));
+                            Notification::make()->title('Casos eliminados')->success()->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
     }

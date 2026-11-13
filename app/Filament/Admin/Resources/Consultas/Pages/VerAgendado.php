@@ -159,18 +159,9 @@ class VerAgendado extends EditRecord
                 Action::make('cancelarCierreConsulta')
                     ->label('Cancelar')
                     ->color('gray')
-                    ->action(function (Set $set): void {
-                        // En edición también descarta lo modificado en la
-                        // ficha (no hay otro "Cancelar", ver getFormActions()).
-                        if ($this->editando) {
-                            $this->redirect($this->urlFicha());
-
-                            return;
-                        }
-
-                        $set('cierre_motivo', $this->motivoInicial());
-                        $set('cierre_detalle', null);
-                    }),
+                    // Descarta lo elegido (y, en edición, lo modificado en la
+                    // ficha) y vuelve al listado de Agendados.
+                    ->action(fn () => $this->redirect(ConsultaResource::getUrl('index').'?tab=agendados')),
             ])
             ->footerActionsAlignment(Alignment::End);
     }
@@ -308,9 +299,19 @@ class VerAgendado extends EditRecord
                 'observaciones' => $vigente->observacionesCon('Anulada', $observacion),
             ]);
 
-            Notification::make()->title('Cita anulada')->success()->send();
+            // La consulta se cierra con estado "Cita Anulada" (pasa a
+            // Consultas cerradas, de donde se puede reactivar), y el motivo
+            // queda también en su nota interna, como el resto de cierres.
+            $nota = trim((string) $record->nota_interna);
+            $entrada = now()->format('d/m/Y H:i')." — Cierre (Cita anulada): {$observacion}";
+            $record->update([
+                'estado' => EstadoConsulta::CitaAnulada,
+                'nota_interna' => $nota !== '' ? "{$nota}\n{$entrada}" : $entrada,
+            ]);
 
-            $this->redirect(ConsultaResource::getUrl('index').'?tab=nuevas');
+            Notification::make()->title('Cita anulada y consulta cerrada')->success()->send();
+
+            $this->redirect(ConsultaResource::getUrl('index').'?tab=cerradas');
 
             return;
         }
@@ -522,7 +523,7 @@ class VerAgendado extends EditRecord
                 Action::make('cancelarEdicion')
                     ->label('Cancelar')
                     ->color('gray')
-                    ->action(fn () => $this->redirect($this->urlFicha())),
+                    ->action(fn () => $this->redirect(ConsultaResource::getUrl('index').'?tab=agendados')),
             ];
         }
 

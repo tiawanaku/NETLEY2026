@@ -76,7 +76,7 @@
                 'nombre' => $nombre,
                 'hora' => $hora,
                 'abogados' => $abogados,
-                'url' => \App\Filament\Admin\Resources\Citas\CitaResource::getUrl('edit', ['record' => $cita->id]),
+                'url' => \App\Filament\Admin\Pages\AgendaCalendario::urlCita($cita),
             ];
         };
     @endphp

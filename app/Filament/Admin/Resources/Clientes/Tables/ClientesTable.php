@@ -7,10 +7,14 @@ use App\Filament\Admin\Support\IndicadoresCliente;
 use App\Filament\Admin\Support\TelefonoColumna;
 use App\Models\Cliente;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkAction;
+use App\Filament\Admin\Support\Eliminacion;
+use Filament\Notifications\Notification;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Support\Enums\Alignment;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -84,10 +88,48 @@ class ClientesTable
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
                 EditAction::make()->visible(fn () => auth()->user()?->puede('editar')),
+                // Borrado lógico (ver Cliente::booted()): sus casos pasan a
+                // "Casos eliminados" y se pueden restaurar desde ahí.
+                DeleteAction::make()
+                    ->label('Eliminar')
+                    ->visible(fn () => auth()->user()?->puede('eliminar'))
+                    ->modalHeading(fn (Cliente $record) => '¿Eliminar al cliente '.$record->nombre_completo.'?')
+                    ->modalDescription(fn (Cliente $record) => ($n = $record->casos()->count()) > 0
+                        ? 'Sus '.$n.' '.($n === 1 ? 'caso pasa' : 'casos pasan').' a "Casos eliminados", con sus pagos y documentos intactos. Se pueden restaurar desde ahí (el cliente vuelve con el caso).'
+                        : 'El cliente sale del listado.')
+                    ->modalWidth('lg')
+                    ->fillForm(fn (): array => Eliminacion::valoresIniciales())
+                    ->schema(Eliminacion::campos())
+                    ->using(function (Cliente $record, array $data): bool {
+                        Eliminacion::eliminar($record, $data);
+
+                        return true;
+                    })
+                    ->modalSubmitActionLabel('Eliminar')
+                    ->modalCancelActionLabel('Cancelar')
+                    ->modalFooterActionsAlignment(Alignment::Start)
+                    ->extraModalWindowAttributes(['class' => 'netley-eliminar-personal'])
+                    ->successNotificationTitle('Cliente eliminado'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->visible(fn () => auth()->user()?->puede('eliminar')),
+                    // Misma fecha y justificación para todos los seleccionados.
+                    BulkAction::make('eliminarSeleccionados')
+                        ->label('Eliminar seleccionados')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->visible(fn () => auth()->user()?->puede('eliminar'))
+                        ->modalHeading('¿Eliminar los clientes seleccionados?')
+                        ->modalDescription('Sus casos pasan a "Casos eliminados" y se pueden restaurar desde ahí.')
+                        ->modalSubmitActionLabel('Eliminar')
+                        ->modalCancelActionLabel('Cancelar')
+                        ->fillForm(fn (): array => Eliminacion::valoresIniciales())
+                        ->schema(Eliminacion::campos())
+                        ->action(function ($records, array $data): void {
+                            $records->each(fn (Cliente $cliente) => Eliminacion::eliminar($cliente, $data));
+                            Notification::make()->title('Clientes eliminados')->success()->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
     }

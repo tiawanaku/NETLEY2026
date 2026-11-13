@@ -65,6 +65,8 @@ class CasosRelationManager extends RelationManager
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->url(fn ($record) => CasoResource::getUrl('edit', ['record' => $record])),
+                // Lo manda a "Casos eliminados" (se puede restaurar).
+                \App\Filament\Admin\Resources\Casos\Actions\CasoActions::eliminar()->label('Eliminar'),
             ]);
     }
 }

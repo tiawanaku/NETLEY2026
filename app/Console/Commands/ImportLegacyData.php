@@ -1005,8 +1005,8 @@ class ImportLegacyData extends Command
 
         return match (true) {
             $v === 'CERRADO' || $v === 'FINALIZADO' || $v === 'CONCLUIDO' => 'cerrado',
-            $v === 'REACTIVADO-PENDIENTE' => 'reactivado_pendiente',
-            default => 'activo_pendiente',
+            $v === 'REACTIVADO-PENDIENTE' => 'activo',
+            default => 'activo',
         };
     }
 

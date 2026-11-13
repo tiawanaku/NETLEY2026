@@ -62,6 +62,73 @@ class CasoActions
             });
     }
 
+    /**
+     * Elimina el caso (borrado lógico): pasa a "Casos eliminados", con sus
+     * pagos, documentos y seguimientos intactos, y se puede restaurar.
+     */
+    public static function eliminar(): Action
+    {
+        return Action::make('eliminarCaso')
+            ->label('Eliminar caso')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->visible(fn (Caso $record) => ! $record->trashed() && auth()->user()?->puede('eliminar'))
+            ->modalIcon('heroicon-o-trash')
+            ->modalIconColor('danger')
+            ->modalHeading(fn (Caso $record) => '¿Eliminar el caso N° '.$record->id.'?')
+            ->modalDescription('El caso pasa a "Casos eliminados" y se puede restaurar desde ahí. Sus pagos, documentos y seguimientos no se borran.')
+            ->modalWidth('lg')
+            ->fillForm(fn (): array => \App\Filament\Admin\Support\Eliminacion::valoresIniciales())
+            ->schema(\App\Filament\Admin\Support\Eliminacion::campos())
+            ->modalSubmitActionLabel('Eliminar')
+            ->modalCancelActionLabel('Cancelar')
+            ->modalFooterActionsAlignment(\Filament\Support\Enums\Alignment::Start)
+            ->extraModalWindowAttributes(['class' => 'netley-eliminar-personal'])
+            ->action(function (Caso $record, array $data, $livewire): void {
+                \App\Filament\Admin\Support\Eliminacion::eliminar($record, $data);
+                Notification::make()->title('Caso eliminado')->body('Lo encuentras en "Casos eliminados".')->success()->send();
+
+                // Desde la ficha del cliente (tabla de Casos) se queda ahí.
+                if ($livewire instanceof \Filament\Resources\RelationManagers\RelationManager) {
+                    return;
+                }
+
+                $livewire->redirect(\App\Filament\Admin\Resources\Casos\CasoResource::getUrl('index').'?tab=eliminados');
+            });
+    }
+
+    /** Documento de respaldo que se subió al eliminar el caso. */
+    public static function descargarDocumentoEliminacion(): Action
+    {
+        return Action::make('descargarDocumentoEliminacion')
+            ->label('Descargar documento')
+            ->icon('heroicon-o-arrow-down-tray')
+            ->color('gray')
+            ->visible(fn (Caso $record) => $record->trashed() && filled($record->documento_eliminacion))
+            ->action(fn (Caso $record) => \App\Filament\Admin\Support\Eliminacion::descargar($record->documento_eliminacion, 'eliminacion-caso-'.$record->id));
+    }
+
+    /** Devuelve un caso eliminado a su lista normal. */
+    public static function restaurar(): Action
+    {
+        return Action::make('restaurarCaso')
+            ->label('Restaurar')
+            ->icon('heroicon-o-arrow-uturn-left')
+            ->color('success')
+            ->visible(fn (Caso $record) => $record->trashed() && auth()->user()?->puede('eliminar'))
+            ->requiresConfirmation()
+            ->modalHeading(fn (Caso $record) => '¿Restaurar el caso N° '.$record->id.'?')
+            ->modalSubmitActionLabel('Restaurar')
+            ->modalCancelActionLabel('Cancelar')
+            ->modalFooterActionsAlignment(\Filament\Support\Enums\Alignment::Start)
+            ->extraModalWindowAttributes(['class' => 'netley-eliminar-personal'])
+            ->action(function (Caso $record, $livewire): void {
+                $record->restore();
+                Notification::make()->title('Caso restaurado')->success()->send();
+                $livewire->redirect(\App\Filament\Admin\Resources\Casos\CasoResource::getUrl('edit', ['record' => $record]));
+            });
+    }
+
     public static function reactivar(): Action
     {
         return Action::make('reactivarCaso')
@@ -71,7 +138,7 @@ class CasoActions
             ->visible(fn (Caso $record) => $record->estado === EstadoCaso::Cerrado)
             ->requiresConfirmation()
             ->action(function (Caso $record): void {
-                $record->update(['estado' => EstadoCaso::ReactivadoPendiente]);
+                $record->update(['estado' => EstadoCaso::Activo]);
                 Notification::make()->title('Caso reactivado')->success()->send();
             });
     }
@@ -95,7 +162,7 @@ class CasoActions
     public static function informeRapido(): Action
     {
         return Action::make('informeRapido')
-            ->label('Imprimir información rápida')
+            ->label('Resumen del Caso')
             ->icon('heroicon-o-printer')
             ->color('gray')
             ->action(fn (Caso $record) => response()->streamDownload(
@@ -109,6 +176,16 @@ class CasoActions
     /** Agenda una cita ligada directamente al caso (no a una consulta), con
      * la misma vista previa de agenda de 14 días que en Consultas.
      */
+    /**
+     * El caso de una acción: el registro de la fila/ficha o, desde la
+     * pestaña "Citas" de la ficha (CitasRelationManager, botón de la
+     * cabecera, sin registro), el caso dueño de esa pestaña.
+     */
+    protected static function casoDe(mixed $livewire, mixed $record): Caso
+    {
+        return $record instanceof Caso ? $record : $livewire->getOwnerRecord();
+    }
+
     public static function agendarCita(): Action
     {
         return Action::make('agendarCitaCaso')
@@ -133,11 +210,13 @@ class CasoActions
                 Textarea::make('detalle')->rows(3),
                 // Se guardan en el caso (no en la cita).
                 CamposDenuncia::denunciado()
-                    ->default(fn (Caso $record) => $record->denunciado),
+                    ->default(fn ($livewire, $record = null) => self::casoDe($livewire, $record)->denunciado),
                 CamposDenuncia::denuncias()
-                    ->default(fn (Caso $record) => CamposDenuncia::ids($record)),
+                    ->default(fn ($livewire, $record = null) => CamposDenuncia::ids(self::casoDe($livewire, $record))),
             ])
-            ->action(function (Caso $record, array $data, $livewire): void {
+            ->action(function (array $data, $livewire, $record = null): void {
+                $record = self::casoDe($livewire, $record);
+
                 DB::transaction(function () use ($record, $data): void {
                     $cita = $record->citas()->create([
                         'fecha' => $data['fecha'],

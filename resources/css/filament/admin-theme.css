@@ -197,7 +197,11 @@
    de arriba. Se fuerza la etiqueta a un ancho fijo (el mismo que una fila
    normal) para que el cuadro arranque justo en esa misma columna de datos. */
 .netley-campo-ancho-alineado.fi-fo-field-has-inline-label {
-    grid-template-columns: 7.4rem 1fr !important;
+    /* Mismo ancho de etiqueta que un campo de media fila: (mitad de la fila
+       menos el espacio entre columnas, 1.5rem) repartida en 3 columnas con
+       1rem de separación entre ellas. Así sirve igual en la ficha (ancho de
+       página) que en el modal del asistente. */
+    grid-template-columns: calc(((100% - 1.5rem) / 2 - 2rem) / 3) 1fr !important;
 }
 
 .netley-campo-ancho-alineado.fi-fo-field-has-inline-label > .fi-fo-field-content-col {

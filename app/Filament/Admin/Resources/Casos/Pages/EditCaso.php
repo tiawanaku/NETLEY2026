@@ -4,9 +4,10 @@ namespace App\Filament\Admin\Resources\Casos\Pages;
 
 use App\Filament\Admin\Resources\Casos\Actions\CasoActions;
 use App\Filament\Admin\Resources\Casos\CasoResource;
-use App\Filament\Admin\Resources\Clientes\ClienteResource;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\EditRecord;
+use App\Support\CronologiaCaso;
+use Illuminate\Contracts\View\View;
 
 class EditCaso extends EditRecord
 {
@@ -23,7 +24,8 @@ class EditCaso extends EditRecord
     {
         parent::mount($record);
 
-        $this->editando = request()->boolean('editar') && auth()->user()?->puede('editar');
+        // Un caso eliminado se puede ver, pero no editar (primero se restaura).
+        $this->editando = request()->boolean('editar') && auth()->user()?->puede('editar') && ! $this->getRecord()->trashed();
     }
 
     /** El formulario va como primera pestaña, junto a Pagos / Documentación / Seguimiento. */
@@ -34,7 +36,7 @@ class EditCaso extends EditRecord
 
     public function getContentTabLabel(): ?string
     {
-        return 'Datos del caso';
+        return 'Datos del proceso';
     }
 
     public function getContentTabIcon(): string
@@ -55,27 +57,45 @@ class EditCaso extends EditRecord
 
     protected function getHeaderActions(): array
     {
+        // Caso eliminado: solo volver al cliente y restaurar.
+        if ($this->getRecord()->trashed()) {
+            return [
+                Action::make('volverEliminados')
+                    ->label('Volver a Casos eliminados')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('gray')
+                    ->url(CasoResource::getUrl('index').'?tab=eliminados'),
+                CasoActions::descargarDocumentoEliminacion(),
+                CasoActions::restaurar(),
+            ];
+        }
+
+        // Solo: Editar, Resumen del proceso, Cronología y Cerrar caso (a
+        // pedido). Con el caso cerrado, "Reactivar" ocupa el lugar de
+        // "Cerrar caso".
         return [
-            // Vuelve a la ficha del cliente (pestaña "Casos").
-            Action::make('verCliente')
-                ->label('Volver al cliente')
-                ->icon('heroicon-o-arrow-uturn-left')
-                ->color('gray')
-                ->visible(fn () => $this->getRecord()->cliente !== null)
-                ->url(fn () => ClienteResource::getUrl('edit', ['record' => $this->getRecord()->cliente_id])),
             Action::make('editarCaso')
                 ->label('Editar')
                 ->icon('heroicon-o-pencil-square')
                 ->color('warning')
                 ->visible(fn () => ! $this->editando && auth()->user()?->puede('editar'))
                 ->action(fn () => $this->redirect($this->urlFicha(editar: true))),
-            // Sin "Realizar pago" ni "Borrar" en la ficha (a pedido): cada
-            // cuota se paga desde la pestaña Pagos (Plan de pagos).
-            CasoActions::agendarCita(),
-            CasoActions::informeRapido(),
+            CasoActions::informeRapido()->label('Resumen del proceso'),
+            // Línea de tiempo del caso (antes era una pestaña).
+            Action::make('cronologia')
+                ->label('Cronología')
+                ->icon('heroicon-o-clock')
+                ->color('gray')
+                ->slideOver()
+                ->modalWidth('3xl')
+                ->modalHeading('Cronología del caso')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Cerrar')
+                ->modalContent(fn (): View => view('filament.admin.casos.cronologia', [
+                    'eventos' => CronologiaCaso::eventos($this->getRecord()->fresh()),
+                ])),
             CasoActions::cerrar(),
             CasoActions::reactivar(),
-            CasoActions::informeCierrePdf(),
         ];
     }
 

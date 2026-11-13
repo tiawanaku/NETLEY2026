@@ -143,7 +143,7 @@
             <td class="et">Pagado</td><td class="pagado">{{ $bs($caso->pagado) }}</td>
         </tr>
         <tr>
-            <td class="et">HiH</td>
+            <td class="et">Patrocinio HiH</td>
             <td>{{ $caso->patrocinio_hih ? $bs($hih).($caso->porcentaje_patrocinio ? ' ('.rtrim(rtrim(number_format((float) $caso->porcentaje_patrocinio, 2, '.', ''), '0'), '.').'%)' : '') : 'No' }}</td>
             <td class="et">Saldo</td><td class="pendiente">{{ $bs($caso->saldo) }}</td>
         </tr>

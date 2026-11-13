@@ -99,7 +99,24 @@ class EditCliente extends EditRecord
     {
         return [
             ClienteActions::gestionarAcceso(),
-            DeleteAction::make()->visible(fn () => auth()->user()?->puede('eliminar')),
+            // Borrado lógico con fecha y justificación (ver Eliminacion);
+            // sus casos pasan a "Casos eliminados".
+            DeleteAction::make()
+                ->label('Eliminar')
+                ->visible(fn () => auth()->user()?->puede('eliminar'))
+                ->modalHeading(fn () => '¿Eliminar al cliente '.$this->getRecord()->nombre_completo.'?')
+                ->modalDescription('Sus casos pasan a "Casos eliminados", con sus pagos y documentos intactos, y se pueden restaurar desde ahí.')
+                ->modalWidth('lg')
+                ->fillForm(fn (): array => \App\Filament\Admin\Support\Eliminacion::valoresIniciales())
+                ->schema(\App\Filament\Admin\Support\Eliminacion::campos())
+                ->using(function (array $data): bool {
+                    \App\Filament\Admin\Support\Eliminacion::eliminar($this->getRecord(), $data);
+
+                    return true;
+                })
+                ->modalSubmitActionLabel('Eliminar')
+                ->modalCancelActionLabel('Cancelar')
+                ->successNotificationTitle('Cliente eliminado'),
         ];
     }
 

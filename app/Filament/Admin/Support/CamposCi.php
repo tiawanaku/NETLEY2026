@@ -36,13 +36,19 @@ class CamposCi
         ];
     }
 
-    public static function make(): FusedGroup
+    /** @param  bool|\Closure  $bloqueado  solo lectura (ej. ficha del cliente, ver ClienteForm) */
+    public static function make(bool|\Closure $bloqueado = false): FusedGroup
     {
         return FusedGroup::make([
             Select::make('extension')
                 ->label('Expedido en')
                 ->hiddenLabel()
-                ->options(self::opcionesExtension())
+                // Un valor antiguo fuera de la lista se agrega para que se
+                // siga viendo (clientes importados del sistema anterior).
+                ->options(fn (?string $state) => filled($state) && ! array_key_exists($state, self::opcionesExtension())
+                    ? [...self::opcionesExtension(), $state => $state]
+                    : self::opcionesExtension())
+                ->disabled($bloqueado)
                 ->native(false)
                 ->selectablePlaceholder(false)
                 ->default('LP')
@@ -52,6 +58,7 @@ class CamposCi
                 ->label('Carnet de identidad')
                 ->hiddenLabel()
                 ->placeholder('Número')
+                ->disabled($bloqueado)
                 ->required()
                 ->regex('/^[0-9]+$/')
                 ->validationMessages(['regex' => 'Solo se permiten números.'])

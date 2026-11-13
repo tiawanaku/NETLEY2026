@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Caso extends Model
 {
     use HasFactory;
+    // Eliminar un caso lo manda a "Casos eliminados" (se puede restaurar).
+    use SoftDeletes;
 
     protected $fillable = [
         'cliente_id',
@@ -46,7 +49,35 @@ class Caso extends Model
         'estado',
         'ciudad',
         'documentos_pendientes',
+        'fecha_eliminacion',
+        'motivo_eliminacion',
+        'documento_eliminacion',
     ];
+
+    /**
+     * Al eliminar (borrado lógico, ver "Casos eliminados") el caso queda con
+     * estado Eliminado; al restaurarlo, vuelve a Activo.
+     */
+    protected static function booted(): void
+    {
+        static::deleted(function (self $caso): void {
+            if (! $caso->isForceDeleting()) {
+                $caso->forceFill(['estado' => EstadoCaso::Eliminado])->saveQuietly();
+            }
+        });
+
+        static::restored(function (self $caso): void {
+            $caso->forceFill(['estado' => EstadoCaso::Activo, 'fecha_eliminacion' => null, 'motivo_eliminacion' => null, 'documento_eliminacion' => null])->saveQuietly();
+
+            // Si el cliente se había eliminado junto con sus casos, vuelve.
+            $cliente = Cliente::withTrashed()->find($caso->cliente_id);
+
+            if ($cliente?->trashed()) {
+                $cliente->restore();
+                $cliente->forceFill(['fecha_eliminacion' => null, 'motivo_eliminacion' => null, 'documento_eliminacion' => null])->saveQuietly();
+            }
+        });
+    }
 
     protected function casts(): array
     {
@@ -64,6 +95,7 @@ class Caso extends Model
             'pagado' => 'decimal:2',
             'patrocinio_hih' => 'boolean',
             'documentos_pendientes' => 'boolean',
+            'fecha_eliminacion' => 'date',
             'porcentaje_patrocinio' => 'decimal:2',
             'monto_patrocinio' => 'decimal:2',
             'comision_porcentaje' => 'decimal:2',
@@ -84,7 +116,9 @@ class Caso extends Model
 
     public function cliente(): BelongsTo
     {
-        return $this->belongsTo(Cliente::class);
+        // También el cliente eliminado: un caso en "Casos eliminados" sigue
+        // mostrando de quién es.
+        return $this->belongsTo(Cliente::class)->withTrashed();
     }
 
     public function delito(): BelongsTo

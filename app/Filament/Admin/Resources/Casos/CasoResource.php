@@ -2,6 +2,10 @@
 
 namespace App\Filament\Admin\Resources\Casos;
 
+use App\Enums\EstadoCaso;
+use Filament\Navigation\NavigationItem;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Enums\Rol;
 use App\Filament\Admin\Concerns\ScopesToAssignedAbogado;
 use App\Filament\Admin\Support\ModoMenu;
@@ -12,7 +16,7 @@ use App\Filament\Admin\Resources\Casos\RelationManagers\DocumentosRelationManage
 use App\Filament\Admin\Resources\Casos\RelationManagers\FiscaliasRelationManager;
 use App\Filament\Admin\Resources\Casos\RelationManagers\JuzgadosRelationManager;
 use App\Filament\Admin\Resources\Casos\RelationManagers\OtrosSeguimientosRelationManager;
-use App\Filament\Admin\Resources\Casos\RelationManagers\CronologiaRelationManager;
+use App\Filament\Admin\Resources\Casos\RelationManagers\CitasRelationManager;
 use App\Filament\Admin\Resources\Casos\RelationManagers\PlanesPagoRelationManager;
 use App\Filament\Admin\Resources\Casos\RelationManagers\SeguimientosRelationManager;
 use App\Filament\Admin\Resources\Casos\Schemas\CasoForm;
@@ -46,10 +50,67 @@ class CasoResource extends Resource
         return auth()->user()?->puede('casos') ?? false;
     }
 
-    /** Oculto del menú en modo simple (ver ModoMenu); sigue accesible desde la ficha del cliente. */
-    public static function shouldRegisterNavigation(): bool
+    /**
+     * En modo simple (ver ModoMenu) el ítem "Casos" se reemplaza por
+     * "Casos cerrados" y "Casos eliminados" (los activos se ven desde la
+     * ficha de cada cliente ejecutivo); en modo completo queda "Casos".
+     *
+     * @return array<NavigationItem>
+     */
+    public static function getNavigationItems(): array
     {
-        return ! ModoMenu::esSimple();
+        if (! ModoMenu::esSimple()) {
+            return parent::getNavigationItems();
+        }
+
+        $base = static::getUrl('index');
+
+        return [
+            NavigationItem::make('Casos cerrados')
+                ->group(static::getNavigationGroup())
+                ->icon('heroicon-o-archive-box')
+                ->sort(static::getNavigationSort() + 10)
+                ->isActiveWhen(fn (): bool => static::pestanaActual() === 'cerrados')
+                ->url("{$base}?tab=cerrados"),
+            NavigationItem::make('Casos eliminados')
+                ->group(static::getNavigationGroup())
+                ->icon('heroicon-o-trash')
+                ->sort(static::getNavigationSort() + 11)
+                ->visible(fn (): bool => auth()->user()?->puede('eliminar') ?? false)
+                ->isActiveWhen(fn (): bool => static::pestanaActual() === 'eliminados')
+                ->url("{$base}?tab=eliminados"),
+        ];
+    }
+
+    /**
+     * Pestaña del listado de casos a la que pertenece la pantalla actual: en
+     * el listado, el ?tab=; dentro de una ficha, según el caso (eliminado o
+     * cerrado). Usado para marcar el ítem del menú lateral.
+     */
+    public static function pestanaActual(): ?string
+    {
+        if (! request()->routeIs(static::getRouteBaseName().'.*')) {
+            return null;
+        }
+
+        if (filled($tab = request()->query('tab'))) {
+            return (string) $tab;
+        }
+
+        $record = request()->route('record');
+        $caso = $record instanceof Caso ? $record : (filled($record) ? Caso::withTrashed()->find($record) : null);
+
+        return match (true) {
+            $caso?->trashed() => 'eliminados',
+            $caso?->estado === EstadoCaso::Cerrado => 'cerrados',
+            default => null,
+        };
+    }
+
+    /** La ficha de un caso eliminado también se puede abrir (para revisarlo o restaurarlo). */
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return parent::getRecordRouteBindingEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     /** Pasantes y procuradoras no pueden dar de alta procesos nuevos. */
@@ -79,17 +140,17 @@ class CasoResource extends Resource
                 // recibo se imprime desde su fila.
                 PlanesPagoRelationManager::class,
             ])->icon('heroicon-o-banknotes'),
-            RelationGroup::make('Documentación', [
+            RelationGroup::make('Documentos', [
                 DocumentosRelationManager::class,
             ])->icon('heroicon-o-document-text'),
-            RelationGroup::make('Seguimiento', [
+            RelationGroup::make('Datos judiciales', [
                 SeguimientosRelationManager::class,
                 FiscaliasRelationManager::class,
                 JuzgadosRelationManager::class,
                 OtrosSeguimientosRelationManager::class,
             ])->icon('heroicon-o-clipboard-document-list'),
-            // Línea de tiempo con todo lo anterior junto (solo lectura).
-            CronologiaRelationManager::class,
+            // Citas con el personal + botón para agendar una nueva.
+            CitasRelationManager::class,
         ];
     }
 

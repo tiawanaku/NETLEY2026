@@ -188,7 +188,7 @@ class ClienteCasoWizard
                     CamposServicios::campo(),
                 ])
                 ->columnSpanFull(),
-            Textarea::make('descripcion')->label('Descripción')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
+            Textarea::make('descripcion')->label('Nota')->columnSpanFull()->inlineLabel(false)->extraInputAttributes(['data-enter-nav' => 'true']),
             Select::make('personal')
                 ->label('Abogado(s) asignado(s)')
                 // Con materia "Otros" no hay especialidad que filtrar:
@@ -249,7 +249,7 @@ class ClienteCasoWizard
             // en dos columnas) para que el cuadro empiece a la misma altura
             // que el de la iguala.
             TextInput::make('monto_patrocinio_hih')
-                ->label('HiH')
+                ->label('Patrocinio HiH')
                 ->numeric()
                 ->integer()
                 ->minValue(0)
@@ -396,7 +396,9 @@ class ClienteCasoWizard
         return DB::transaction(function () use ($data): array {
             // Si ya existe un cliente con esa CI (consulta recurrente), se
             // actualizan sus datos en vez de crear un duplicado.
-            $cliente = Cliente::updateOrCreate(
+            // withTrashed(): si esa CI era de un cliente eliminado, se
+            // reutiliza ese registro (la CI es única) y vuelve a la lista.
+            $cliente = Cliente::withTrashed()->updateOrCreate(
                 ['ci' => $data['ci']],
                 [
                     'nombres' => $data['nombres'],
@@ -514,7 +516,7 @@ class ClienteCasoWizard
                 'fecha_inicio' => $data['fecha_inicio'],
                 'duracion_meses' => $duracionMeses,
                 'fecha_fin' => $fechaFin,
-                'estado' => EstadoCaso::ActivoPendiente,
+                'estado' => EstadoCaso::Activo,
             ]);
 
             $cliente->increment('nro_casos');
@@ -714,7 +716,7 @@ class ClienteCasoWizard
     /**
      * @param  array<string, mixed>  $plan
      */
-    protected static function resumenPlanHtml(array $plan): HtmlString
+    public static function resumenPlanHtml(array $plan, string $marcaAnticipo = ' (anticipo, hoy)'): HtmlString
     {
         $bs = fn (int | float $monto): string => self::bs($monto);
 
@@ -736,7 +738,7 @@ class ClienteCasoWizard
 
         if ($plan['patrocinio']) {
             $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
-            $html .= $filaResumen('HiH ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
+            $html .= $filaResumen('Patrocinio HiH ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
         }
 
         $html .= $filaResumen('Iguala Netley', $bs($plan['monto_cliente']), fuerte: true);
@@ -752,7 +754,7 @@ class ClienteCasoWizard
             foreach ($plan['cuotas'] as $cuota) {
                 // La cuota 1 es el anticipo pagado hoy (ver plan()): se
                 // marca acá para distinguirla, no es una fila aparte.
-                $numero = $cuota['numero'].($cuota['pagada_hoy'] ? ' (anticipo, hoy)' : '');
+                $numero = $cuota['numero'].($cuota['pagada_hoy'] ? $marcaAnticipo : '');
                 $html .= $fila([$numero, $cuota['fecha']->format('d/m/Y'), $bs($cuota['monto']), $bs($cuota['nuevo_saldo'])]);
             }
         }

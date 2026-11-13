@@ -70,6 +70,36 @@ class AgendaCalendario extends Page
         return 'Calendario';
     }
 
+    /**
+     * Adónde lleva el clic en una cita del calendario:
+     * - cita de una consulta todavía abierta (no anulada): su ficha de
+     *   Agendados (VerAgendado);
+     * - cita de un caso, o de una consulta que ya pasó a cliente ejecutivo:
+     *   la ficha del caso, en la pestaña "Citas";
+     * - el resto (consulta cerrada o cita anulada): la ficha de la consulta.
+     */
+    public static function urlCita(Cita $cita): string
+    {
+        $casoId = $cita->caso_id ?? $cita->consulta?->caso_id;
+
+        if ($casoId) {
+            // Pestañas del caso: Pagos (0), Documentos (1), Datos judiciales (2), Citas (3).
+            return \App\Filament\Admin\Resources\Casos\CasoResource::getUrl('edit', ['record' => $casoId]).'?relation=3';
+        }
+
+        $consulta = $cita->consulta;
+
+        if (! $consulta) {
+            return CitaResource::getUrl('edit', ['record' => $cita->id]);
+        }
+
+        $abierta = in_array($consulta->estado, \App\Enums\EstadoConsulta::abiertos(), true);
+
+        return $abierta && ! $cita->anulada
+            ? \App\Filament\Admin\Resources\Consultas\ConsultaResource::getUrl('verAgendado', ['record' => $consulta])
+            : \App\Filament\Admin\Resources\Consultas\ConsultaResource::getUrl('edit', ['record' => $consulta]);
+    }
+
     protected function getHeaderActions(): array
     {
         return [
