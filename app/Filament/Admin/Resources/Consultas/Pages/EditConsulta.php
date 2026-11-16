@@ -15,6 +15,14 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditConsulta extends EditRecord
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::consultas(\App\Filament\Admin\Support\Migas::pestanaConsulta($this->getRecord()), $this->getRecord());
+    }
+
     protected static string $resource = ConsultaResource::class;
 
     public bool $editando = false;
@@ -43,15 +51,6 @@ class EditConsulta extends EditRecord
     public function getTitle(): string
     {
         return 'N° '.$this->getRecord()->getKey();
-    }
-
-    /** Sin el último escalón "Editar": la migaja de pan queda "Consultas > N° X". */
-    public function getBreadcrumbs(): array
-    {
-        $breadcrumbs = $this->getResourceBreadcrumbs();
-        $breadcrumbs[] = $this->getRecordTitle();
-
-        return $breadcrumbs;
     }
 
     /** Si se eligió "Agendar" al editar, ver mutateFormDataBeforeSave(). */

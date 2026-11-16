@@ -22,6 +22,13 @@ use Illuminate\Support\HtmlString;
 
 class CasoForm
 {
+    /** Opciones de "Caso" en Detalles del proceso; "Otro" se escribe a mano. */
+    public const TIPOS_CASO = [
+        'nurej' => 'NUREJ',
+        'cud' => 'CUD',
+        'otro' => 'Otro',
+    ];
+
     public static function configure(Schema $schema): Schema
     {
         // Igual que en Consultas/Clientes: la ficha del caso queda de solo
@@ -95,6 +102,32 @@ class CasoForm
                             ->label('Documento')
                             ->content(fn (?Caso $record) => \App\Filament\Admin\Support\Eliminacion::enlaceDocumento($record?->documento_eliminacion)),
                     ]),
+
+                // Código que identifica al caso (NUREJ, CUD u otro escrito a
+                // mano) y su detalle.
+                Section::make('Detalles del proceso')
+                    ->schema([
+                        Select::make('caso_tipo')
+                            ->label('Caso')
+                            ->options(self::TIPOS_CASO)
+                            ->native(false)
+                            ->placeholder('Seleccionar')
+                            ->live()
+                            ->afterStateUpdated(fn ($state, $set) => $state === 'otro' ? null : $set('caso_tipo_otro', null))
+                            ->disabled($isEditing),
+                        TextInput::make('caso_tipo_otro')
+                            ->label('Especificar')
+                            ->maxLength(100)
+                            ->required(fn ($get) => $get('caso_tipo') === 'otro')
+                            ->visible(fn ($get) => $get('caso_tipo') === 'otro')
+                            ->disabled($isEditing),
+                        TextInput::make('caso_detalle')
+                            ->label('Detalle')
+                            ->maxLength(255)
+                            ->disabled($isEditing),
+                    ])
+                    ->columns(['default' => 1, 'lg' => 2])
+                    ->columnSpanFull(),
 
                 // Mismos campos, orden y disposición que el paso 2
                 // ("Proceso") del formulario de Cliente ejecutivo

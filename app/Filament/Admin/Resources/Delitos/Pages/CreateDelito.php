@@ -7,5 +7,7 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateDelito extends CreateRecord
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = DelitoResource::class;
 }

@@ -30,6 +30,14 @@ use Illuminate\Support\Collection;
  */
 class SeguimientoDiario extends Page
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return [['Cliente Ejecutivo', \App\Filament\Admin\Resources\Clientes\ClienteResource::getUrl('index')], ['Seguimiento diario']];
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
 
     protected static ?string $navigationLabel = 'Seguimiento diario';

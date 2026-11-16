@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditDelito extends EditRecord
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = DelitoResource::class;
 
     protected function getHeaderActions(): array

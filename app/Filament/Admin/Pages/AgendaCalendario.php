@@ -23,6 +23,14 @@ use Illuminate\Support\Collection;
  */
 class AgendaCalendario extends Page
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::agenda('calendario');
+    }
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendar;
 
     protected static ?string $navigationLabel = 'Calendario';

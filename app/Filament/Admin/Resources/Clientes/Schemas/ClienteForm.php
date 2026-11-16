@@ -22,7 +22,8 @@ class ClienteForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $isEditing = fn (string $operation): bool => $operation === 'edit';
+        // De solo lectura; con "Editar" en la ficha (EditCliente::$editando) se habilitan.
+        $isEditing = fn (string $operation, $livewire): bool => $operation === 'edit' && ! ($livewire->editando ?? false);
 
         return $schema
             ->components([

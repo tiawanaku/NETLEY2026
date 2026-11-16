@@ -3,6 +3,8 @@
 namespace App\Filament\Admin\Resources\Clientes\RelationManagers;
 
 use App\Filament\Admin\Resources\Casos\CasoResource;
+use App\Filament\Admin\Resources\Clientes\ClienteResource;
+use App\Models\Caso;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use Filament\Actions\Action;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -64,7 +66,19 @@ class CasosRelationManager extends RelationManager
                 Action::make('ver')
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
+                    ->visible(fn (Caso $record): bool => ! $record->requiereCostasYCostos())
                     ->url(fn ($record) => CasoResource::getUrl('edit', ['record' => $record])),
+                // Caso cerrado y ganado con patrocinio HiH: en lugar de "Ver",
+                // mientras no se inicie, abre "Nuevo proceso" en la ficha del
+                // cliente (EditCliente::anadirCasoAction(), con el caso de
+                // origen) para las costas y costos.
+                Action::make('iniciarCostas')
+                    ->label('Iniciar costas y costos')
+                    ->icon('heroicon-o-scale')
+                    ->color('success')
+                    ->visible(fn (Caso $record): bool => $record->requiereCostasYCostos() && CasoResource::canCreate())
+                    ->url(fn (Caso $record): string => ClienteResource::getUrl('edit', ['record' => $record->cliente_id])
+                        .'?'.http_build_query(['action' => 'anadirCaso', 'actionArguments' => ['origen' => $record->getKey()]])),
             ]);
     }
 }

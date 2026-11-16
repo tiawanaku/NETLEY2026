@@ -10,6 +10,8 @@ use Filament\Schemas\Components\Tabs\Tab;
 
 class ListDelitos extends ListRecords
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = DelitoResource::class;
 
     protected function getHeaderActions(): array

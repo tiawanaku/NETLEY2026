@@ -6,6 +6,7 @@ use App\Enums\TipoDocumento;
 use App\Filament\Admin\Support\AdjuntarDocumentosClip;
 use App\Models\DocumentoCliente;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
@@ -14,6 +15,8 @@ use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Enums\Alignment;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Storage;
@@ -54,6 +57,17 @@ class DocumentosRelationManager extends RelationManager
                         $record->subido_por_cliente ? 'Subido por el cliente' : null,
                     ])->filter()->implode(' · ') ?: null)
                     ->searchable(),
+                // Los mismos casilleros del formulario, solo de lectura
+                // (se cambian con "Editar").
+                TextColumn::make('visible_para')
+                    ->label('Visible para')
+                    ->state(fn (DocumentoCliente $record): string => $record->visible_cliente ? 'cliente' : 'netley')
+                    // HtmlString: con ->html() Filament sanea el HTML y quita los <input>.
+                    ->formatStateUsing(fn (DocumentoCliente $record): HtmlString => new HtmlString(
+                        self::casilleroHtml('Netley', true)
+                        .'<span style="display:inline-block;width:1.25rem;"></span>'
+                        .self::casilleroHtml('Cliente', (bool) $record->visible_cliente)
+                    )),
                 TextColumn::make('ruta')
                     ->label('Documento')
                     ->formatStateUsing(fn (?string $state) => $state ? basename($state) : '—')
@@ -91,22 +105,28 @@ class DocumentosRelationManager extends RelationManager
                     ->color('warning')
                     ->size('sm')
                     ->visible(fn () => auth()->user()?->puede('editar'))
-                    ->modalHeading('Editar descripción')
-                    ->modalWidth('md')
+                    ->modalHeading('Editar documento')
+                    ->modalWidth('3xl')
                     ->modalSubmitActionLabel('Guardar')
                     ->modalCancelActionLabel('Cancelar')
-                    ->fillForm(fn (DocumentoCliente $record): array => ['descripcion' => $record->descripcion])
+                    ->fillForm(fn (DocumentoCliente $record): array => ['descripcion' => $record->descripcion, 'visible_cliente' => $record->visible_cliente])
                     ->schema([
-                        TextInput::make('descripcion')
-                            ->label('Descripción')
-                            ->required()
-                            ->maxLength(100)
-                            ->extraInputAttributes(['data-enter-nav' => 'true']),
+                        // Descripción y, a su lado, "Visible para: Netley / Cliente".
+                        Grid::make(2)
+                            ->extraAttributes(['class' => 'netley-editar-documento-fila'])
+                            ->schema([
+                                TextInput::make('descripcion')
+                                    ->label('Descripción')
+                                    ->required()
+                                    ->maxLength(100)
+                                    ->extraInputAttributes(['data-enter-nav' => 'true']),
+                                Group::make(self::casillerosVisibilidad())->columns(['default' => 3])->extraAttributes(['class' => 'netley-documento-visibilidad']),
+                            ]),
                     ])
                     ->action(function (DocumentoCliente $record, array $data): void {
-                        $record->update(['descripcion' => $data['descripcion']]);
+                        $record->update(['descripcion' => $data['descripcion'], 'visible_cliente' => (bool) ($data['visible_cliente'] ?? false)]);
 
-                        Notification::make()->title('Descripción actualizada')->success()->send();
+                        Notification::make()->title('Documento actualizado')->success()->send();
                     }),
                 Action::make('eliminarDocumento')
                     ->label('Eliminar')
@@ -135,6 +155,38 @@ class DocumentosRelationManager extends RelationManager
             ]);
     }
 
+    /**
+     * "Visible para": Netley siempre (marcado y fijo); Cliente es opcional —
+     * si se marca, el documento aparece en el portal del cliente.
+     *
+     * @return array<int, \Filament\Schemas\Components\Component>
+     */
+    protected static function casillerosVisibilidad(): array
+    {
+        // En una sola línea: "Visible para:  [x] Netley  [ ] Cliente".
+        return [
+            Placeholder::make('visible_para')
+                ->hiddenLabel()
+                ->content(new HtmlString('<span style="font-weight:500;">Visible para:</span>')),
+            Placeholder::make('visible_netley')
+                ->hiddenLabel()
+                ->content(new HtmlString(
+                    '<label style="display:inline-flex;align-items:center;gap:8px;opacity:.75;cursor:not-allowed;">'
+                    .'<input type="checkbox" checked disabled style="width:16px;height:16px;"> Netley</label>'
+                )),
+            Checkbox::make('visible_cliente')
+                ->label('Cliente')
+                ->inlineLabel(false),
+        ];
+    }
+
+    /** Casillero de solo lectura (columna "Visible para"). */
+    protected static function casilleroHtml(string $etiqueta, bool $marcado): string
+    {
+        return '<label style="display:inline-flex;align-items:center;gap:6px;">'
+            .'<input type="checkbox" disabled'.($marcado ? ' checked' : '').' style="width:16px;height:16px;"> '.e($etiqueta).'</label>';
+    }
+
     /** Mismo formulario de adjuntar que Agendar / Personal: clip + descripción por archivo. */
     protected function anadirDocumentosAction(): Action
     {
@@ -148,7 +200,9 @@ class DocumentosRelationManager extends RelationManager
             ->schema([
                 Repeater::make('documentos')
                     ->label('Adjuntar documentos')
-                    ->extraAttributes(['class' => 'netley-fila-documento'])
+                    // netley-fila-documento-ancha: la descripción llega hasta
+                    // el borde y los casilleros van debajo (admin-theme.css).
+                    ->extraAttributes(['class' => 'netley-fila-documento netley-fila-documento-ancha'])
                     ->schema([
                         // El archivo llega desde el clip (ver
                         // AdjuntarDocumentosClip); oculto, se identifica con
@@ -164,6 +218,9 @@ class DocumentosRelationManager extends RelationManager
                         TextInput::make('descripcion')
                             ->label('Descripción')
                             ->maxLength(100),
+                        Group::make(self::casillerosVisibilidad())
+                            ->columns(['default' => 3])
+                            ->extraAttributes(['class' => 'netley-documento-visibilidad']),
                     ])
                     ->columns(2)
                     ->addable(false)
@@ -186,6 +243,7 @@ class DocumentosRelationManager extends RelationManager
                         'cliente_id' => $caso->cliente_id,
                         'ruta' => $documento['ruta'],
                         'descripcion' => $documento['descripcion'] ?? null,
+                        'visible_cliente' => (bool) ($documento['visible_cliente'] ?? false),
                         'fecha_origen' => now(),
                     ]);
                 }

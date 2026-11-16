@@ -58,7 +58,7 @@ class PagosRelationManager extends RelationManager
                         $caso = $this->getOwnerRecord();
 
                         $data['cliente_id'] = $caso->cliente_id;
-                        $data['nro_recibo'] = ((int) Pago::max('nro_recibo')) + 1;
+                        $data['nro_recibo'] = Pago::siguienteRecibo();
                         $data['nro_cuota'] = Pago::where('caso_id', $caso->id)->count() + 1;
                         $data['registrado_por'] = auth()->user()?->username;
 

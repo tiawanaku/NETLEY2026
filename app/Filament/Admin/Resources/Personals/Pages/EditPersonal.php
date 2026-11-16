@@ -21,6 +21,14 @@ use Illuminate\Support\HtmlString;
 
 class EditPersonal extends EditRecord
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::personal($this->getRecord()->trashed() ? 'retirados' : 'vigentes', $this->getRecord());
+    }
+
     protected static string $resource = PersonalResource::class;
 
     public bool $editando = false;

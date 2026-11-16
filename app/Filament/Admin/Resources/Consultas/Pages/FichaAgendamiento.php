@@ -28,6 +28,14 @@ use Illuminate\Contracts\View\View;
  */
 class FichaAgendamiento extends ViewRecord
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::consultas(\App\Filament\Admin\Support\Migas::pestanaConsulta($this->getRecord()), $this->getRecord(), 'Ficha de agendamiento');
+    }
+
     protected static string $resource = ConsultaResource::class;
 
     /** Opciones del selector de "Cerrar caso" que no son un EstadoConsulta directo. */
@@ -79,20 +87,6 @@ class FichaAgendamiento extends ViewRecord
     public function getTitle(): string
     {
         return 'Agendamiento — N° '.$this->getRecord()->getKey();
-    }
-
-    /** Sin encabezado visible en la página (solo queda en la pestaña del navegador y en la migaja de pan). */
-    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable|null
-    {
-        return null;
-    }
-
-    public function getBreadcrumbs(): array
-    {
-        $breadcrumbs = $this->getResourceBreadcrumbs();
-        $breadcrumbs[] = $this->getRecordTitle();
-
-        return $breadcrumbs;
     }
 
     protected function getHeaderActions(): array

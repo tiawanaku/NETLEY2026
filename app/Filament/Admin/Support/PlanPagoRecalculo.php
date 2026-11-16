@@ -82,7 +82,7 @@ class PlanPagoRecalculo
                 'monto' => $monto,
                 ...$datosPago,
                 'nro_cuota' => $cuota->numero,
-                'nro_recibo' => ((int) Pago::max('nro_recibo')) + 1,
+                'nro_recibo' => Pago::siguienteRecibo(),
                 'registrado_por' => auth()->user()?->username,
             ]);
 
@@ -117,9 +117,12 @@ class PlanPagoRecalculo
     }
 
     /**
-     * Corrige un pago ya registrado. Guarda la justificación y lo que cambió
-     * (PagoCorreccion), ajusta pagado/saldo del caso por la diferencia y
-     * vuelve a calcular el plan.
+     * Corrige un pago ya registrado: el recibo original queda ANULADO (con
+     * fecha, motivo y quién lo anuló; ver Contabilidad › Recibos anulados) y
+     * se emite un recibo NUEVO, con otro número, con los datos corregidos.
+     * Queda también el historial de la corrección (PagoCorreccion), el
+     * pagado/saldo del caso pasa del monto viejo al nuevo y se recalcula el
+     * plan; la cuota pagada toma el monto y la fecha del recibo nuevo.
      *
      * @param  array<string, mixed>  $datos  monto, fecha_pago, forma_pago, nro_cheque, banco, sucursal
      */
@@ -139,35 +142,46 @@ class PlanPagoRecalculo
                 throw ValidationException::withMessages(['monto' => 'Con ese monto se pagaría más que la Iguala Netley: el máximo es Bs. '.self::bs($montoAnterior + (float) $caso->saldo).'.']);
             }
 
-            $campos = ['monto', 'fecha_pago', 'forma_pago', 'nro_cheque', 'banco', 'sucursal'];
-            $antes = collect($pago->only($campos))->map(fn ($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : $v)->all();
+            $campos = ['nro_recibo', 'monto', 'fecha_pago', 'forma_pago', 'nro_cheque', 'banco', 'sucursal'];
+            $foto = fn (Pago $p) => collect($p->only($campos))->map(fn ($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : $v)->all();
+            $antes = $foto($pago);
 
-            $pago->update(collect($datos)->only($campos)->all());
+            // 1) Anular el recibo original: su monto deja de contar en el caso.
+            $pago->forceFill([
+                'anulado' => true,
+                'anulado_at' => now(),
+                'motivo_anulacion' => trim($justificacion),
+                'anulado_por' => auth()->user()?->username,
+            ])->save();
+            $caso->increment('saldo', $montoAnterior);
+            $caso->decrement('pagado', $montoAnterior);
 
-            $despues = collect($pago->fresh()->only($campos))->map(fn ($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : $v)->all();
+            // 2) Recibo nuevo con los datos corregidos (PagoObserver suma su monto).
+            $nuevo = Pago::create([
+                ...$pago->only(['caso_id', 'cliente_id', 'tipo_pago', 'nro_cuota', 'forma_pago', 'nro_cheque', 'banco', 'fecha_pago', 'sucursal']),
+                ...collect($datos)->only(['monto', 'fecha_pago', 'forma_pago', 'nro_cheque', 'banco', 'sucursal'])->all(),
+                'nro_recibo' => Pago::siguienteRecibo(),
+                'registrado_por' => auth()->user()?->username,
+            ]);
+
+            $pago->forceFill(['reemplazado_por_id' => $nuevo->id])->save();
 
             PagoCorreccion::create([
-                'pago_id' => $pago->id,
+                'pago_id' => $nuevo->id,
                 'caso_id' => $caso->id,
                 'justificacion' => trim($justificacion),
                 'antes' => $antes,
-                'despues' => $despues,
+                'despues' => $foto($nuevo->fresh()),
                 'corregido_por' => auth()->user()?->username,
             ]);
 
-            // El PagoObserver solo ajusta al crear/borrar: acá la diferencia.
-            if ($diferencia != 0.0) {
-                $caso->decrement('saldo', $diferencia);
-                $caso->increment('pagado', $diferencia);
-
-                // La cuota pagada con este pago refleja el monto corregido.
-                $caso->planesPago()->where('numero', $pago->nro_cuota)->where('estado', EstadoCuota::Pagado)
-                    ->update(['monto' => $montoNuevo]);
-            }
+            // 3) La cuota pagada refleja el recibo nuevo (monto y fecha).
+            $caso->planesPago()->where('numero', $pago->nro_cuota)->where('estado', EstadoCuota::Pagado)
+                ->update(['monto' => $montoNuevo, 'fecha' => $nuevo->fecha_pago]);
 
             self::recalcular($caso->fresh());
 
-            return $pago->fresh();
+            return $nuevo->fresh();
         });
     }
 

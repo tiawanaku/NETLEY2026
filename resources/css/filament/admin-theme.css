@@ -446,3 +446,51 @@
 .netley-menu-modo-switch.is-on .netley-menu-modo-knob {
     transform: translateX(1rem);
 }
+
+/* Documentos del caso (Casos > Documentos > "Añadir documentos"): nombre del
+   archivo angosto y la descripción hasta el borde del formulario; debajo, a
+   todo el ancho, los casilleros "Visible para: Netley / Cliente". */
+/* La cuadrícula va solo en la grilla interna (la base de .netley-fila-documento
+   también la pone en el contenedor, que tiene un único hijo y lo dejaba en
+   la primera columna, angosto). */
+.netley-fila-documento-ancha .fi-fo-repeater-item-content {
+    display: block !important;
+}
+
+.netley-fila-documento-ancha .fi-fo-repeater-item-content > .fi-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2.5fr) !important;
+    gap: 1rem;
+    width: 100%;
+}
+
+.netley-fila-documento-ancha .fi-grid-col:has(.netley-documento-visibilidad) {
+    grid-column: 1 / -1 !important;
+}
+
+.netley-documento-visibilidad > .fi-grid {
+    grid-template-columns: max-content max-content max-content !important;
+    column-gap: 2rem;
+    align-items: center;
+}
+
+/* Los tres a la misma altura (sin el margen propio de cada campo). */
+.netley-documento-visibilidad .fi-fo-field,
+.netley-documento-visibilidad .fi-fo-placeholder {
+    margin: 0 !important;
+}
+
+/* Editar documento (Casos > Documentos): descripción a la izquierda y los
+   casilleros "Visible para" a su lado, alineados con el campo. */
+.netley-editar-documento-fila > .fi-grid {
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+    align-items: end;
+    column-gap: 2rem;
+}
+
+.netley-editar-documento-fila .netley-documento-visibilidad {
+    min-height: 2.25rem;
+    display: flex;
+    align-items: center;
+}
+

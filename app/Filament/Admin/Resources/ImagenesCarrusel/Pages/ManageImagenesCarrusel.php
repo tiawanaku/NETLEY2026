@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ManageRecords;
 
 class ManageImagenesCarrusel extends ManageRecords
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = ImagenCarruselResource::class;
 
     protected function getHeaderActions(): array

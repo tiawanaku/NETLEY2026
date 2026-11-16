@@ -311,7 +311,7 @@ class CasoActions
                     ...CamposPago::datos($data),
                     'fecha_pago' => $data['fecha_pago'],
                     'nro_cuota' => $plan?->numero ?? 0,
-                    'nro_recibo' => ((int) Pago::max('nro_recibo')) + 1,
+                    'nro_recibo' => Pago::siguienteRecibo(),
                     'sucursal' => $data['sucursal'],
                     'registrado_por' => auth()->user()?->username,
                 ]);

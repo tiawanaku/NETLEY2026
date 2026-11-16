@@ -38,6 +38,14 @@ use Illuminate\Support\HtmlString;
  */
 class VerAgendado extends EditRecord
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::consultas('agendados', $this->getRecord());
+    }
+
     protected static string $resource = ConsultaResource::class;
 
     public bool $editando = false;
@@ -337,14 +345,6 @@ class VerAgendado extends EditRecord
             // cerradas", donde queda ahora esta consulta.
             $this->redirect(ConsultaResource::getUrl('index').'?tab=cerradas');
         }
-    }
-
-    public function getBreadcrumbs(): array
-    {
-        $breadcrumbs = $this->getResourceBreadcrumbs();
-        $breadcrumbs[] = $this->getRecordTitle();
-
-        return $breadcrumbs;
     }
 
     protected function mutateFormDataBeforeSave(array $data): array

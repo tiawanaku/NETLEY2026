@@ -9,6 +9,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditLlamada extends EditRecord
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = LlamadaResource::class;
 
     protected function getHeaderActions(): array

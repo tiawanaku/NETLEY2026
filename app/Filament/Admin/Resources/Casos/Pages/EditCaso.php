@@ -11,6 +11,14 @@ use Illuminate\Contracts\View\View;
 
 class EditCaso extends EditRecord
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::caso($this->getRecord());
+    }
+
     protected static string $resource = CasoResource::class;
 
     /**

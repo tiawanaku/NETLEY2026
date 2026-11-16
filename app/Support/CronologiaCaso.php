@@ -86,6 +86,7 @@ class CronologiaCaso
             $cambios = collect($correccion->despues)
                 ->filter(fn ($valor, $campo) => ($correccion->antes[$campo] ?? null) != $valor)
                 ->map(fn ($valor, $campo) => match ($campo) {
+                    'nro_recibo' => 'recibo N° '.($correccion->antes['nro_recibo'] ?? '—').' anulado → nuevo N° '.$valor,
                     'monto' => 'monto '.$bs($correccion->antes['monto'] ?? 0).' → '.$bs($valor),
                     'fecha_pago' => 'fecha '.\Illuminate\Support\Carbon::parse($correccion->antes['fecha_pago'])->format('d/m/Y').' → '.\Illuminate\Support\Carbon::parse($valor)->format('d/m/Y'),
                     'forma_pago' => 'forma de pago '.ucfirst((string) ($correccion->antes['forma_pago'] ?? '—')).' → '.ucfirst((string) $valor),

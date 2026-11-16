@@ -15,6 +15,14 @@ use Illuminate\Support\HtmlString;
 
 class CreateConsulta extends CreateRecord
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::consultas(null, null, 'Nueva consulta');
+    }
+
     protected static string $resource = ConsultaResource::class;
 
     public function form(Schema $schema): Schema

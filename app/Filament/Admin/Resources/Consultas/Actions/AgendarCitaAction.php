@@ -111,7 +111,8 @@ class AgendarCitaAction
                 TextInput::make('bs_comision')->label('Bs. Comisión')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
                 Repeater::make('documentos')
                     ->label('Adjuntar documentos')
-                    ->extraAttributes(['class' => 'netley-fila-documento'])
+                    // -ancha: la descripción llega hasta el borde (admin-theme.css).
+                    ->extraAttributes(['class' => 'netley-fila-documento netley-fila-documento-ancha'])
                     ->schema([
                         // El archivo ya llega adjunto desde el clip (ver
                         // AdjuntarDocumentosClip): este campo solo sigue

@@ -2,7 +2,10 @@
 
 namespace App\Filament\Admin\Resources\Casos\Schemas;
 
+use App\Enums\EstadoPersonal;
 use App\Filament\Admin\Support\AdjuntarDocumentosClip;
+use App\Models\Caso;
+use App\Models\Personal;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
@@ -28,17 +31,60 @@ class CierreCasoSchema
         'otro' => 'Otro',
     ];
 
+    /**
+     * Personal habilitado (todas las profesiones), por nombre completo.
+     *
+     * @return array<string, string>
+     */
+    protected static function opcionesPersonal(): array
+    {
+        return Personal::query()
+            ->where('estado', EstadoPersonal::Habilitado)
+            ->orderBy('nombres')
+            ->get()
+            ->mapWithKeys(fn (Personal $personal) => [
+                $personal->nombre_completo => $personal->nombre_completo.(filled($personal->profesion) ? ' — '.$personal->profesion : ''),
+            ])
+            ->all();
+    }
+
     public static function make(): array
     {
         return [
+            // Orden pedido: fecha de cierre, abogado responsable, resultado.
+            DatePicker::make('fecha_cierre')->label('Fecha de cierre')->default(now())->required(),
+            // Abogados habilitados (más los del caso, aunque hoy no lo
+            // estén); llega elegido el primer abogado asignado al caso.
+            Select::make('abogado_responsable')
+                ->label('Abogado responsable')
+                ->options(fn (?Caso $record): array => Personal::query()
+                    ->where('profesion', 'Abogado')
+                    ->where(fn ($q) => $q->where('estado', EstadoPersonal::Habilitado)
+                        ->when($record, fn ($q) => $q->orWhereIn('id', $record->personal()->pluck('personal.id'))))
+                    ->orderBy('nombres')
+                    ->get()
+                    ->mapWithKeys(fn (Personal $personal) => [$personal->nombre_completo => $personal->nombre_completo])
+                    ->all())
+                ->default(fn (?Caso $record): ?string => $record?->personal()->where('profesion', 'Abogado')->first()?->nombre_completo)
+                ->searchable()
+                ->native(false)
+                ->required(),
             Select::make('resultado')
                 ->options(self::$resultados)
                 ->required(),
-            DatePicker::make('fecha_cierre')->default(now())->required(),
             TextInput::make('saldo')->numeric()->prefix('Bs.')->default(0)->label('Saldo pendiente al cierre'),
             TextInput::make('perdida')->numeric()->prefix('Bs.')->default(0)->label('Pérdida (si aplica)'),
-            TextInput::make('asume')->label('¿Quién asume el saldo/pérdida?'),
-            TextInput::make('seguimiento_responsable')->label('Responsable de seguimiento posterior'),
+            // Personal registrado (habilitado); se guarda el nombre.
+            Select::make('asume')
+                ->label('¿Quién asume el saldo/pérdida?')
+                ->options(fn (): array => self::opcionesPersonal())
+                ->searchable()
+                ->native(false),
+            Select::make('seguimiento_responsable')
+                ->label('Responsable de seguimiento posterior')
+                ->options(fn (): array => self::opcionesPersonal())
+                ->searchable()
+                ->native(false),
             Textarea::make('opciones')->label('Opción de cierre')->columnSpanFull(),
             Textarea::make('nota_netley')->label('Nota interna')->columnSpanFull(),
             // Al final, documentos del cierre con el mismo formato de todo el

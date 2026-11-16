@@ -9,6 +9,8 @@ use Filament\Schemas\Components\Tabs\Tab;
 
 class ListLlamadas extends ListRecords
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = LlamadaResource::class;
 
     protected function getHeaderActions(): array

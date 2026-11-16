@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditTestimonio extends EditRecord
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = TestimonioResource::class;
 
     protected function getHeaderActions(): array

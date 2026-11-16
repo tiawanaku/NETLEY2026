@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListPagos extends ListRecords
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = PagoResource::class;
 
     protected function getHeaderActions(): array

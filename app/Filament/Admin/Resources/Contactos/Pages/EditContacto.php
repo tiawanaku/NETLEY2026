@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditContacto extends EditRecord
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = ContactoResource::class;
 
     protected function getHeaderActions(): array

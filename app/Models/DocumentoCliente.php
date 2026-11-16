@@ -21,6 +21,7 @@ class DocumentoCliente extends Model
         'tipo',
         'tipo_detalle',
         'subido_por_cliente',
+        'visible_cliente',
         'fecha_origen',
     ];
 
@@ -29,6 +30,7 @@ class DocumentoCliente extends Model
         return [
             'tipo' => TipoDocumento::class,
             'subido_por_cliente' => 'boolean',
+            'visible_cliente' => 'boolean',
             'fecha_origen' => 'datetime',
         ];
     }

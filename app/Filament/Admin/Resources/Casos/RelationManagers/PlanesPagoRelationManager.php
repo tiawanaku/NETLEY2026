@@ -128,6 +128,12 @@ class PlanesPagoRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('numero')
             ->columns([
+                // N° del recibo vigente con el que se pagó la cuota (los
+                // anulados no cuentan: el scope "vigentes" de Pago los excluye).
+                TextColumn::make('nro_recibo')
+                    ->label('N° recibo')
+                    ->state(fn (PlanPago $record) => self::pagoDeCuota($record)?->nro_recibo)
+                    ->placeholder('—'),
                 // La cuota pagada con el anticipo (al crear el caso) se marca como tal.
                 TextColumn::make('numero')
                     ->label('Cuota #')
@@ -176,6 +182,9 @@ class PlanesPagoRelationManager extends RelationManager
                     }),
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
+            // Botones alineados a la izquierda: "Realizar pago" queda justo debajo
+            // de "Imprimir recibo" (no al otro extremo de la columna).
+            ->recordActionsAlignment('start')
             ->recordActions([
                 // Plan dinámico (ver PlanPagoRecalculo): se paga en orden (solo
                 // la primera cuota pendiente), sin pasar del saldo, y la
@@ -311,6 +320,9 @@ class PlanesPagoRelationManager extends RelationManager
                                         return 'Recibo N° '.$pago->nro_recibo.' · Bs. '.PlanPagoRecalculo::bs((float) $pago->monto)
                                             .' · '.$pago->fecha_pago?->format('d/m/Y').' · '.ucfirst((string) $pago->forma_pago);
                                     }),
+                                Placeholder::make('aviso_anulacion')
+                                    ->hiddenLabel()
+                                    ->content('Al guardar, este recibo queda ANULADO y se emite uno nuevo, con otro número, con los datos corregidos.'),
                                 Textarea::make('justificacion')
                                     ->label('Justificación del error')
                                     ->placeholder('Explica qué estaba mal en este pago y por qué se corrige.')
@@ -350,7 +362,11 @@ class PlanesPagoRelationManager extends RelationManager
                             'sucursal' => $data['sucursal'],
                         ], $data['justificacion']);
 
-                        Notification::make()->title('Pago corregido')->body('La corrección quedó registrada con su justificación.')->success()->send();
+                        Notification::make()
+                            ->title('Recibo corregido')
+                            ->body('El recibo anterior quedó anulado (Contabilidad › Recibos anulados) y se emitió uno nuevo.')
+                            ->success()
+                            ->send();
                     }),
             ]);
     }

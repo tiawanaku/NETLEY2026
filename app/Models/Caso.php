@@ -20,11 +20,15 @@ class Caso extends Model
 
     protected $fillable = [
         'cliente_id',
+        'caso_origen_id',
         'especialidad',
         'materia_texto',
         'delito_id',
         'delito_texto',
         'descripcion',
+        'caso_tipo',
+        'caso_tipo_otro',
+        'caso_detalle',
         'apersonamiento',
         'servicio_psicologia',
         'servicio_trabajo_social',
@@ -60,6 +64,13 @@ class Caso extends Model
      */
     protected static function booted(): void
     {
+        // "Especificar" de Detalles del proceso solo vale con "Otro".
+        static::saving(function (self $caso): void {
+            if ($caso->caso_tipo !== 'otro') {
+                $caso->caso_tipo_otro = null;
+            }
+        });
+
         static::deleted(function (self $caso): void {
             if (! $caso->isForceDeleting()) {
                 $caso->forceFill(['estado' => EstadoCaso::Eliminado])->saveQuietly();
@@ -173,6 +184,32 @@ class Caso extends Model
     public function informesCierre(): HasMany
     {
         return $this->hasMany(InformeCierreCaso::class);
+    }
+
+    /** Caso ganado del que salió este proceso de costas y costos. */
+    public function casoOrigen(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'caso_origen_id');
+    }
+
+    /** Procesos de costas y costos iniciados a partir de este caso. */
+    public function casosDerivados(): HasMany
+    {
+        return $this->hasMany(self::class, 'caso_origen_id');
+    }
+
+    /**
+     * ¿Falta iniciar costas y costos? Caso cerrado, ganado ("Se ganó el
+     * proceso" en el informe de cierre), con patrocinio HiH mayor a 0 y sin
+     * un proceso de costas ya iniciado (contando los eliminados).
+     */
+    public function requiereCostasYCostos(): bool
+    {
+        return $this->estado === EstadoCaso::Cerrado
+            && $this->patrocinio_hih
+            && (float) $this->monto_patrocinio > 0
+            && $this->informeCierre?->resultado === 'se_gano_proceso'
+            && ! $this->casosDerivados()->withTrashed()->exists();
     }
 
     public function fiscalias(): HasMany

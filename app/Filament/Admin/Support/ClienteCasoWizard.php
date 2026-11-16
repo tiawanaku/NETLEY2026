@@ -50,6 +50,19 @@ class ClienteCasoWizard
         return [
             Step::make('Validación de datos')
                 ->schema([
+                    // Solo con un cliente ya registrado ("Nuevo proceso" desde
+                    // su ficha): su ID, en la primera línea y sin poder cambiarse.
+                    TextInput::make('id_cliente')
+                        ->label('ID cliente')
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->visible(fn (?string $state): bool => filled($state)),
+                    // Hueco a su derecha: el resto de los campos sigue en el
+                    // mismo lugar que siempre (Nombres abajo a la izquierda).
+                    Placeholder::make('id_cliente_hueco')
+                        ->hiddenLabel()
+                        ->content('')
+                        ->visible(fn ($get): bool => filled($get('id_cliente'))),
                     TextInput::make('nombres')
                         ->required()
                         ->regex('/^[\pL\s\'-]+$/u')
@@ -565,7 +578,7 @@ class ClienteCasoWizard
             // Netley si así se cargó) — es la cuota 1 del plan (ver plan()),
             // no una cuota 0 aparte.
             if ($plan['pago_hoy'] > 0) {
-                $siguienteRecibo = ((int) Pago::max('nro_recibo')) + 1;
+                $siguienteRecibo = Pago::siguienteRecibo();
 
                 Pago::create([
                     'caso_id' => $caso->id,

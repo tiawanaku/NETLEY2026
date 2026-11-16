@@ -16,6 +16,7 @@ class InformeCierreCaso extends Model
         'caso_id',
         'cliente_id',
         'resultado',
+        'abogado_responsable',
         'saldo',
         'perdida',
         'asume',

@@ -7,6 +7,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateLlamada extends CreateRecord
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = LlamadaResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

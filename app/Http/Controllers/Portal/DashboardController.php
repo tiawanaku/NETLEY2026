@@ -22,7 +22,9 @@ class DashboardController extends Controller
                     ->orderBy('fecha')
                     ->orderBy('hora'),
                 'planesPago' => fn ($q) => $q->where('estado', EstadoCuota::Pendiente)->orderBy('fecha'),
-                'documentos' => fn ($q) => $q->orderByDesc('fecha_origen'),
+                // Solo los documentos marcados visibles para el cliente (y los que subió él).
+                'documentos' => fn ($q) => $q->where(fn ($w) => $w->where('visible_cliente', true)->orWhere('subido_por_cliente', true))
+                    ->orderByDesc('fecha_origen'),
             ])
             ->orderByDesc('created_at')
             ->get();

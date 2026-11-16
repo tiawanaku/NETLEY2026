@@ -11,6 +11,14 @@ use Illuminate\Validation\ValidationException;
 
 class CreatePersonal extends CreateRecord
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::personal(null, null, 'Nuevo personal');
+    }
+
     protected static string $resource = PersonalResource::class;
 
     protected static ?string $title = 'Agregar personal';

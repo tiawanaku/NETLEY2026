@@ -22,6 +22,14 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class ListCasos extends ListRecords
 {
+    // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
+    use \App\Filament\Admin\Concerns\MigasDeNavegacion;
+
+    protected function migas(): array
+    {
+        return \App\Filament\Admin\Support\Migas::listadoCasos($this->activeTab);
+    }
+
     protected static string $resource = CasoResource::class;
 
     public function getTitle(): string

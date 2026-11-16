@@ -37,6 +37,7 @@ class DocumentoController extends Controller
             'ruta' => $ruta,
             'descripcion' => $data['descripcion'] ?: $request->file('archivo')->getClientOriginalName(),
             'subido_por_cliente' => true,
+            'visible_cliente' => true,
             'fecha_origen' => now(),
         ]);
 
@@ -51,6 +52,7 @@ class DocumentoController extends Controller
         $cliente = Auth::guard('cliente')->user();
 
         abort_unless($documento->cliente_id === $cliente->id, 403);
+        abort_unless($documento->visible_cliente || $documento->subido_por_cliente, 403);
 
         return Storage::disk('local')->download($documento->ruta, $documento->descripcion ?: 'documento');
     }

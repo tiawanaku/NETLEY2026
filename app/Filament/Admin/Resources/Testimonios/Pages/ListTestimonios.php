@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListTestimonios extends ListRecords
 {
+    use \App\Filament\Admin\Concerns\MigasSimples;
+
     protected static string $resource = TestimonioResource::class;
 
     protected function getHeaderActions(): array
