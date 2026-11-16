@@ -400,25 +400,7 @@ class ClienteCasoWizard
             // reutiliza ese registro (la CI es única) y vuelve a la lista.
             $cliente = Cliente::withTrashed()->updateOrCreate(
                 ['ci' => $data['ci']],
-                [
-                    'nombres' => $data['nombres'],
-                    'ap_paterno' => $data['ap_paterno'],
-                    'ap_materno' => $data['ap_materno'] ?? null,
-                    'telefono' => $data['telefono'] ?? null,
-                    'whatsapp' => $data['whatsapp'] ?? null,
-                    'correo' => $data['correo'] ?? null,
-                    'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
-                    'direccion' => $data['direccion'] ?? null,
-                    'pais' => $data['pais'] ?? null,
-                    'provincia' => $data['provincia'] ?? null,
-                    'ciudad' => $data['ciudad'] ?? null,
-                    'zona' => $data['zona'] ?? null,
-                    'calles' => $data['calles'] ?? null,
-                    'numero_domicilio' => $data['numero_domicilio'] ?? null,
-                    'indicaciones_domicilio' => $data['indicaciones_domicilio'] ?? null,
-                    'ubicacion' => CamposDomicilio::ubicacionValida($data['ubicacion'] ?? null),
-                    'extension' => $data['extension'] ?? null,
-                ]
+                self::datosCliente($data)
             );
 
             $caso = self::crearCaso($cliente, $data);
@@ -427,6 +409,58 @@ class ClienteCasoWizard
 
             return ['cliente' => $cliente, 'caso' => $caso];
         });
+    }
+
+    /**
+     * "Nuevo proceso" desde la ficha de un cliente que ya existe (los 4
+     * pasos, ver EditCliente::anadirCasoAction()): actualiza los datos
+     * personales de ESE cliente con lo del paso 1 (aunque cambie la CI, no
+     * crea otro cliente) y le agrega el caso nuevo con su pago, plan y
+     * documentos.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{cliente: Cliente, caso: Caso}
+     */
+    public static function crearParaCliente(Cliente $cliente, array $data): array
+    {
+        return DB::transaction(function () use ($cliente, $data): array {
+            $cliente->update([...self::datosCliente($data), 'ci' => $data['ci']]);
+
+            $caso = self::crearCaso($cliente, $data);
+
+            self::guardarDocumentos($cliente, $caso, $data['documentos'] ?? []);
+
+            return ['cliente' => $cliente->fresh(), 'caso' => $caso];
+        });
+    }
+
+    /**
+     * Datos personales del paso 1 tal como se guardan en el cliente.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function datosCliente(array $data): array
+    {
+        return [
+            'nombres' => $data['nombres'],
+            'ap_paterno' => $data['ap_paterno'],
+            'ap_materno' => $data['ap_materno'] ?? null,
+            'telefono' => $data['telefono'] ?? null,
+            'whatsapp' => $data['whatsapp'] ?? null,
+            'correo' => $data['correo'] ?? null,
+            'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
+            'direccion' => $data['direccion'] ?? null,
+            'pais' => $data['pais'] ?? null,
+            'provincia' => $data['provincia'] ?? null,
+            'ciudad' => $data['ciudad'] ?? null,
+            'zona' => $data['zona'] ?? null,
+            'calles' => $data['calles'] ?? null,
+            'numero_domicilio' => $data['numero_domicilio'] ?? null,
+            'indicaciones_domicilio' => $data['indicaciones_domicilio'] ?? null,
+            'ubicacion' => CamposDomicilio::ubicacionValida($data['ubicacion'] ?? null),
+            'extension' => $data['extension'] ?? null,
+        ];
     }
 
     /**

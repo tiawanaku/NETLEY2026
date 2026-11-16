@@ -235,7 +235,8 @@ class PlanesPagoRelationManager extends RelationManager
                                 return 'Saldo después del pago: Bs. '.PlanPagoRecalculo::bs($vista['saldo']).'. Las '.$vista['restantes'].' cuotas restantes quedarán en Bs. '
                                     .$vista['monto_cuota'].($vista['ultima'] != $vista['monto_cuota'] ? ' (la última Bs. '.PlanPagoRecalculo::bs($vista['ultima']).')' : '').'.';
                             }),
-                        ...CamposPago::components(),
+                        // Sin "Tipo de pago" (a pedido): queda "a cuenta"; el recibo lo muestra como "Cuota N°".
+                        ...CamposPago::components(conTipo: false),
                         DatePicker::make('fecha_pago')->label('Fecha de pago')->default(now())->required(),
                         Select::make('sucursal')
                             ->options(['LA PAZ' => 'La Paz', 'SANTA CRUZ' => 'Santa Cruz', 'COCHABAMBA' => 'Cochabamba'])
@@ -250,6 +251,27 @@ class PlanesPagoRelationManager extends RelationManager
                         ]);
 
                         Notification::make()->title('Pago registrado')->success()->send();
+                    }),
+                Action::make('imprimirRecibo')
+                    ->label('Imprimir recibo')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->visible(fn (PlanPago $record) => $record->estado === EstadoCuota::Pagado)
+                    ->action(function (PlanPago $record) {
+                        $pago = Pago::where('caso_id', $record->caso_id)
+                            ->where('nro_cuota', $record->numero)
+                            ->latest('id')
+                            ->first();
+
+                        if (! $pago) {
+                            Notification::make()->title('No se encontró el pago de esta cuota')->danger()->send();
+
+                            return null;
+                        }
+
+                        return response()->streamDownload(
+                            fn () => print (Pdf::loadView('pdf.recibo-pago', ['pago' => $pago->load(['cliente', 'caso'])])->output()),
+                            "recibo-{$pago->nro_recibo}.pdf"
+                        );
                     }),
                 // Corregir un pago ya registrado: primero se pide la
                 // justificación del error y recién después se habilitan los
@@ -329,27 +351,6 @@ class PlanesPagoRelationManager extends RelationManager
                         ], $data['justificacion']);
 
                         Notification::make()->title('Pago corregido')->body('La corrección quedó registrada con su justificación.')->success()->send();
-                    }),
-                Action::make('imprimirRecibo')
-                    ->label('Imprimir recibo')
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->visible(fn (PlanPago $record) => $record->estado === EstadoCuota::Pagado)
-                    ->action(function (PlanPago $record) {
-                        $pago = Pago::where('caso_id', $record->caso_id)
-                            ->where('nro_cuota', $record->numero)
-                            ->latest('id')
-                            ->first();
-
-                        if (! $pago) {
-                            Notification::make()->title('No se encontró el pago de esta cuota')->danger()->send();
-
-                            return null;
-                        }
-
-                        return response()->streamDownload(
-                            fn () => print (Pdf::loadView('pdf.recibo-pago', ['pago' => $pago->load(['cliente', 'caso'])])->output()),
-                            "recibo-{$pago->nro_recibo}.pdf"
-                        );
                     }),
             ]);
     }

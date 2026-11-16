@@ -50,13 +50,35 @@ class CasoActions
             ->color('danger')
             ->visible(fn (Caso $record) => $record->estado !== EstadoCaso::Cerrado)
             ->schema(CierreCasoSchema::make())
+            ->modalWidth('3xl')
+            ->modalSubmitActionLabel('Guardar')
+            ->modalCancelActionLabel('Cancelar')
             ->action(function (Caso $record, array $data): void {
-                $record->informesCierre()->create([
-                    'cliente_id' => $record->cliente_id,
-                    'creado_por' => auth()->user()?->username,
-                    ...$data,
-                ]);
-                $record->update(['estado' => EstadoCaso::Cerrado]);
+                $documentos = $data['documentos'] ?? [];
+                unset($data['documentos']);
+
+                DB::transaction(function () use ($record, $data, $documentos): void {
+                    $record->informesCierre()->create([
+                        'cliente_id' => $record->cliente_id,
+                        'creado_por' => auth()->user()?->username,
+                        ...$data,
+                    ]);
+                    $record->update(['estado' => EstadoCaso::Cerrado]);
+
+                    // Documentos del cierre: a la pestaña Documentos del caso.
+                    foreach ($documentos as $documento) {
+                        if (blank($documento['ruta'] ?? null)) {
+                            continue;
+                        }
+
+                        $record->documentos()->create([
+                            'cliente_id' => $record->cliente_id,
+                            'ruta' => is_array($documento['ruta']) ? collect($documento['ruta'])->first() : $documento['ruta'],
+                            'descripcion' => filled($documento['descripcion'] ?? null) ? $documento['descripcion'] : 'Cierre del caso',
+                            'fecha_origen' => now(),
+                        ]);
+                    }
+                });
 
                 Notification::make()->title('Caso cerrado')->success()->send();
             });

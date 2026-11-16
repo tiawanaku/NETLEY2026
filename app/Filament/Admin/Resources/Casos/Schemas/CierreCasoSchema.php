@@ -2,10 +2,15 @@
 
 namespace App\Filament\Admin\Resources\Casos\Schemas;
 
+use App\Filament\Admin\Support\AdjuntarDocumentosClip;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
 
 /**
  * Formulario del informe de cierre de caso (reemplaza informe_cierre_caso.php).
@@ -36,6 +41,32 @@ class CierreCasoSchema
             TextInput::make('seguimiento_responsable')->label('Responsable de seguimiento posterior'),
             Textarea::make('opciones')->label('Opción de cierre')->columnSpanFull(),
             Textarea::make('nota_netley')->label('Nota interna')->columnSpanFull(),
+            // Al final, documentos del cierre con el mismo formato de todo el
+            // sistema: el clip agrega filas (archivo + descripción). Se
+            // guardan en la pestaña Documentos del caso (ver
+            // CasoActions::cerrar()).
+            Repeater::make('documentos')
+                ->label('Documentos del cierre')
+                ->extraAttributes(['class' => 'netley-fila-documento'])
+                ->schema([
+                    FileUpload::make('ruta')
+                        ->hiddenLabel()
+                        ->directory('documentos-clientes')
+                        ->extraAttributes(['class' => 'netley-documento-oculto'])
+                        ->required(),
+                    Placeholder::make('nombreArchivo')
+                        ->label('Archivo')
+                        ->content(fn (Get $get) => AdjuntarDocumentosClip::nombreArchivo($get('ruta')) ?? '—'),
+                    TextInput::make('descripcion')
+                        ->label('Descripción')
+                        ->maxLength(100),
+                ])
+                ->columns(2)
+                ->addable(false)
+                ->reorderable(false)
+                ->defaultItems(0)
+                ->columnSpanFull(),
+            AdjuntarDocumentosClip::make('documentos', 'documentos-clientes'),
         ];
     }
 }

@@ -15,7 +15,7 @@ class CasosRelationManager extends RelationManager
 {
     protected static string $relationship = 'casos';
 
-    protected static ?string $title = 'Casos';
+    protected static ?string $title = 'Datos del proceso';
 
     protected static string|\BackedEnum|null $icon = 'heroicon-o-briefcase';
 
@@ -65,8 +65,6 @@ class CasosRelationManager extends RelationManager
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
                     ->url(fn ($record) => CasoResource::getUrl('edit', ['record' => $record])),
-                // Lo manda a "Casos eliminados" (se puede restaurar).
-                \App\Filament\Admin\Resources\Casos\Actions\CasoActions::eliminar()->label('Eliminar'),
             ]);
     }
 }

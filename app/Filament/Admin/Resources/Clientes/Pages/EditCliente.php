@@ -5,10 +5,11 @@ namespace App\Filament\Admin\Resources\Clientes\Pages;
 use App\Filament\Admin\Resources\Casos\CasoResource;
 use App\Filament\Admin\Resources\Clientes\Actions\ClienteActions;
 use App\Filament\Admin\Resources\Clientes\ClienteResource;
+use App\Filament\Admin\Support\CamposDomicilio;
+use Filament\Schemas\Components\Wizard;
 use App\Filament\Admin\Support\ClienteCasoWizard;
 use App\Models\Cliente;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Component;
@@ -27,7 +28,7 @@ class EditCliente extends EditRecord
 
     public function getContentTabLabel(): ?string
     {
-        return 'Datos personales';
+        return 'Datos del cliente';
     }
 
     public function getContentTabIcon(): string
@@ -59,10 +60,9 @@ class EditCliente extends EditRecord
     /**
      * Acción de página (método xxxAction(): Filament la resuelve por nombre
      * desde mountAction('anadirCaso') del botón de la barra de pestañas).
-     * Mismos campos que los pasos "Proceso" y "Pago y plan de cuotas" del
-     * wizard de Cliente Ejecutivo, en un solo formulario (el cliente ya
-     * existe); el guardado replica la misma lógica financiera
-     * (ClienteCasoWizard::crearCaso()).
+     * Los mismos 4 pasos del formulario de Cliente ejecutivo: el paso 1 llega
+     * con los datos personales de este cliente (se pueden corregir) y el
+     * resto se llena para el caso nuevo (ClienteCasoWizard::crearParaCliente()).
      */
     protected function anadirCasoAction(): Action
     {
@@ -73,20 +73,43 @@ class EditCliente extends EditRecord
             ->visible(fn (): bool => CasoResource::canCreate())
             ->modalHeading('Nuevo proceso')
             ->modalWidth('5xl')
-            ->schema(fn (Schema $schema): Schema => $schema
-                ->inlineLabel()
-                ->columns(2)
-                ->components([
-                    ...ClienteCasoWizard::camposProceso(),
-                    ...ClienteCasoWizard::camposPago(),
-                ]))
-            ->modalSubmitActionLabel('Guardar')
-            ->modalCancelActionLabel('Cancelar')
-            ->action(function (array $data): void {
+            ->fillForm(function (): array {
                 /** @var Cliente $cliente */
                 $cliente = $this->getRecord();
 
-                ClienteCasoWizard::crearCaso($cliente, $data);
+                return [
+                    ...$cliente->only([
+                        'nombres', 'ap_paterno', 'ap_materno', 'telefono', 'whatsapp', 'correo',
+                        'ci', 'extension', 'fecha_nacimiento',
+                    ]),
+                    ...$cliente->only(CamposDomicilio::COLUMNAS),
+                    'fecha_inicio' => now()->toDateString(),
+                    'fecha_primera_cuota' => now()->addMonth()->toDateString(),
+                    'patrocinio_hih' => false,
+                    'servicio_psicologia' => false,
+                    'servicio_trabajo_social' => false,
+                    'servicio_otro' => false,
+                ];
+            })
+            // Mismo asistente que Cliente ejecutivo: Guardar solo en el paso
+            // 4 y sin Cancelar (se cierra con la X), ver AscenderCasoAction.
+            ->steps(ClienteCasoWizard::steps())
+            ->modifyWizardUsing(fn (Wizard $wizard): Wizard => $wizard
+                ->nextAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true'])))
+            ->modalCancelAction(false)
+            ->modalSubmitActionLabel('Guardar')
+            ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))
+            ->action(function (array $data, Action $action): void {
+                /** @var Cliente $cliente */
+                $cliente = $this->getRecord();
+
+                // La CI es única: si se cambió por la de otro cliente, no se guarda.
+                if (Cliente::withTrashed()->where('ci', $data['ci'])->whereKeyNot($cliente->getKey())->exists()) {
+                    Notification::make()->title('Esa CI ya pertenece a otro cliente')->body('Revisa el carnet de identidad en el paso 1.')->danger()->send();
+                    $action->halt();
+                }
+
+                ClienteCasoWizard::crearParaCliente($cliente, $data);
 
                 Notification::make()->title('Caso creado')->success()->send();
 
@@ -99,24 +122,8 @@ class EditCliente extends EditRecord
     {
         return [
             ClienteActions::gestionarAcceso(),
-            // Borrado lógico con fecha y justificación (ver Eliminacion);
-            // sus casos pasan a "Casos eliminados".
-            DeleteAction::make()
-                ->label('Eliminar')
-                ->visible(fn () => auth()->user()?->puede('eliminar'))
-                ->modalHeading(fn () => '¿Eliminar al cliente '.$this->getRecord()->nombre_completo.'?')
-                ->modalDescription('Sus casos pasan a "Casos eliminados", con sus pagos y documentos intactos, y se pueden restaurar desde ahí.')
-                ->modalWidth('lg')
-                ->fillForm(fn (): array => \App\Filament\Admin\Support\Eliminacion::valoresIniciales())
-                ->schema(\App\Filament\Admin\Support\Eliminacion::campos())
-                ->using(function (array $data): bool {
-                    \App\Filament\Admin\Support\Eliminacion::eliminar($this->getRecord(), $data);
-
-                    return true;
-                })
-                ->modalSubmitActionLabel('Eliminar')
-                ->modalCancelActionLabel('Cancelar')
-                ->successNotificationTitle('Cliente eliminado'),
+            // Sin "Eliminar" en la ficha (a pedido): el cliente se elimina
+            // desde el listado de Clientes ejecutivos.
         ];
     }
 
