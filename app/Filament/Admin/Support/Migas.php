@@ -17,7 +17,7 @@ use App\Models\Personal;
 /**
  * Ruta de navegación (migas de pan) de cada pantalla, armada según la
  * sección del menú lateral a la que pertenece: "Consultas › Agendados ›
- * N° 80", "Cliente Ejecutivo › Clientes ejecutivos › Juan Pérez › Caso N° 73",
+ * N° 80", "Clientes ejecutivos › ID 49 › Proceso N° 73",
  * etc. Cada escalón (menos el último) lleva a su pantalla. Ver
  * App\Filament\Admin\Concerns\MigasDeNavegacion.
  */
@@ -124,16 +124,18 @@ class Migas
         return $escalones;
     }
 
-    /** Cliente Ejecutivo › Clientes ejecutivos › Nombre */
+    /**
+     * Clientes ejecutivos › ID 49 (sin el grupo "Cliente Ejecutivo" delante,
+     * que repetía casi lo mismo; el cliente por su ID, no por el nombre).
+     */
     public static function clientes(?Cliente $cliente = null, ?string $extra = null): array
     {
         $escalones = [
-            ['Cliente Ejecutivo'],
             ['Clientes ejecutivos', $cliente || $extra ? ClienteResource::getUrl('index') : null],
         ];
 
         if ($cliente) {
-            $escalones[] = [$cliente->nombre_completo];
+            $escalones[] = [self::idCliente($cliente), $extra ? ClienteResource::getUrl('edit', ['record' => $cliente]) : null];
         }
 
         if ($extra) {
@@ -145,14 +147,14 @@ class Migas
 
     /**
      * Ficha del caso según dónde está en el menú:
-     * - eliminado: Cliente Ejecutivo › Casos eliminados › Caso N° X
-     * - cerrado:   Cliente Ejecutivo › Casos cerrados › Caso N° X
-     * - activo:    Cliente Ejecutivo › Clientes ejecutivos › Cliente › Caso N° X
+     * - eliminado: Cliente Ejecutivo › Casos eliminados › Proceso N° X
+     * - cerrado:   Cliente Ejecutivo › Casos cerrados › Proceso N° X
+     * - activo:    Clientes ejecutivos › ID cliente › Proceso N° X
      */
     public static function caso(Caso $caso): array
     {
         $base = CasoResource::getUrl('index');
-        $titulo = 'Caso N° '.$caso->getKey();
+        $titulo = 'Proceso N° '.$caso->getKey();
 
         if ($caso->trashed()) {
             return [['Cliente Ejecutivo'], ['Casos eliminados', $base.'?tab=eliminados'], [$titulo]];
@@ -162,15 +164,21 @@ class Migas
             return [['Cliente Ejecutivo'], ['Casos cerrados', $base.'?tab=cerrados'], [$titulo]];
         }
 
-        $escalones = [['Cliente Ejecutivo'], ['Clientes ejecutivos', ClienteResource::getUrl('index')]];
+        $escalones = [['Clientes ejecutivos', ClienteResource::getUrl('index')]];
 
         if ($caso->cliente) {
-            $escalones[] = [$caso->cliente->nombre_completo, ClienteResource::getUrl('edit', ['record' => $caso->cliente_id]).'?relation=0'];
+            $escalones[] = [self::idCliente($caso->cliente), ClienteResource::getUrl('edit', ['record' => $caso->cliente_id]).'?relation=0'];
         }
 
         $escalones[] = [$titulo];
 
         return $escalones;
+    }
+
+    /** El cliente en las migas: "ID 49" (el ID cliente del listado). */
+    public static function idCliente(Cliente $cliente): string
+    {
+        return 'ID '.($cliente->nro_cliente ?? $cliente->getKey());
     }
 
     /** Listado de casos: Cliente Ejecutivo › {Casos cerrados|Casos eliminados|Casos} */

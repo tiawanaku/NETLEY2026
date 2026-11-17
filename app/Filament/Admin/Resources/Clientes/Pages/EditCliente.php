@@ -103,7 +103,10 @@ class EditCliente extends EditRecord
                     'servicio_trabajo_social' => false,
                     'servicio_otro' => false,
                     ...(($origen = $this->casoOrigenCostas($arguments))
-                        ? ['descripcion' => 'Costas y costos del caso N° '.$origen->id.($origen->materia_legal ? ' ('.$origen->materia_legal.')' : '')]
+                        ? ['descripcion' => 'Costas y costos del caso N° '.$origen->id.($origen->materia_legal ? ' ('.$origen->materia_legal.')' : '')
+                            // Saldo y responsable indicados al cerrar el caso ganado.
+                            .($origen->informeCierre ? '. Saldo al cierre: Bs. '.number_format((float) $origen->informeCierre->saldo, 2, '.', '')
+                                .(filled($origen->informeCierre->asume) ? ' — responsable: '.$origen->informeCierre->asume : '') : '')]
                         : []),
                 ];
             })

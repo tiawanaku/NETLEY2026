@@ -53,9 +53,14 @@ class CasoActions
             ->modalWidth('3xl')
             ->modalSubmitActionLabel('Guardar')
             ->modalCancelActionLabel('Cancelar')
-            ->action(function (Caso $record, array $data): void {
+            ->action(function (Caso $record, array $data, $livewire): void {
                 $documentos = $data['documentos'] ?? [];
                 unset($data['documentos']);
+
+                // Perdido / acuerdo / desistimiento / abandono: la pérdida es el saldo.
+                if (in_array($data['resultado'] ?? null, CierreCasoSchema::CON_PERDIDA, true)) {
+                    $data['perdida'] = $data['saldo'] ?? 0;
+                }
 
                 DB::transaction(function () use ($record, $data, $documentos): void {
                     $record->informesCierre()->create([
@@ -79,6 +84,17 @@ class CasoActions
                         ]);
                     }
                 });
+
+                // Ganado con patrocinio HiH: sigue directo al proceso de costas
+                // y costos (asistente "Nuevo proceso" en la ficha del cliente).
+                if ($record->fresh()->requiereCostasYCostos() && \App\Filament\Admin\Resources\Casos\CasoResource::canCreate()) {
+                    Notification::make()->title('Caso cerrado')->body('Continúa con el proceso de costas y costos.')->success()->send();
+
+                    $livewire->redirect(ClienteResource::getUrl('edit', ['record' => $record->cliente_id])
+                        .'?'.http_build_query(['action' => 'anadirCaso', 'actionArguments' => ['origen' => $record->id]]));
+
+                    return;
+                }
 
                 Notification::make()->title('Caso cerrado')->success()->send();
             });

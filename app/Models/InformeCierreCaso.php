@@ -12,6 +12,22 @@ class InformeCierreCaso extends Model
 
     protected $table = 'informes_cierre_caso';
 
+    /** Opciones de "Resultado" del cierre (se guarda la clave). */
+    public const RESULTADOS = [
+        'se_gano_proceso' => 'Se ganó el proceso',
+        'se_perdio_proceso' => 'Se perdió el proceso',
+        'transaccion' => 'Transacción / acuerdo',
+        'desistimiento' => 'Desistimiento',
+        'abandono' => 'Abandono',
+        'otro' => 'Otro',
+    ];
+
+    /** Resultado para mostrar; los importados con texto libre se ven tal cual. */
+    public function getResultadoTextoAttribute(): ?string
+    {
+        return self::RESULTADOS[$this->resultado] ?? $this->resultado;
+    }
+
     protected $fillable = [
         'caso_id',
         'cliente_id',

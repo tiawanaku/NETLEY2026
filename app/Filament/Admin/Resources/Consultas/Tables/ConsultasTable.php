@@ -134,7 +134,8 @@ class ConsultasTable
                 ? fn (Builder $query): Builder => $query->orderByRaw(
                     '(select timestamp(c.fecha, c.hora) from citas c where c.consulta_id = consultas.id and c.anulada = 0 order by c.id desc limit 1) asc'
                 )
-                : 'fecha_consulta', $esAgendados ? 'asc' : 'desc')
+                // Nuevas: por N° de consulta, la más nueva arriba.
+                : (in_array($pestana, [null, 'nuevas'], true) ? 'id' : 'fecha_consulta'), $esAgendados ? 'asc' : 'desc')
             ->filters([
                 SelectFilter::make('estado')->options(EstadoConsulta::class),
                 ...FiltrosContacto::make(),

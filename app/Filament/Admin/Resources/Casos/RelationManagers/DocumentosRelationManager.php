@@ -57,7 +57,12 @@ class DocumentosRelationManager extends RelationManager
                         $record->subido_por_cliente ? 'Subido por el cliente' : null,
                     ])->filter()->implode(' · ') ?: null)
                     ->searchable(),
-                // Los mismos casilleros del formulario, solo de lectura
+                TextColumn::make('ruta')
+                    ->label('Documento')
+                    ->formatStateUsing(fn (?string $state) => $state ? basename($state) : '—')
+                    ->color('gray')
+                    ->wrap(),
+                // Al final de la tabla: los mismos casilleros del formulario, solo de lectura
                 // (se cambian con "Editar").
                 TextColumn::make('visible_para')
                     ->label('Visible para')
@@ -68,11 +73,6 @@ class DocumentosRelationManager extends RelationManager
                         .'<span style="display:inline-block;width:1.25rem;"></span>'
                         .self::casilleroHtml('Cliente', (bool) $record->visible_cliente)
                     )),
-                TextColumn::make('ruta')
-                    ->label('Documento')
-                    ->formatStateUsing(fn (?string $state) => $state ? basename($state) : '—')
-                    ->color('gray')
-                    ->wrap(),
             ])
             ->defaultSort('id')
             ->headerActions([

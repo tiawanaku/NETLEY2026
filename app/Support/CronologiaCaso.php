@@ -142,7 +142,7 @@ class CronologiaCaso
 
         foreach ($caso->informesCierre as $informe) {
             $agregar($informe->fecha_cierre ?? $informe->created_at, 'cierre', 'Caso cerrado',
-                collect([$informe->resultado ? 'Resultado: '.$informe->resultado : null, $informe->nota_netley])->filter()->join(' · '));
+                collect([$informe->resultado ? 'Resultado: '.$informe->resultado_texto : null, $informe->nota_netley])->filter()->join(' · '));
         }
 
         // Vencimiento estimado del proceso (si todavía no pasó).

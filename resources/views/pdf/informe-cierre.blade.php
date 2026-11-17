@@ -24,13 +24,18 @@
         <tr><td class="label">Cliente</td><td>{{ $informe->caso->cliente->nombre_completo }}</td></tr>
         <tr><td class="label">Materia</td><td>{{ $informe->caso->materia_legal }}</td></tr>
         <tr><td class="label">Abogado responsable</td><td>{{ $informe->abogado_responsable ?: '-' }}</td></tr>
-        <tr><td class="label">Resultado</td><td>{{ $informe->resultado }}</td></tr>
+        <tr><td class="label">Resultado</td><td>{{ $informe->resultado_texto }}</td></tr>
         <tr><td class="label">Fecha de cierre</td><td>{{ optional($informe->fecha_cierre)->format('d/m/Y') }}</td></tr>
         <tr><td class="label">Saldo pendiente</td><td>Bs. {{ number_format($informe->saldo, 2) }}</td></tr>
         <tr><td class="label">Pérdida</td><td>Bs. {{ number_format($informe->perdida, 2) }}</td></tr>
         <tr><td class="label">Asume saldo/pérdida</td><td>{{ $informe->asume ?: '-' }}</td></tr>
-        <tr><td class="label">Responsable seguimiento</td><td>{{ $informe->seguimiento_responsable ?: '-' }}</td></tr>
-        <tr><td class="label">Opción de cierre</td><td>{{ $informe->opciones ?: '-' }}</td></tr>
+        {{-- Ya no se piden al cerrar; solo se ven en cierres anteriores que los tengan. --}}
+        @if (filled($informe->seguimiento_responsable))
+        <tr><td class="label">Responsable seguimiento</td><td>{{ $informe->seguimiento_responsable }}</td></tr>
+        @endif
+        @if (filled($informe->opciones))
+        <tr><td class="label">Opción de cierre</td><td>{{ $informe->opciones }}</td></tr>
+        @endif
         <tr><td class="label">Elaborado por</td><td>{{ $informe->creado_por ?: '-' }}</td></tr>
     </table>
 

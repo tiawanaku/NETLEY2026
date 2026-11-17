@@ -103,32 +103,6 @@ class CasoForm
                             ->content(fn (?Caso $record) => \App\Filament\Admin\Support\Eliminacion::enlaceDocumento($record?->documento_eliminacion)),
                     ]),
 
-                // Código que identifica al caso (NUREJ, CUD u otro escrito a
-                // mano) y su detalle.
-                Section::make('Detalles del proceso')
-                    ->schema([
-                        Select::make('caso_tipo')
-                            ->label('Caso')
-                            ->options(self::TIPOS_CASO)
-                            ->native(false)
-                            ->placeholder('Seleccionar')
-                            ->live()
-                            ->afterStateUpdated(fn ($state, $set) => $state === 'otro' ? null : $set('caso_tipo_otro', null))
-                            ->disabled($isEditing),
-                        TextInput::make('caso_tipo_otro')
-                            ->label('Especificar')
-                            ->maxLength(100)
-                            ->required(fn ($get) => $get('caso_tipo') === 'otro')
-                            ->visible(fn ($get) => $get('caso_tipo') === 'otro')
-                            ->disabled($isEditing),
-                        TextInput::make('caso_detalle')
-                            ->label('Detalle')
-                            ->maxLength(255)
-                            ->disabled($isEditing),
-                    ])
-                    ->columns(['default' => 1, 'lg' => 2])
-                    ->columnSpanFull(),
-
                 // Mismos campos, orden y disposición que el paso 2
                 // ("Proceso") del formulario de Cliente ejecutivo
                 // (ClienteCasoWizard::camposProceso()).
@@ -144,6 +118,31 @@ class CasoForm
                             ->preload()
                             ->required()
                             ->visibleOn('create')
+                            ->columnSpanFull(),
+                        // Lo primero: código que identifica al proceso (NUREJ,
+                        // CUD u otro escrito a mano) y su detalle. En su propia
+                        // grilla para que "Especificar" no corra los campos de abajo.
+                        Grid::make(['default' => 1, 'lg' => 2])
+                            ->schema([
+                            Select::make('caso_tipo')
+                                ->label('Caso')
+                                ->options(self::TIPOS_CASO)
+                                ->native(false)
+                                ->placeholder('Seleccionar')
+                                ->live()
+                                ->afterStateUpdated(fn ($state, $set) => $state === 'otro' ? null : $set('caso_tipo_otro', null))
+                                ->disabled($isEditing),
+                            TextInput::make('caso_tipo_otro')
+                                ->label('Especificar')
+                                ->maxLength(100)
+                                ->required(fn ($get) => $get('caso_tipo') === 'otro')
+                                ->visible(fn ($get) => $get('caso_tipo') === 'otro')
+                                ->disabled($isEditing),
+                            TextInput::make('caso_detalle')
+                                ->label('Detalle')
+                                ->maxLength(255)
+                                ->disabled($isEditing),
+                            ])
                             ->columnSpanFull(),
                         ...array_map(fn ($field) => $field->disabled($isEditing), DelitoSelect::make(delitoLabel: 'Tipo de proceso')),
                         // Casos creados con materia / delito "Otros" (escritos a mano).
