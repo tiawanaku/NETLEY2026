@@ -42,7 +42,7 @@ class FrontpageController extends Controller
             'captcha' => $this->captcha($request),
             'stats' => [
                 'casos' => Caso::query()->count(),
-                'resueltos' => Caso::query()->where('estado', EstadoCaso::Cerrado)->count(),
+                'resueltos' => Caso::query()->whereIn('estado', EstadoCaso::cerrados())->count(),
                 'clientes' => Cliente::query()->count(),
                 'abogados' => Personal::query()->where('profesion', 'Abogado')->count(),
             ],

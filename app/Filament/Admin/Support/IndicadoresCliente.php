@@ -30,7 +30,7 @@ class IndicadoresCliente
 {
     public static function render(Cliente $cliente): HtmlString
     {
-        $casosAbiertos = $cliente->casos->where('estado', '!=', EstadoCaso::Cerrado);
+        $casosAbiertos = $cliente->casos->filter(fn ($caso) => ! $caso->estado?->esCerrado());
 
         [$colorPago, $tituloPago] = self::estadoPago($casosAbiertos);
         [$colorVencimiento, $tituloVencimiento] = self::estadoVencimiento($casosAbiertos);

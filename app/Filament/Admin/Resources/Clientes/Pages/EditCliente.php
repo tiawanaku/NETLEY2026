@@ -102,7 +102,20 @@ class EditCliente extends EditRecord
                     'servicio_psicologia' => false,
                     'servicio_trabajo_social' => false,
                     'servicio_otro' => false,
+                    // Costas y costos: el paso 3 llega con los montos del caso
+                    // de origen (iguala profesional = iguala Netley + patrocinio).
                     ...(($origen = $this->casoOrigenCostas($arguments))
+                        ? [
+                            'monto_origen_costas' => self::montoOrigenCostas($origen),
+                            'monto_adicional_costas' => 0,
+                            'iguala' => self::montoOrigenCostas($origen),
+                            'patrocinio_hih' => (bool) $origen->patrocinio_hih,
+                            'monto_patrocinio_hih' => $origen->patrocinio_hih ? (int) round((float) $origen->monto_patrocinio) : null,
+                            'comision_porcentaje' => $origen->comision_porcentaje,
+                            'comision_monto' => $origen->comision_monto !== null ? (int) round((float) $origen->comision_monto) : null,
+                        ]
+                        : []),
+                    ...($origen
                         ? ['descripcion' => 'Costas y costos del caso N° '.$origen->id.($origen->materia_legal ? ' ('.$origen->materia_legal.')' : '')
                             // Saldo y responsable indicados al cerrar el caso ganado.
                             .($origen->informeCierre ? '. Saldo al cierre: Bs. '.number_format((float) $origen->informeCierre->saldo, 2, '.', '')
@@ -130,6 +143,12 @@ class EditCliente extends EditRecord
 
                 $origen = $this->casoOrigenCostas($arguments);
 
+                // Costas y costos: monto = proceso original + adicional
+                // (se vuelve a calcular acá, no se confía en lo enviado).
+                if ($origen) {
+                    $data['iguala'] = self::montoOrigenCostas($origen) + max((int) ($data['monto_adicional_costas'] ?? 0), 0);
+                }
+
                 $nuevo = ClienteCasoWizard::crearParaCliente($cliente, $data)['caso'];
 
                 if ($origen) {
@@ -141,6 +160,12 @@ class EditCliente extends EditRecord
                 // Recarga la ficha en la pestaña "Casos" para ver el nuevo.
                 $this->redirect(ClienteResource::getUrl('edit', ['record' => $cliente]).'?relation=0');
             });
+    }
+
+    /** Monto del proceso original: iguala profesional (iguala Netley + patrocinio HiH). */
+    protected static function montoOrigenCostas(\App\Models\Caso $origen): int
+    {
+        return (int) round((float) $origen->iguala + (float) ($origen->patrocinio_hih ? $origen->monto_patrocinio : 0));
     }
 
     /** Caso ganado de origen de "Iniciar costas y costos" (si sigue pendiente). */

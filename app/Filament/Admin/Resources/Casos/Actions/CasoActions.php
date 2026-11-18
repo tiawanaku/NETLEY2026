@@ -48,14 +48,15 @@ class CasoActions
             ->label('Cerrar caso')
             ->icon('heroicon-o-archive-box')
             ->color('danger')
-            ->visible(fn (Caso $record) => $record->estado !== EstadoCaso::Cerrado)
+            ->visible(fn (Caso $record) => ! $record->estado?->esCerrado())
             ->schema(CierreCasoSchema::make())
             ->modalWidth('3xl')
             ->modalSubmitActionLabel('Guardar')
             ->modalCancelActionLabel('Cancelar')
             ->action(function (Caso $record, array $data, $livewire): void {
                 $documentos = $data['documentos'] ?? [];
-                unset($data['documentos']);
+                $iniciarCostas = (bool) ($data['iniciar_costas'] ?? false);
+                unset($data['documentos'], $data['iniciar_costas']);
 
                 // Perdido / acuerdo / desistimiento / abandono: la pérdida es el saldo.
                 if (in_array($data['resultado'] ?? null, CierreCasoSchema::CON_PERDIDA, true)) {
@@ -85,9 +86,9 @@ class CasoActions
                     }
                 });
 
-                // Ganado con patrocinio HiH: sigue directo al proceso de costas
-                // y costos (asistente "Nuevo proceso" en la ficha del cliente).
-                if ($record->fresh()->requiereCostasYCostos() && \App\Filament\Admin\Resources\Casos\CasoResource::canCreate()) {
+                // Ganado con patrocinio HiH y marcado "Iniciar proceso de costas
+                // y costos": abre el asistente de 4 pasos en la ficha del cliente.
+                if ($iniciarCostas && $record->fresh()->requiereCostasYCostos() && \App\Filament\Admin\Resources\Casos\CasoResource::canCreate()) {
                     Notification::make()->title('Caso cerrado')->body('Continúa con el proceso de costas y costos.')->success()->send();
 
                     $livewire->redirect(ClienteResource::getUrl('edit', ['record' => $record->cliente_id])
@@ -186,7 +187,7 @@ class CasoActions
         return Action::make('informeCierrePdf')
             ->label('Informe de cierre PDF')
             ->icon('heroicon-o-document-arrow-down')
-            ->visible(fn (Caso $record) => $record->estado === EstadoCaso::Cerrado && $record->informeCierre)
+            ->visible(fn (Caso $record) => $record->estado?->esCerrado() && $record->informeCierre)
             ->action(fn (Caso $record) => response()->streamDownload(
                 fn () => print(Pdf::loadView('pdf.informe-cierre', ['informe' => $record->informeCierre->load('caso.cliente')])->output()),
                 "informe-cierre-caso-{$record->id}.pdf"

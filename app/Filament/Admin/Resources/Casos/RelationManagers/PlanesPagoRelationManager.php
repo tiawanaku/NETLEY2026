@@ -13,6 +13,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Illuminate\Support\HtmlString;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -114,6 +115,22 @@ class PlanesPagoRelationManager extends RelationManager
             ->first();
     }
 
+    /**
+     * Recibos anulados de esta cuota (al corregir el pago con "Editar
+     * pago"), del más reciente al más antiguo.
+     *
+     * @return \Illuminate\Support\Collection<int, Pago>
+     */
+    protected static function anuladosDeCuota(PlanPago $record): \Illuminate\Support\Collection
+    {
+        return Pago::withoutGlobalScope('vigentes')
+            ->where('anulado', true)
+            ->where('caso_id', $record->caso_id)
+            ->where('nro_cuota', $record->numero)
+            ->latest('id')
+            ->get();
+    }
+
     /** ¿Esta cuota se pagó con el pago marcado como anticipo? */
     protected static function esAnticipo(PlanPago $record): bool
     {
@@ -128,12 +145,18 @@ class PlanesPagoRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('numero')
             ->columns([
-                // N° del recibo vigente con el que se pagó la cuota (los
-                // anulados no cuentan: el scope "vigentes" de Pago los excluye).
+                // N° del recibo vigente con el que se pagó la cuota (el scope
+                // "vigentes" de Pago excluye los anulados); debajo, en rojo y
+                // tachados, los recibos anulados de la misma cuota.
                 TextColumn::make('nro_recibo')
                     ->label('N° recibo')
                     ->state(fn (PlanPago $record) => self::pagoDeCuota($record)?->nro_recibo)
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->description(fn (PlanPago $record): ?HtmlString => ($anulados = self::anuladosDeCuota($record))->isEmpty()
+                        ? null
+                        : new HtmlString('<span style="color:rgb(220 38 38);">Anulado: '
+                            .$anulados->map(fn (Pago $pago) => '<s>'.e($pago->nro_recibo).'</s>')->join(', ')
+                            .'</span>')),
                 // La cuota pagada con el anticipo (al crear el caso) se marca como tal.
                 TextColumn::make('numero')
                     ->label('Cuota #')
@@ -280,6 +303,37 @@ class PlanesPagoRelationManager extends RelationManager
                         return response()->streamDownload(
                             fn () => print (Pdf::loadView('pdf.recibo-pago', ['pago' => $pago->load(['cliente', 'caso'])])->output()),
                             "recibo-{$pago->nro_recibo}.pdf"
+                        );
+                    }),
+                // Recibos anulados de la cuota (también en Contabilidad ›
+                // Recibos anulados). Con más de uno, se elige cuál.
+                Action::make('imprimirAnulado')
+                    ->label('Imprimir anulado')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('danger')
+                    ->visible(fn (PlanPago $record) => self::anuladosDeCuota($record)->isNotEmpty())
+                    ->modalHeading('Imprimir recibo anulado')
+                    ->modalWidth('md')
+                    ->modalSubmitActionLabel('Imprimir')
+                    ->schema(fn (PlanPago $record): array => self::anuladosDeCuota($record)->count() > 1 ? [
+                        Select::make('pago_id')
+                            ->label('Recibo anulado')
+                            ->options(self::anuladosDeCuota($record)->mapWithKeys(fn (Pago $pago) => [
+                                $pago->id => 'N° '.$pago->nro_recibo.' — Bs. '.number_format((float) $pago->monto, 0, '', '').' — anulado el '.$pago->anulado_at?->format('d/m/Y'),
+                            ])->all())
+                            ->default(self::anuladosDeCuota($record)->first()?->id)
+                            ->required(),
+                    ] : [])
+                    // Con uno solo se imprime directo, sin preguntar.
+                    ->requiresConfirmation(false)
+                    ->modalHidden(fn (PlanPago $record) => self::anuladosDeCuota($record)->count() <= 1)
+                    ->action(function (PlanPago $record, array $data) {
+                        $anulados = self::anuladosDeCuota($record);
+                        $pago = $anulados->firstWhere('id', (int) ($data['pago_id'] ?? 0)) ?? $anulados->first();
+
+                        return response()->streamDownload(
+                            fn () => print (Pdf::loadView('pdf.recibo-pago', ['pago' => $pago->load(['cliente', 'caso', 'reemplazadoPor'])])->output()),
+                            'recibo-'.$pago->nro_recibo.'-anulado.pdf'
                         );
                     }),
                 // Corregir un pago ya registrado: primero se pide la

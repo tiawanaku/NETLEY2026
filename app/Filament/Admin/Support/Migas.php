@@ -160,7 +160,7 @@ class Migas
             return [['Cliente Ejecutivo'], ['Casos eliminados', $base.'?tab=eliminados'], [$titulo]];
         }
 
-        if ($caso->estado === EstadoCaso::Cerrado) {
+        if ($caso->estado?->esCerrado()) {
             return [['Cliente Ejecutivo'], ['Casos cerrados', $base.'?tab=cerrados'], [$titulo]];
         }
 

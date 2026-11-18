@@ -71,14 +71,21 @@ class Caso extends Model
             }
         });
 
+        // Proceso de costas y costos: su caso de origen queda "Pendiente"
+        // mientras esté abierto y vuelve a "Cerrado" al cerrarlo (o eliminarlo).
+        static::saved(fn (self $caso) => $caso->sincronizarOrigenCostas());
+
         static::deleted(function (self $caso): void {
             if (! $caso->isForceDeleting()) {
                 $caso->forceFill(['estado' => EstadoCaso::Eliminado])->saveQuietly();
             }
+
+            $caso->sincronizarOrigenCostas();
         });
 
         static::restored(function (self $caso): void {
             $caso->forceFill(['estado' => EstadoCaso::Activo, 'fecha_eliminacion' => null, 'motivo_eliminacion' => null, 'documento_eliminacion' => null])->saveQuietly();
+            $caso->sincronizarOrigenCostas();
 
             // Si el cliente se había eliminado junto con sus casos, vuelve.
             $cliente = Cliente::withTrashed()->find($caso->cliente_id);
@@ -196,6 +203,32 @@ class Caso extends Model
     public function casosDerivados(): HasMany
     {
         return $this->hasMany(self::class, 'caso_origen_id');
+    }
+
+    /**
+     * Si este es un proceso de costas y costos: su caso de origen (ya
+     * cerrado) queda "Pendiente" mientras este siga activo, y "Cerrado"
+     * cuando este se cierra o se elimina. No toca un origen reactivado.
+     */
+    public function sincronizarOrigenCostas(): void
+    {
+        if (blank($this->caso_origen_id)) {
+            return;
+        }
+
+        $origen = self::withTrashed()->find($this->caso_origen_id);
+
+        if (! $origen || ! $origen->estado?->esCerrado()) {
+            return;
+        }
+
+        $estado = (! $this->trashed() && $this->estado === EstadoCaso::Activo)
+            ? EstadoCaso::Pendiente
+            : EstadoCaso::Cerrado;
+
+        if ($origen->estado !== $estado) {
+            $origen->forceFill(['estado' => $estado])->saveQuietly();
+        }
     }
 
     /**

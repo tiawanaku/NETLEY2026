@@ -61,12 +61,12 @@ class CasosTable
                     ->label('Vencimiento')
                     ->date()
                     ->sortable()
-                    ->color(fn (Caso $record) => $record->fecha_fin && $record->fecha_fin->isPast() && $record->estado !== EstadoCaso::Cerrado ? 'danger' : null),
+                    ->color(fn (Caso $record) => $record->fecha_fin && $record->fecha_fin->isPast() && ! $record->estado?->esCerrado() ? 'danger' : null),
             ])
             ->defaultSort('id', 'desc')
             ->filters([
                 SelectFilter::make('especialidad')->options(Especialidad::class),
-                SelectFilter::make('estado')->options([EstadoCaso::Activo->value => EstadoCaso::Activo->getLabel(), EstadoCaso::Cerrado->value => EstadoCaso::Cerrado->getLabel()]),
+                SelectFilter::make('estado')->options([EstadoCaso::Activo->value => EstadoCaso::Activo->getLabel(), EstadoCaso::Cerrado->value => EstadoCaso::Cerrado->getLabel(), EstadoCaso::Pendiente->value => EstadoCaso::Pendiente->getLabel()]),
                 // Datos de contacto del cliente del caso.
                 ...FiltrosContacto::make(relacion: 'cliente'),
             ])

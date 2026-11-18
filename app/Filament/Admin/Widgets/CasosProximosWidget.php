@@ -23,7 +23,7 @@ class CasosProximosWidget extends TableWidget
         $ids = AlcancePersonal::idsRelevantes(auth()->user());
 
         return Caso::query()
-            ->where('estado', '!=', EstadoCaso::Cerrado)
+            ->whereNotIn('estado', EstadoCaso::cerrados())
             ->whereNotNull('fecha_fin')
             ->whereBetween('fecha_fin', [now()->toDateString(), now()->addDays(15)->toDateString()])
             ->when($ids !== null, fn ($q) => $q->whereHas('personal', fn ($q2) => $q2->whereIn('personal.id', $ids)));

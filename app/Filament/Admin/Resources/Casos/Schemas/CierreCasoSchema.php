@@ -6,6 +6,7 @@ use App\Enums\EstadoPersonal;
 use App\Filament\Admin\Support\AdjuntarDocumentosClip;
 use App\Models\Caso;
 use App\Models\Personal;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
@@ -31,7 +32,7 @@ class CierreCasoSchema
     {
         // Primero las instituciones, luego el personal.
         return [
-            'Hand in Hand' => 'Hand in Hand',
+            'Hand i Hand' => 'Hand i Hand',
             'Netley' => 'Netley',
         ] + Personal::query()
             ->where('estado', EstadoPersonal::Habilitado)
@@ -100,24 +101,14 @@ class CierreCasoSchema
                     }
                 })
                 ->required(),
-            // Con pérdida: monto del patrocinio Hand in Hand del caso.
+            // Con pérdida: monto del patrocinio Hand i Hand del caso.
             Placeholder::make('patrocinioHih')
-                ->label('Patrocinio Hand in Hand')
+                ->label('Patrocinio Hand i Hand')
                 ->visible(fn (Get $get): bool => in_array($get('resultado'), self::CON_PERDIDA, true))
                 ->content(fn (?Caso $record): string => $record?->patrocinio_hih
                     ? 'Bs. '.number_format((float) $record->monto_patrocinio, 2, '.', '')
                         .((float) $record->porcentaje_patrocinio > 0 ? ' ('.rtrim(rtrim(number_format((float) $record->porcentaje_patrocinio, 2, '.', ''), '0'), '.').'%)' : '')
                     : 'Sin patrocinio'),
-            // Ganado con patrocinio HiH: al guardar sigue el proceso de costas y costos.
-            Placeholder::make('avisoCostas')
-                ->hiddenLabel()
-                ->columnSpanFull()
-                ->visible(fn (Get $get, ?Caso $record): bool => self::vaACostas($get('resultado'), $record))
-                ->content(new \Illuminate\Support\HtmlString(
-                    '<div style="padding:.6rem .8rem;border-radius:.5rem;background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.4);">'
-                    .'<strong>Proceso de costas y costos.</strong> El caso tiene patrocinio Hand in Hand: al guardar se abre el nuevo proceso de costas y costos. Indica el saldo actual y quién se hace responsable de ese monto.'
-                    .'</div>'
-                )),
             // Llega con el saldo actual del caso.
             TextInput::make('saldo')->numeric()->prefix('Bs.')
                 ->default(fn (?Caso $record) => (float) ($record?->saldo ?? 0))
@@ -133,7 +124,7 @@ class CierreCasoSchema
                 ->label(fn (Get $get): string => in_array($get('resultado'), self::CON_PERDIDA, true) ? 'Pérdida' : 'Pérdida (si aplica)')
                 ->readOnly(fn (Get $get): bool => in_array($get('resultado'), self::CON_PERDIDA, true))
                 ->visible(fn (Get $get): bool => filled($get('resultado')) && $get('resultado') !== 'se_gano_proceso'),
-            // Hand in Hand, Netley o personal registrado; se guarda el nombre.
+            // Hand i Hand, Netley o personal registrado; se guarda el nombre.
             Select::make('asume')
                 ->label(fn (Get $get, ?Caso $record): string => self::vaACostas($get('resultado'), $record)
                     ? '¿Quién se hace responsable del saldo?'
@@ -178,6 +169,15 @@ class CierreCasoSchema
                 ->visible($conResultado)
                 ->columnSpanFull(),
             AdjuntarDocumentosClip::make('documentos', 'documentos-clientes')->visible($conResultado),
+            // Lo último. Ganado con patrocinio HiH: marcado, al guardar abre
+            // el asistente de 4 pasos del proceso de costas y costos
+            // (CasoActions::cerrar()); si no, se inicia luego desde la lista
+            // de casos del cliente ("Iniciar costas y costos").
+            Checkbox::make('iniciar_costas')
+                ->label('Iniciar proceso de costas y costos')
+                ->default(false)
+                ->visible(fn (Get $get, ?Caso $record): bool => self::vaACostas($get('resultado'), $record))
+                ->columnSpanFull(),
         ];
     }
 }

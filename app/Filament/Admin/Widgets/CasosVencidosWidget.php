@@ -23,7 +23,7 @@ class CasosVencidosWidget extends TableWidget
         $ids = AlcancePersonal::idsRelevantes(auth()->user());
 
         return Caso::query()
-            ->where('estado', '!=', EstadoCaso::Cerrado)
+            ->whereNotIn('estado', EstadoCaso::cerrados())
             ->whereNotNull('fecha_fin')
             ->where('fecha_fin', '<', now()->toDateString())
             ->when($ids !== null, fn ($q) => $q->whereHas('personal', fn ($q2) => $q2->whereIn('personal.id', $ids)));

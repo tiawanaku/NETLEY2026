@@ -13,6 +13,7 @@ use App\Models\Pago;
 use App\Support\PersonalEspecialidades;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -116,6 +117,7 @@ class ClienteCasoWizard
                 ->inlineLabel(),
 
             Step::make('Pago y plan de cuotas')
+                ->label(fn (Get $get): string => filled($get('monto_origen_costas')) ? 'Monto costas y costos' : 'Pago y plan de cuotas')
                 ->schema(self::camposPago())
                 ->columns(1)
                 ->inlineLabel(),
@@ -245,10 +247,30 @@ class ClienteCasoWizard
      */
     public static function camposPago(): array
     {
+        // Proceso de costas y costos ("Iniciar costas y costos" de un caso
+        // ganado, ver EditCliente::anadirCasoAction()): llega con los montos
+        // del caso de origen y la iguala es el monto del proceso original
+        // más un monto adicional.
+        $esCostas = fn (Get $get): bool => filled($get('monto_origen_costas'));
+
         return [
+            Hidden::make('monto_origen_costas')->dehydrated(false),
+            Placeholder::make('monto_origen_costas_preview')
+                ->label('Monto del proceso original')
+                ->content(fn (Get $get) => self::bs((int) $get('monto_origen_costas')))
+                ->visible($esCostas),
+            TextInput::make('monto_adicional_costas')
+                ->label('Monto adicional')
+                ->numeric()->integer()->minValue(0)->prefix('Bs.')
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn ($state, Get $get, $set) => $set('iguala', (int) $get('monto_origen_costas') + max((int) $state, 0)))
+                ->visible($esCostas)
+                ->extraInputAttributes(self::atributosEnterPago()),
             // Todos los montos en bolivianos enteros, sin centavos (->integer()).
+            // En costas y costos: proceso original + adicional, no se escribe.
             TextInput::make('iguala')
-                ->label('Iguala profesional')
+                ->label(fn (Get $get): string => $esCostas($get) ? 'Monto costas y costos' : 'Iguala profesional')
+                ->readOnly($esCostas)
                 ->numeric()->integer()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)
                 ->extraInputAttributes(self::atributosEnterPago()),
 
@@ -612,7 +634,7 @@ class ClienteCasoWizard
      * vista previa y crear(), así lo que se ve es exactamente lo que se
      * guarda.
      *
-     * - Iguala profesional, con un descuento opcional de Hand in Hand (HIH)
+     * - Iguala profesional, con un descuento opcional de Hand i Hand (HIH)
      *   cargado en bolivianos (el porcentaje que representa se calcula
      *   solo), da la Iguala Netley (lo que el cliente le debe a Netley).
      * - El anticipo es la cuota 1 del plan de pagos (no una "cuota 0"

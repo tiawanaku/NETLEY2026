@@ -60,7 +60,7 @@ class ListCasos extends ListRecords
         $tabs = [
             'todos' => Tab::make('Todos'),
             'cerrados' => Tab::make('Casos cerrados')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('estado', EstadoCaso::Cerrado)),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('estado', EstadoCaso::cerrados())),
         ];
 
         if (auth()->user()?->puede('eliminar')) {

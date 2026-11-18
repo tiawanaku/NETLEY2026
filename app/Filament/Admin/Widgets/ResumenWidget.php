@@ -28,10 +28,10 @@ class ResumenWidget extends StatsOverviewWidget
             ->when($ids !== null, fn ($q) => $q->whereHas('personal', fn ($q2) => $q2->whereIn('personal.id', $ids)));
 
         return [
-            Stat::make('Casos activos', (clone $casos)->where('estado', '!=', EstadoCaso::Cerrado)->count())
+            Stat::make('Casos activos', (clone $casos)->whereNotIn('estado', EstadoCaso::cerrados())->count())
                 ->color('primary'),
             Stat::make('Casos vencidos', (clone $casos)
-                ->where('estado', '!=', EstadoCaso::Cerrado)
+                ->whereNotIn('estado', EstadoCaso::cerrados())
                 ->whereNotNull('fecha_fin')
                 ->where('fecha_fin', '<', now())
                 ->count())

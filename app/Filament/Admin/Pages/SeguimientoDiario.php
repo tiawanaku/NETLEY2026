@@ -76,7 +76,7 @@ class SeguimientoDiario extends Page
         $ids = AlcancePersonal::idsRelevantes(auth()->user());
 
         return Caso::query()
-            ->where('estado', '!=', EstadoCaso::Cerrado)
+            ->whereNotIn('estado', EstadoCaso::cerrados())
             ->when($ids !== null, fn ($q) => $q->whereHas('personal', fn ($q2) => $q2->whereIn('personal.id', $ids)))
             ->with('cliente')
             ->orderByDesc('created_at')

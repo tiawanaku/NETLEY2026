@@ -18,112 +18,110 @@
         .valor { font-weight: bold; }
         .check { font-family: 'DejaVu Sans', sans-serif; margin-right: 3px; }
         .fila-check td { padding: 4px 8px; }
-        .nota-caja { min-height: 26px; }
+        .nota-caja { min-height: 40px; }
+        .tipo-cita { font-weight: bold; text-transform: uppercase; vertical-align: middle !important; }
         .firma { margin-top: 26px; text-align: center; }
         .firma .linea { border-top: 1px solid #000; width: 260px; margin: 0 auto 4px; }
     </style>
 </head>
 <body>
+    @php
+        // Primera cita = la agendada; las siguientes, reagendadas (orden por fecha y hora).
+        $reagendada = $citas->count() > 1;
+        // Montos, servicios y nota: los de la cita vigente (la última no anulada).
+        $vigente = $citas->where('anulada', false)->last() ?? $citas->last();
+        $anio = ($consulta->created_at ?? now())->format('Y');
+        $bs = fn ($monto) => $monto !== null ? number_format((float) $monto, fmod((float) $monto, 1.0) == 0.0 ? 0 : 2, '.', '') : '—';
+        $tipoProceso = $consulta->delito?->delito ?? $consulta->delito_texto;
+        $nota = collect([$vigente?->detalle, $consulta->nota_interna])->filter(fn ($texto) => filled($texto))->unique()->join("\n");
+        $estado = $consulta->estado;
+    @endphp
+
     <div class="header">
-        <h1>CONSULTAS DIRECTAS NETLEY 2026</h1>
+        <h1>CONSULTAS DIRECTAS{{ $reagendada ? ' REAGENDADAS' : '' }} {{ $anio }}</h1>
     </div>
 
     <table class="marco">
         <tr>
-            <td style="width:33%;"><span class="label">Fecha de registro</span><span class="valor">{{ $consulta->created_at?->format('d/m/Y') ?? '—' }}</span></td>
-            <td style="width:33%;"><span class="label">Atendido por</span><span class="valor">{{ $consulta->atendidoPor?->nombre_completo ?: '—' }}</span></td>
-            <td class="numero-caja" style="width:34%;">N°<span class="caja">{{ $consulta->id }}</span></td>
+            <td style="width:24%;"><span class="label">Fecha de ingreso</span><span class="valor">{{ ($consulta->fecha_registro ?? $consulta->created_at)?->format('d-m-Y') ?? '—' }}</span></td>
+            <td style="width:22%;"><span class="label">Ciudad</span><span class="valor">{{ $consulta->ciudad ?: '—' }}</span></td>
+            <td style="width:30%;"><span class="label">Agendado por</span><span class="valor">{{ $consulta->atendidoPor?->nombre_completo ?: '—' }}</span></td>
+            <td class="numero-caja" style="width:24%;">N°<span class="caja">{{ $consulta->id }}</span></td>
         </tr>
     </table>
 
-    @php
-        $origenTexto = (string) ($consulta->origen ?? '');
-        $origenNormalizado = mb_strtolower(trim($origenTexto));
-        $esTaller = \App\Support\Origenes::esTalleres($consulta->origen);
-        $esPsicologia = str_contains($origenNormalizado, 'psicolog');
-        $esRedesSociales = ! $esTaller && ! $esPsicologia && collect(['facebook', 'instagram', 'tiktok', 'whatsapp', 'redes', 'x', 'youtube', 'linkedin'])
-            ->contains(fn ($red) => str_contains($origenNormalizado, $red));
-        $esOtros = $origenTexto !== '' && ! $esTaller && ! $esPsicologia && ! $esRedesSociales;
-    @endphp
     <div class="titulo-seccion">Forma de ingreso</div>
     <table class="campos">
         <tr>
-            <td style="width:25%;"><span class="check">{{ $esRedesSociales ? '☑' : '☐' }}</span>Redes Sociales</td>
-            <td style="width:25%;"><span class="check">{{ $esPsicologia ? '☑' : '☐' }}</span>Psicología</td>
-            <td style="width:25%;"><span class="check">{{ $esTaller ? '☑' : '☐' }}</span>Taller</td>
-            <td style="width:25%;"><span class="check">{{ $esOtros ? '☑' : '☐' }}</span>Otros{{ $esOtros ? ': '.\App\Support\Origenes::texto($consulta->origen, $consulta->origen_detalle) : '' }}</td>
-        </tr>
-        <tr>
-            <td><span class="label">Ciudad</span><span class="valor">{{ $consulta->ciudad ?: '—' }}</span></td>
-            <td colspan="3"><span class="label">Nombre colegio / otros</span><span class="valor">{{ ($esTaller ? $consulta->origen_detalle : null) ?: '—' }}</span></td>
+            <td style="width:25%;"><span class="label">Forma de ingreso</span><span class="valor">{{ $consulta->forma_ingreso?->getLabel() ?? '—' }}</span></td>
+            <td style="width:25%;"><span class="label">Origen</span><span class="valor">{{ $consulta->origen ?: '—' }}</span></td>
+            <td style="width:50%;"><span class="label">Detalle</span><span class="valor">{{ $consulta->origen_detalle ?: '—' }}</span></td>
         </tr>
     </table>
 
     <div class="titulo-seccion">Datos del cliente</div>
     <table class="campos">
         <tr>
-            <td style="width:25%;"><span class="label">ID Cliente</span><span class="valor">{{ $consulta->caso?->cliente?->nro_cliente ?? '—' }}</span></td>
-            <td style="width:40%;"><span class="label">Nombre</span><span class="valor">{{ $consulta->nombres }}</span></td>
-            <td style="width:35%;"><span class="label">Teléfono</span><span class="valor">{{ \App\Support\Telefono::formatear($consulta->telefono) ?: '—' }}</span></td>
+            <td style="width:20%;"><span class="label">N° de cliente</span><span class="valor">{{ $consulta->caso?->cliente?->nro_cliente ?? '—' }}</span></td>
+            <td style="width:28%;"><span class="label">Nombre</span><span class="valor">{{ $consulta->nombres ?: '—' }}</span></td>
+            <td style="width:30%;"><span class="label">Apellido</span><span class="valor">{{ trim($consulta->ap_paterno.' '.$consulta->ap_materno) ?: '—' }}</span></td>
+            <td style="width:22%;"><span class="label">Teléfono</span><span class="valor">{{ \App\Support\Telefono::formatear($consulta->telefono) ?: '—' }}</span></td>
         </tr>
         <tr>
-            <td colspan="2"><span class="label">Apellido</span><span class="valor">{{ trim($consulta->ap_paterno.' '.$consulta->ap_materno) ?: '—' }}</span></td>
-            <td><span class="label">Nota</span><span class="valor">{{ $consulta->nota_interna ?: '—' }}</span></td>
+            <td><span class="label">Fecha de consulta</span><span class="valor">{{ $consulta->fecha_consulta?->format('d-m-Y') ?? '—' }}</span></td>
+            <td><span class="label">Materia legal</span><span class="valor">{{ $consulta->materia_legal }}</span></td>
+            <td colspan="2"><span class="label">Tipo de proceso</span><span class="valor">{{ $tipoProceso ?: '—' }}</span></td>
         </tr>
     </table>
 
-    <div class="titulo-seccion">Tipo de proceso</div>
+    <div class="titulo-seccion">Iguala profesional</div>
     <table class="campos">
-        <tr><td><span class="valor">{{ $consulta->materia_legal }}</span></td></tr>
+        <tr>
+            <td style="width:25%;"><span class="label">Bs. Iguala Netley</span><span class="valor">{{ $bs($vigente?->bs_iguala) }}</span></td>
+            <td style="width:25%;"><span class="label">Bs. Anticipo</span><span class="valor">{{ $bs($vigente?->bs_anticipo) }}</span></td>
+            <td style="width:25%;"><span class="label">% Comisión</span><span class="valor">{{ $vigente?->porcentaje_comision !== null ? rtrim(rtrim(number_format((float) $vigente->porcentaje_comision, 2, '.', ''), '0'), '.').' %' : '—' }}</span></td>
+            <td style="width:25%;"><span class="label">Bs. Comisión</span><span class="valor">{{ $bs($vigente?->bs_comision) }}</span></td>
+        </tr>
     </table>
 
-    @forelse ($citas as $indice => $cita)
-        <div class="titulo-seccion">
-            {{ $indice === 0 ? 'Agendar' : 'Reprogramación '.$indice }}
-            — Abogado(a): {{ $cita->personal->pluck('nombres')->join(', ') ?: '—' }}
-        </div>
-        <table class="campos">
-            <tr>
-                <td style="width:20%;"><span class="label">Fecha</span><span class="valor">{{ $cita->fecha?->format('d/m/Y') ?? '—' }}</span></td>
-                <td style="width:20%;"><span class="label">Hora</span><span class="valor">{{ substr((string) $cita->hora, 0, 5) ?: '—' }}</span></td>
-                <td style="width:20%;"><span class="label">Bs. Iguala</span><span class="valor">{{ $cita->bs_iguala !== null ? number_format((float) $cita->bs_iguala, 2) : '—' }}</span></td>
-                <td style="width:20%;"><span class="label">Bs. Anticipo</span><span class="valor">{{ $cita->bs_anticipo !== null ? number_format((float) $cita->bs_anticipo, 2) : '—' }}</span></td>
-                <td style="width:20%;"><span class="label">% Comisión</span><span class="valor">{{ $cita->porcentaje_comision !== null ? number_format((float) $cita->porcentaje_comision, 2).'%' : '—' }}</span></td>
-            </tr>
-            <tr class="fila-check">
-                <td><span class="label">Bs. Comisión</span><span class="valor">{{ $cita->bs_comision !== null ? number_format((float) $cita->bs_comision, 2) : '—' }}</span></td>
-                <td colspan="2"><span class="check">{{ $cita->confirmada ? '☑' : '☐' }}</span>Cita confirmada</td>
-                <td colspan="2"><span class="check">{{ $cita->anulada ? '☑' : '☐' }}</span>Cita anulada</td>
-            </tr>
-            <tr class="fila-check">
-                <td colspan="5"><span class="label">Servicios requeridos</span><span class="check">{{ $cita->servicio_psicologia ? '☑' : '☐' }}</span>Psicología &nbsp;&nbsp; <span class="check">{{ $cita->servicio_trabajo_social ? '☑' : '☐' }}</span>Trabajo social &nbsp;&nbsp; <span class="check">{{ $cita->servicio_otro ? '☑' : '☐' }}</span>Otro{{ $cita->servicio_otro && $cita->servicio_otro_detalle ? ': '.$cita->servicio_otro_detalle : '' }}</td>
-            </tr>
-            <tr>
-                <td colspan="5"><span class="label">Nota</span><div class="nota-caja">{{ $cita->detalle ?: '—' }}</div></td>
-            </tr>
-        </table>
-    @empty
-        <div class="titulo-seccion">Agendar</div>
-        <table class="campos">
-            <tr><td>Sin citas agendadas todavía.</td></tr>
-        </table>
-    @endforelse
+    <div class="titulo-seccion">Servicios requeridos</div>
+    <table class="campos">
+        <tr class="fila-check">
+            <td style="width:25%;"><span class="check">{{ $vigente?->servicio_psicologia ? '☑' : '☐' }}</span>Psicología</td>
+            <td style="width:25%;"><span class="check">{{ $vigente?->servicio_trabajo_social ? '☑' : '☐' }}</span>Social</td>
+            <td style="width:50%;"><span class="check">{{ $vigente?->servicio_otro ? '☑' : '☐' }}</span>Otros{{ $vigente?->servicio_otro && $vigente->servicio_otro_detalle ? ': '.$vigente->servicio_otro_detalle : '' }}</td>
+        </tr>
+    </table>
 
-    @php
-        $vigente = $citas->firstWhere('anulada', false) ?? $citas->first();
-    @endphp
+    <div class="titulo-seccion">Nota</div>
+    <table class="campos">
+        <tr><td><div class="nota-caja">{!! nl2br(e($nota)) ?: '&nbsp;' !!}</div></td></tr>
+    </table>
+
+    {{-- Una fila por cita: la primera "Agendar cita", las demás "Cita reagendada". --}}
+    <div class="titulo-seccion">Citas</div>
+    <table class="campos">
+        @forelse ($citas as $indice => $cita)
+            <tr>
+                <td class="tipo-cita" style="width:26%;">{{ $indice === 0 ? 'Agendar cita' : 'Cita reagendada' }}</td>
+                <td style="width:38%;"><span class="label">Abogado(a)</span><span class="valor">{{ $cita->personal->pluck('nombre_completo')->join(', ') ?: '—' }}</span></td>
+                <td style="width:18%;"><span class="label">Fecha</span><span class="valor">{{ $cita->fecha?->format('d-m-Y') ?? '—' }}</span></td>
+                <td style="width:18%;"><span class="label">Hora</span><span class="valor">{{ substr((string) $cita->hora, 0, 5) ?: '—' }}</span>@if ($cita->anulada) <span style="color:#b91c1c;font-size:9px;">(anulada)</span>@endif</td>
+            </tr>
+        @empty
+            <tr><td class="tipo-cita" style="width:26%;">Agendar cita</td><td colspan="3">Sin citas agendadas todavía.</td></tr>
+        @endforelse
+    </table>
+
     <div class="titulo-seccion">Cerrar caso</div>
     <table class="campos">
         <tr class="fila-check">
-            <td style="width:20%;"><span class="check">{{ $consulta->caso_id !== null ? '☑' : '☐' }}</span>Cliente ejecutivo</td>
-            <td style="width:22%;"><span class="check">{{ $consulta->estado === \App\Enums\EstadoConsulta::RemitirPsicologia ? '☑' : '☐' }}</span>Tb. necesita Psicología</td>
-            <td style="width:16%;"><span class="check">{{ $consulta->estado === \App\Enums\EstadoConsulta::SoloConsulta ? '☑' : '☐' }}</span>Solo consulta</td>
-            <td style="width:16%;"><span class="check">{{ $consulta->estado === \App\Enums\EstadoConsulta::NoAsistio ? '☑' : '☐' }}</span>No asistió</td>
-            <td style="width:13%;"><span class="check">{{ $consulta->estado === \App\Enums\EstadoConsulta::NoResponde ? '☑' : '☐' }}</span>No responde</td>
-            <td style="width:13%;"><span class="check">{{ $vigente?->anulada ? '☑' : '☐' }}</span>Cita anulada</td>
-        </tr>
-        <tr>
-            <td colspan="6"><span class="label">Observación</span><div class="nota-caja">{{ $consulta->nota_interna ?: '—' }}</div></td>
+            <td style="width:19%;"><span class="check">{{ $consulta->caso_id !== null ? '☑' : '☐' }}</span>Cliente ejecutivo</td>
+            <td style="width:16%;"><span class="check">{{ $reagendada ? '☑' : '☐' }}</span>Reagendar</td>
+            <td style="width:17%;"><span class="check">{{ $estado === \App\Enums\EstadoConsulta::SoloConsulta ? '☑' : '☐' }}</span>Solo consulta</td>
+            <td style="width:16%;"><span class="check">{{ in_array($estado, [\App\Enums\EstadoConsulta::NoContesta, \App\Enums\EstadoConsulta::NoResponde], true) ? '☑' : '☐' }}</span>No contesta</td>
+            <td style="width:15%;"><span class="check">{{ $estado === \App\Enums\EstadoConsulta::NoAsistio ? '☑' : '☐' }}</span>No asistió</td>
+            <td style="width:17%;"><span class="check">{{ $vigente?->anulada || $estado === \App\Enums\EstadoConsulta::CitaAnulada ? '☑' : '☐' }}</span>Cita anulada</td>
         </tr>
     </table>
 
