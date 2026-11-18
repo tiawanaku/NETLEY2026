@@ -9,7 +9,6 @@ use App\Filament\Admin\Support\ClienteCasoWizard;
 use Filament\Actions\Action;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -42,17 +41,36 @@ class CasosRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('id')
+            ->modifyQueryUsing(fn ($query) => $query->with(['personal', 'delito', 'delitosDenunciados', 'planesPago']))
+            // Orden pedido; mismas columnas que la lista de Clientes ejecutivos.
             ->columns([
+                // "Caso" y "Detalle" de Datos del proceso (NUREJ / CUD / otro).
+                TextColumn::make('caso_texto')
+                    ->label('Caso')
+                    ->state(fn (Caso $record): ?string => $record->caso_texto)
+                    ->wrap()
+                    ->placeholder('—'),
                 TextColumn::make('especialidad')->label('Materia legal')->badge()->state(fn ($record) => $record->especialidad ?? $record->materia_texto),
-                TextColumn::make('delito.delito')->label('Delito')->limit(40)->placeholder(fn ($record) => $record->delito_texto ?: '-'),
+                // Delito principal y los denunciados, uno debajo del otro.
+                TextColumn::make('tipo_proceso')
+                    ->label('Tipo de proceso')
+                    ->state(fn (Caso $record): array => $record->tiposProceso())
+                    ->listWithLineBreaks()
+                    ->placeholder('—'),
+                TextColumn::make('abogados')
+                    ->label('Abogado')
+                    ->state(fn (Caso $record): array => $record->personal->pluck('nombre_completo')->all())
+                    ->listWithLineBreaks()
+                    ->placeholder('—'),
+                TextColumn::make('fecha_inicio')->label('Fecha inicio')->date('d/m/Y')->placeholder('—'),
+                TextColumn::make('fecha_fin')->label('Fecha fin')->date('d/m/Y')->placeholder('—'),
                 TextColumn::make('estado')->badge(),
-                IconColumn::make('documentos_pendientes')
-                    ->label('Documento')
-                    ->icon(fn (bool $state) => $state ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-check-circle')
-                    ->color(fn (bool $state) => $state ? 'warning' : 'gray')
-                    ->tooltip(fn (bool $state) => $state ? 'Falta subir el documento del expediente' : 'Documento subido'),
-                TextColumn::make('saldo')->money('BOB'),
-                TextColumn::make('fecha_fin')->date()->label('Vencimiento'),
+                // Pago, vencimiento y documento pendiente de este caso (ver IndicadoresCliente).
+                TextColumn::make('alerta')
+                    ->label('Alerta')
+                    ->html()
+                    ->state(fn (Caso $record) => \App\Filament\Admin\Support\IndicadoresCliente::renderCaso($record))
+                    ->placeholder('—'),
             ])
             // Sin botón de crear acá: "Añadir caso" está al lado de las
             // pestañas de la ficha del cliente (EditCliente::anadirCasoAction()).

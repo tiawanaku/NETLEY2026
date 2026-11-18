@@ -47,6 +47,15 @@ class CierreCasoSchema
     /** Resultados en que la pérdida es el saldo y se muestra el patrocinio HiH. */
     public const CON_PERDIDA = ['se_perdio_proceso', 'transaccion', 'desistimiento', 'abandono'];
 
+    /**
+     * Pérdida en perdido / acuerdo / desistimiento / abandono: el saldo
+     * pendiente más el patrocinio Hand i Hand del caso.
+     */
+    public static function perdida(mixed $saldo, ?Caso $caso): float
+    {
+        return round((float) $saldo + ($caso?->patrocinio_hih ? (float) $caso->monto_patrocinio : 0.0), 2);
+    }
+
     /** ¿Este cierre sigue como costas y costos? Ganado y con patrocinio HiH mayor a 0. */
     public static function vaACostas(?string $resultado, ?Caso $caso): bool
     {
@@ -89,10 +98,10 @@ class CierreCasoSchema
             Select::make('resultado')
                 ->options(\App\Models\InformeCierreCaso::RESULTADOS)
                 ->live()
-                ->afterStateUpdated(function ($state, Get $get, $set): void {
-                    // Con pérdida: la pérdida es el saldo.
+                ->afterStateUpdated(function ($state, Get $get, $set, ?Caso $record): void {
+                    // Con pérdida: saldo + patrocinio Hand i Hand.
                     if (in_array($state, self::CON_PERDIDA, true)) {
-                        $set('perdida', $get('saldo'));
+                        $set('perdida', self::perdida($get('saldo'), $record));
                     }
 
                     // Por defecto asume el abogado responsable ("Cliente" solo vale con Abandono).
@@ -101,6 +110,15 @@ class CierreCasoSchema
                     }
                 })
                 ->required(),
+            // Siempre: el mismo "Resumen" del paso 3 (iguala, patrocinio,
+            // anticipo y saldo, sin el plan de cuotas), con lo guardado en el caso.
+            Placeholder::make('resumenPagos')
+                ->label('Resumen de pagos')
+                ->inlineLabel(false)
+                ->columnSpanFull()
+                ->content(fn (?Caso $record) => $record
+                    ? \App\Filament\Admin\Support\ClienteCasoWizard::resumenPlanHtml(\App\Filament\Admin\Support\ClienteCasoWizard::planDeCaso($record), ' (anticipo)')
+                    : '—'),
             // Con pérdida: monto del patrocinio Hand i Hand del caso.
             Placeholder::make('patrocinioHih')
                 ->label('Patrocinio Hand i Hand')
@@ -114,8 +132,8 @@ class CierreCasoSchema
                 ->default(fn (?Caso $record) => (float) ($record?->saldo ?? 0))
                 ->label('Saldo pendiente al cierre')
                 ->live(onBlur: true)
-                ->afterStateUpdated(fn ($state, Get $get, $set) => in_array($get('resultado'), self::CON_PERDIDA, true)
-                    ? $set('perdida', $state)
+                ->afterStateUpdated(fn ($state, Get $get, $set, ?Caso $record) => in_array($get('resultado'), self::CON_PERDIDA, true)
+                    ? $set('perdida', self::perdida($state, $record))
                     : null)
                 ->visible($conResultado),
             // Si se ganó no hay pérdida. Con pérdida, la pérdida es el saldo
@@ -178,6 +196,26 @@ class CierreCasoSchema
                 ->default(false)
                 ->visible(fn (Get $get, ?Caso $record): bool => self::vaACostas($get('resultado'), $record))
                 ->columnSpanFull(),
+            // Siempre, al final: lo que falta pagar de la Iguala Netley
+            // (saldo del caso) más el patrocinio Hand i Hand = saldo general.
+            Placeholder::make('saldoGeneral')
+                ->label('Saldo general')
+                ->columnSpanFull()
+                ->content(function (?Caso $record): \Illuminate\Support\HtmlString {
+                    $bs = fn ($monto): string => 'Bs. '.number_format((float) $monto, fmod((float) $monto, 1.0) == 0.0 ? 0 : 2, '.', '');
+                    $saldo = (float) ($record?->saldo ?? 0);
+                    $hih = $record?->patrocinio_hih ? (float) $record->monto_patrocinio : 0.0;
+                    $separador = ' &nbsp;·&nbsp; ';
+
+                    return new \Illuminate\Support\HtmlString(
+                        '<div style="padding:.6rem .8rem;border-radius:.5rem;border:1px solid rgb(128 128 128 / .35);">'
+                        .'<span style="color:#666;">Pagado</span> '.e($bs($record?->pagado ?? 0))
+                        .$separador.'<span style="color:#666;">Saldo</span> '.e($bs($saldo))
+                        .$separador.'<span style="color:#666;">Patrocinio Hand i Hand</span> '.e($bs($hih))
+                        .$separador.'<span style="color:#666;">Saldo general</span> <strong style="font-size:1.05rem;">'.e($bs($saldo + $hih)).'</strong>'
+                        .'</div>'
+                    );
+                }),
         ];
     }
 }

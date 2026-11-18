@@ -30,8 +30,21 @@ class IndicadoresCliente
 {
     public static function render(Cliente $cliente): HtmlString
     {
-        $casosAbiertos = $cliente->casos->filter(fn ($caso) => ! $caso->estado?->esCerrado());
+        return self::renderCasos($cliente->casos->filter(fn ($caso) => ! $caso->estado?->esCerrado()));
+    }
 
+    /**
+     * Columna "Alerta" de la lista de casos en la ficha del cliente: los
+     * mismos símbolos para un solo caso (sin alertas si está cerrado).
+     */
+    public static function renderCaso(Caso $caso): ?HtmlString
+    {
+        return $caso->estado?->esCerrado() || $caso->trashed() ? null : self::renderCasos(collect([$caso]));
+    }
+
+    /** @param  \Illuminate\Support\Collection<int, Caso>  $casosAbiertos */
+    protected static function renderCasos($casosAbiertos): HtmlString
+    {
         [$colorPago, $tituloPago] = self::estadoPago($casosAbiertos);
         [$colorVencimiento, $tituloVencimiento] = self::estadoVencimiento($casosAbiertos);
 

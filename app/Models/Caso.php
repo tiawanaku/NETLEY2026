@@ -132,6 +132,35 @@ class Caso extends Model
         return $this->especialidad?->getLabel() ?? $this->materia_texto ?? '—';
     }
 
+    /**
+     * "Caso" de Datos del proceso para listados: "NUREJ — 2026-123" (o el
+     * tipo escrito a mano con "Otro"), con el detalle.
+     */
+    public function getCasoTextoAttribute(): ?string
+    {
+        $tipo = $this->caso_tipo === 'otro'
+            ? ($this->caso_tipo_otro ?: \App\Filament\Admin\Resources\Casos\Schemas\CasoForm::TIPOS_CASO['otro'])
+            : (\App\Filament\Admin\Resources\Casos\Schemas\CasoForm::TIPOS_CASO[$this->caso_tipo] ?? null);
+
+        return collect([$tipo, $this->caso_detalle])->filter(fn ($valor) => filled($valor))->join(' — ') ?: null;
+    }
+
+    /**
+     * Tipo(s) de proceso para listados: delito principal (o el escrito a
+     * mano) y los delitos denunciados, sin repetir.
+     *
+     * @return array<int, string>
+     */
+    public function tiposProceso(): array
+    {
+        return collect([$this->delito?->delito ?? $this->delito_texto])
+            ->merge($this->delitosDenunciados->pluck('delito'))
+            ->filter(fn ($valor) => filled($valor))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function cliente(): BelongsTo
     {
         // También el cliente eliminado: un caso en "Casos eliminados" sigue

@@ -76,19 +76,8 @@ class PlanesPagoRelationManager extends RelationManager
             ? number_format((float) $monto, 0, '.', '')
             : number_format((float) $monto, 2, '.', ''));
 
-        $hih = $caso->patrocinio_hih ? (float) $caso->monto_patrocinio : 0.0;
-        $anticipo = (float) $caso->pagos()->where('tipo_pago', 'anticipo')->sum('monto');
-        $plan = [
-            'iguala' => (float) $caso->iguala + $hih,
-            'patrocinio' => (bool) $caso->patrocinio_hih,
-            'porcentaje' => (float) $caso->porcentaje_patrocinio,
-            'monto_patrocinio' => $hih,
-            'monto_cliente' => (float) $caso->iguala,
-            'pago_hoy' => $anticipo,
-            'saldo_cliente' => (float) $caso->iguala - $anticipo,
-            // Sin la lista de cuotas: ya está en la tabla del Plan de pagos de abajo.
-            'cuotas' => [],
-        ];
+        // Sin la lista de cuotas: ya está en la tabla del Plan de pagos de abajo.
+        $plan = \App\Filament\Admin\Support\ClienteCasoWizard::planDeCaso($caso);
 
         $servicios = collect([
             [$caso->servicio_psicologia, 'Psicología', $caso->monto_servicio_psicologia],

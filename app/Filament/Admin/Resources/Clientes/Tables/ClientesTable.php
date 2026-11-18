@@ -27,16 +27,14 @@ class ClientesTable
             // los indicadores ($/balanza, ver IndicadoresCliente) miran
             // TODOS los casos abiertos, con sus cuotas ya precargadas para
             // no disparar una consulta por fila.
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['ultimoCaso.personal', 'casos.planesPago']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['ultimoCaso.personal', 'ultimoCaso.delito', 'ultimoCaso.delitosDenunciados', 'casos.planesPago']))
+            // Orden pedido. Caso, tipo de proceso, abogado y fechas: del caso
+            // más reciente del cliente.
             ->columns([
                 TextColumn::make('nro_cliente')
                     ->label('ID cliente')
                     ->sortable()
                     ->searchable(),
-                TextColumn::make('indicadores')
-                    ->label('Indicadores')
-                    ->html()
-                    ->state(fn (Cliente $record) => IndicadoresCliente::render($record)),
                 TextColumn::make('nombre_completo')
                     ->label('Nombre')
                     ->searchable(['nombres', 'ap_paterno', 'ap_materno'])
@@ -46,19 +44,31 @@ class ClientesTable
                     ->formatStateUsing(fn (?string $state) => TelefonoColumna::html($state))
                     ->html()
                     ->searchable(),
+                // "Caso" y "Detalle" de Datos del proceso (NUREJ / CUD / otro).
+                TextColumn::make('caso')
+                    ->label('Caso')
+                    ->state(fn (Cliente $record): ?string => $record->ultimoCaso?->caso_texto)
+                    ->wrap()
+                    ->placeholder('—'),
+                // Delito principal y los denunciados, uno debajo del otro.
+                TextColumn::make('tipo_proceso')
+                    ->label('Tipo de proceso')
+                    ->state(fn (Cliente $record): array => $record->ultimoCaso?->tiposProceso() ?? [])
+                    ->listWithLineBreaks()
+                    ->placeholder('—'),
                 TextColumn::make('abogados')
-                    ->label('Abogado asignado')
+                    ->label('Abogado')
                     ->state(fn (Cliente $record): array => $record->ultimoCaso?->personal
                         ->map(fn ($personal) => $personal->nombre_completo)
                         ->all() ?? [])
                     ->listWithLineBreaks()
                     ->placeholder('—'),
                 TextColumn::make('ultimoCaso.fecha_inicio')
-                    ->label('Inicio del proceso')
+                    ->label('Fecha inicio')
                     ->date('d/m/Y')
                     ->placeholder('—'),
                 TextColumn::make('ultimoCaso.fecha_fin')
-                    ->label('Fin del proceso')
+                    ->label('Fecha fin')
                     ->date('d/m/Y')
                     ->placeholder('—'),
                 TextColumn::make('casos_count')
@@ -66,18 +76,10 @@ class ClientesTable
                     ->counts('casos')
                     ->badge()
                     ->sortable(),
-                TextColumn::make('ci')
-                    ->label('CI')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('sucursal')
-                    ->badge()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('created_at')
-                    ->label('Registrado')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('indicadores')
+                    ->label('Alertas')
+                    ->html()
+                    ->state(fn (Cliente $record) => IndicadoresCliente::render($record)),
             ])
             ->defaultSort('id', 'desc')
             ->filters([
@@ -87,7 +89,7 @@ class ClientesTable
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
-                EditAction::make()->visible(fn () => auth()->user()?->puede('editar')),
+                EditAction::make()->label('Editar')->visible(fn () => auth()->user()?->puede('editar')),
                 // Borrado lógico (ver Cliente::booted()): sus casos pasan a
                 // "Casos eliminados" y se pueden restaurar desde ahí.
                 DeleteAction::make()

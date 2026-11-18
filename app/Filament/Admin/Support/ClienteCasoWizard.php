@@ -783,6 +783,40 @@ class ClienteCasoWizard
     }
 
     /**
+     * El mismo $plan que arma plan() en el paso 3, pero desde lo que quedó
+     * guardado en un caso ya creado (iguala, patrocinio, anticipo pagado y,
+     * con $conCuotas, su plan de pagos). Para resumenPlanHtml() en la pestaña
+     * Pagos y en el formulario de cierre.
+     *
+     * @return array<string, mixed>
+     */
+    public static function planDeCaso(Caso $caso, bool $conCuotas = false): array
+    {
+        $hih = $caso->patrocinio_hih ? (float) $caso->monto_patrocinio : 0.0;
+        $anticipo = (float) $caso->pagos()->where('tipo_pago', 'anticipo')->sum('monto');
+        $cuotaAnticipo = $caso->pagos()->where('tipo_pago', 'anticipo')->value('nro_cuota');
+
+        return [
+            'iguala' => (float) $caso->iguala + $hih,
+            'patrocinio' => (bool) $caso->patrocinio_hih,
+            'porcentaje' => (float) $caso->porcentaje_patrocinio,
+            'monto_patrocinio' => $hih,
+            'monto_cliente' => (float) $caso->iguala,
+            'pago_hoy' => $anticipo,
+            'saldo_cliente' => (float) $caso->iguala - $anticipo,
+            'cuotas' => $conCuotas
+                ? $caso->planesPago()->orderBy('numero')->get()->map(fn ($cuota) => [
+                    'numero' => $cuota->numero,
+                    'fecha' => $cuota->fecha,
+                    'monto' => (float) $cuota->monto,
+                    'nuevo_saldo' => (float) $cuota->nuevo_saldo,
+                    'pagada_hoy' => $cuotaAnticipo !== null && (int) $cuotaAnticipo === (int) $cuota->numero,
+                ])->all()
+                : [],
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>  $plan
      */
     public static function resumenPlanHtml(array $plan, string $marcaAnticipo = ' (anticipo, hoy)'): HtmlString

@@ -58,9 +58,10 @@ class CasoActions
                 $iniciarCostas = (bool) ($data['iniciar_costas'] ?? false);
                 unset($data['documentos'], $data['iniciar_costas']);
 
-                // Perdido / acuerdo / desistimiento / abandono: la pérdida es el saldo.
+                // Perdido / acuerdo / desistimiento / abandono: la pérdida es el
+                // saldo más el patrocinio Hand i Hand.
                 if (in_array($data['resultado'] ?? null, CierreCasoSchema::CON_PERDIDA, true)) {
-                    $data['perdida'] = $data['saldo'] ?? 0;
+                    $data['perdida'] = CierreCasoSchema::perdida($data['saldo'] ?? 0, $record);
                 }
 
                 DB::transaction(function () use ($record, $data, $documentos): void {
