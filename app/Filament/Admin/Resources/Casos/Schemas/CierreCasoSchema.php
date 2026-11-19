@@ -9,11 +9,13 @@ use App\Models\Personal;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 
 /**
@@ -49,11 +51,58 @@ class CierreCasoSchema
 
     /**
      * Pérdida en perdido / acuerdo / desistimiento / abandono: el saldo
-     * pendiente más el patrocinio Hand i Hand del caso.
+     * pendiente (Netley) más el patrocinio Hand i Hand del caso (HiH).
      */
     public static function perdida(mixed $saldo, ?Caso $caso): float
     {
-        return round((float) $saldo + ($caso?->patrocinio_hih ? (float) $caso->monto_patrocinio : 0.0), 2);
+        return round(self::perdidaNetley($saldo, $caso) + self::perdidaHih($caso, $saldo), 2);
+    }
+
+    /**
+     * Parte de la pérdida de Hand i Hand: el patrocinio del caso. En costas y
+     * costos el saldo ya incluye el patrocinio: es la parte de HiH que queda
+     * dentro del saldo pendiente.
+     */
+    public static function perdidaHih(?Caso $caso, mixed $saldo = null): float
+    {
+        $hih = $caso?->patrocinio_hih ? round((float) $caso->monto_patrocinio, 2) : 0.0;
+
+        return $caso?->esCostas() ? min($hih, max((float) ($saldo ?? $caso->saldo), 0.0)) : $hih;
+    }
+
+    /** Parte de la pérdida de Netley: el saldo pendiente (en costas, sin la parte de HiH). */
+    public static function perdidaNetley(mixed $saldo, ?Caso $caso): float
+    {
+        $saldo = max((float) $saldo, 0.0);
+
+        return round($caso?->esCostas() ? $saldo - self::perdidaHih($caso, $saldo) : $saldo, 2);
+    }
+
+    /**
+     * Opciones de responsable (¿Quién asume? y la tabla por organización):
+     * Hand i Hand, Netley, personal habilitado y el abogado responsable
+     * elegido; con Abandono, también el cliente.
+     *
+     * @return array<string, string>
+     */
+    protected static function opcionesResponsable(Get $get, ?Caso $record): array
+    {
+        return ($get('resultado') === 'abandono'
+                ? ['Cliente' => 'Cliente'.($record?->cliente ? ' — '.$record->cliente->nombre_completo : '')]
+                : [])
+            + self::opcionesPersonal()
+            + (filled($get('abogado_responsable')) ? [$get('abogado_responsable') => $get('abogado_responsable')] : []);
+    }
+
+    /** Primer abogado asignado al caso (responsable por defecto). */
+    protected static function abogadoDelCaso(?Caso $record): ?string
+    {
+        return $record?->personal()->where('profesion', 'Abogado')->first()?->nombre_completo;
+    }
+
+    protected static function bs(float $monto): string
+    {
+        return 'Bs. '.number_format($monto, fmod($monto, 1.0) == 0.0 ? 0 : 2, '.', '');
     }
 
     /** ¿Este cierre sigue como costas y costos? Ganado y con patrocinio HiH mayor a 0. */
@@ -98,12 +147,7 @@ class CierreCasoSchema
             Select::make('resultado')
                 ->options(\App\Models\InformeCierreCaso::RESULTADOS)
                 ->live()
-                ->afterStateUpdated(function ($state, Get $get, $set, ?Caso $record): void {
-                    // Con pérdida: saldo + patrocinio Hand i Hand.
-                    if (in_array($state, self::CON_PERDIDA, true)) {
-                        $set('perdida', self::perdida($get('saldo'), $record));
-                    }
-
+                ->afterStateUpdated(function ($state, Get $get, $set): void {
                     // Por defecto asume el abogado responsable ("Cliente" solo vale con Abandono).
                     if (blank($get('asume')) || ($get('asume') === 'Cliente' && $state !== 'abandono')) {
                         $set('asume', $get('abogado_responsable'));
@@ -119,44 +163,50 @@ class CierreCasoSchema
                 ->content(fn (?Caso $record) => $record
                     ? \App\Filament\Admin\Support\ClienteCasoWizard::resumenPlanHtml(\App\Filament\Admin\Support\ClienteCasoWizard::planDeCaso($record), ' (anticipo)')
                     : '—'),
-            // Con pérdida: monto del patrocinio Hand i Hand del caso.
-            Placeholder::make('patrocinioHih')
-                ->label('Patrocinio Hand i Hand')
+            // Saldo pendiente al cierre: el saldo actual del caso, sin
+            // mostrarse (se guarda en el informe; es la pérdida de Netley).
+            Hidden::make('saldo')->default(fn (?Caso $record) => (float) ($record?->saldo ?? 0)),
+            // Con pérdida: el total (HiH + Netley) y, debajo, por organización.
+            Placeholder::make('totalPerdida')
+                ->label('Total de la pérdida')
                 ->visible(fn (Get $get): bool => in_array($get('resultado'), self::CON_PERDIDA, true))
-                ->content(fn (?Caso $record): string => $record?->patrocinio_hih
-                    ? 'Bs. '.number_format((float) $record->monto_patrocinio, 2, '.', '')
-                        .((float) $record->porcentaje_patrocinio > 0 ? ' ('.rtrim(rtrim(number_format((float) $record->porcentaje_patrocinio, 2, '.', ''), '0'), '.').'%)' : '')
-                    : 'Sin patrocinio'),
-            // Llega con el saldo actual del caso.
-            TextInput::make('saldo')->numeric()->prefix('Bs.')
-                ->default(fn (?Caso $record) => (float) ($record?->saldo ?? 0))
-                ->label('Saldo pendiente al cierre')
-                ->live(onBlur: true)
-                ->afterStateUpdated(fn ($state, Get $get, $set, ?Caso $record) => in_array($get('resultado'), self::CON_PERDIDA, true)
-                    ? $set('perdida', self::perdida($state, $record))
-                    : null)
-                ->visible($conResultado),
-            // Si se ganó no hay pérdida. Con pérdida, la pérdida es el saldo
-            // (no se escribe; se vuelve a fijar al guardar, CasoActions::cerrar()).
-            TextInput::make('perdida')->numeric()->prefix('Bs.')->default(0)
-                ->label(fn (Get $get): string => in_array($get('resultado'), self::CON_PERDIDA, true) ? 'Pérdida' : 'Pérdida (si aplica)')
-                ->readOnly(fn (Get $get): bool => in_array($get('resultado'), self::CON_PERDIDA, true))
-                ->visible(fn (Get $get): bool => filled($get('resultado')) && $get('resultado') !== 'se_gano_proceso'),
+                ->content(fn (Get $get, ?Caso $record): \Illuminate\Support\HtmlString => new \Illuminate\Support\HtmlString(
+                    '<strong style="font-size:1.05rem;">'.e(self::bs(self::perdida($get('saldo'), $record))).'</strong>'
+                )),
+            // Organización | Monto pérdida | Responsable. HiH = patrocinio;
+            // Netley = saldo pendiente.
+            Grid::make(3)
+                ->visible(fn (Get $get): bool => in_array($get('resultado'), self::CON_PERDIDA, true))
+                ->columnSpanFull()
+                ->extraAttributes(['class' => 'netley-perdida-organizaciones'])
+                ->schema([
+                    Placeholder::make('org_hih')->label('Organización')->inlineLabel(false)->content('HiH'),
+                    Placeholder::make('monto_hih')->label('Monto pérdida')->inlineLabel(false)
+                        ->content(fn (Get $get, ?Caso $record): string => self::bs(self::perdidaHih($record, $get('saldo')))),
+                    Select::make('responsable_hih')->label('Responsable')->inlineLabel(false)
+                        ->options(fn (Get $get, ?Caso $record): array => self::opcionesResponsable($get, $record))
+                        ->default(fn (?Caso $record): ?string => self::abogadoDelCaso($record))
+                        ->searchable()
+                        ->native(false),
+                    Placeholder::make('org_netley')->hiddenLabel()->content('Netley'),
+                    Placeholder::make('monto_netley')->hiddenLabel()
+                        ->content(fn (Get $get, ?Caso $record): string => self::bs(self::perdidaNetley($get('saldo'), $record))),
+                    Select::make('responsable_netley')->hiddenLabel()
+                        ->options(fn (Get $get, ?Caso $record): array => self::opcionesResponsable($get, $record))
+                        ->default(fn (?Caso $record): ?string => self::abogadoDelCaso($record))
+                        ->searchable()
+                        ->native(false),
+                ]),
             // Hand i Hand, Netley o personal registrado; se guarda el nombre.
             Select::make('asume')
                 ->label(fn (Get $get, ?Caso $record): string => self::vaACostas($get('resultado'), $record)
                     ? '¿Quién se hace responsable del saldo?'
                     : '¿Quién asume el saldo/pérdida?')
-                // Incluye al abogado responsable aunque hoy no esté habilitado.
-                // Con Abandono también puede asumirlo el cliente.
-                ->options(fn (Get $get, ?Caso $record): array => ($get('resultado') === 'abandono'
-                        ? ['Cliente' => 'Cliente'.($record?->cliente ? ' — '.$record->cliente->nombre_completo : '')]
-                        : [])
-                    + self::opcionesPersonal()
-                    + (filled($get('abogado_responsable')) ? [$get('abogado_responsable') => $get('abogado_responsable')] : []))
-                ->default(fn (?Caso $record): ?string => $record?->personal()->where('profesion', 'Abogado')->first()?->nombre_completo)
+                ->options(fn (Get $get, ?Caso $record): array => self::opcionesResponsable($get, $record))
+                ->default(fn (?Caso $record): ?string => self::abogadoDelCaso($record))
                 ->required(fn (Get $get, ?Caso $record): bool => self::vaACostas($get('resultado'), $record))
-                ->visible($conResultado)
+                // Con pérdida lo reemplaza el responsable por organización (tabla de arriba).
+                ->visible(fn (Get $get): bool => filled($get('resultado')) && ! in_array($get('resultado'), self::CON_PERDIDA, true))
                 ->searchable()
                 ->native(false),
             Textarea::make('nota_netley')->label('Nota interna')->visible($conResultado)->columnSpanFull(),
@@ -196,26 +246,6 @@ class CierreCasoSchema
                 ->default(false)
                 ->visible(fn (Get $get, ?Caso $record): bool => self::vaACostas($get('resultado'), $record))
                 ->columnSpanFull(),
-            // Siempre, al final: lo que falta pagar de la Iguala Netley
-            // (saldo del caso) más el patrocinio Hand i Hand = saldo general.
-            Placeholder::make('saldoGeneral')
-                ->label('Saldo general')
-                ->columnSpanFull()
-                ->content(function (?Caso $record): \Illuminate\Support\HtmlString {
-                    $bs = fn ($monto): string => 'Bs. '.number_format((float) $monto, fmod((float) $monto, 1.0) == 0.0 ? 0 : 2, '.', '');
-                    $saldo = (float) ($record?->saldo ?? 0);
-                    $hih = $record?->patrocinio_hih ? (float) $record->monto_patrocinio : 0.0;
-                    $separador = ' &nbsp;·&nbsp; ';
-
-                    return new \Illuminate\Support\HtmlString(
-                        '<div style="padding:.6rem .8rem;border-radius:.5rem;border:1px solid rgb(128 128 128 / .35);">'
-                        .'<span style="color:#666;">Pagado</span> '.e($bs($record?->pagado ?? 0))
-                        .$separador.'<span style="color:#666;">Saldo</span> '.e($bs($saldo))
-                        .$separador.'<span style="color:#666;">Patrocinio Hand i Hand</span> '.e($bs($hih))
-                        .$separador.'<span style="color:#666;">Saldo general</span> <strong style="font-size:1.05rem;">'.e($bs($saldo + $hih)).'</strong>'
-                        .'</div>'
-                    );
-                }),
         ];
     }
 }

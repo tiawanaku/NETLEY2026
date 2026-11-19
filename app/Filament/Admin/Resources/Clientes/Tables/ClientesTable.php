@@ -20,14 +20,28 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ClientesTable
 {
-    public static function configure(Table $table): Table
+    /**
+     * Con $soloCerrados ("Casos cerrados", ListClientesCerrados): solo los
+     * clientes con algún caso cerrado; las columnas del caso salen del
+     * cerrado más reciente, N° de casos cuenta los cerrados y "Ver" abre la
+     * ficha con solo los procesos cerrados (?cerrados=1).
+     */
+    public static function configure(Table $table, bool $soloCerrados = false): Table
     {
+        $relacion = $soloCerrados ? 'ultimoCasoCerrado' : 'ultimoCaso';
+        $caso = fn (Cliente $record): ?\App\Models\Caso => $record->{$relacion};
+
         return $table
             // Abogado(s) y fechas del proceso salen del caso más reciente;
             // los indicadores ($/balanza, ver IndicadoresCliente) miran
             // TODOS los casos abiertos, con sus cuotas ya precargadas para
             // no disparar una consulta por fila.
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['ultimoCaso.personal', 'ultimoCaso.delito', 'ultimoCaso.delitosDenunciados', 'casos.planesPago']))
+            ->modifyQueryUsing(fn (Builder $query) => $query
+                ->with(["{$relacion}.personal", "{$relacion}.delito", "{$relacion}.delitosDenunciados", 'casos.planesPago'])
+                ->when($soloCerrados, fn (Builder $query) => $query->whereHas('casos', fn (Builder $casos) => $casos->where('estado', \App\Enums\EstadoCaso::Cerrado))))
+            ->when($soloCerrados, fn (Table $table) => $table
+                ->recordUrl(fn (Cliente $record): string => \App\Filament\Admin\Resources\Clientes\ClienteResource::getUrl('edit', ['record' => $record]).'?cerrados=1&relation=0')
+                ->emptyStateHeading('No hay casos cerrados'))
             // Orden pedido. Caso, tipo de proceso, abogado y fechas: del caso
             // más reciente del cliente.
             ->columns([
@@ -47,33 +61,35 @@ class ClientesTable
                 // "Caso" y "Detalle" de Datos del proceso (NUREJ / CUD / otro).
                 TextColumn::make('caso')
                     ->label('Caso')
-                    ->state(fn (Cliente $record): ?string => $record->ultimoCaso?->caso_texto)
+                    ->state(fn (Cliente $record): ?string => $caso($record)?->caso_texto)
                     ->wrap()
                     ->placeholder('—'),
                 // Delito principal y los denunciados, uno debajo del otro.
                 TextColumn::make('tipo_proceso')
                     ->label('Tipo de proceso')
-                    ->state(fn (Cliente $record): array => $record->ultimoCaso?->tiposProceso() ?? [])
+                    ->state(fn (Cliente $record): array => $caso($record)?->tiposProceso() ?? [])
                     ->listWithLineBreaks()
                     ->placeholder('—'),
                 TextColumn::make('abogados')
                     ->label('Abogado')
-                    ->state(fn (Cliente $record): array => $record->ultimoCaso?->personal
+                    ->state(fn (Cliente $record): array => $caso($record)?->personal
                         ->map(fn ($personal) => $personal->nombre_completo)
                         ->all() ?? [])
                     ->listWithLineBreaks()
                     ->placeholder('—'),
-                TextColumn::make('ultimoCaso.fecha_inicio')
+                TextColumn::make("{$relacion}.fecha_inicio")
                     ->label('Fecha inicio')
                     ->date('d/m/Y')
                     ->placeholder('—'),
-                TextColumn::make('ultimoCaso.fecha_fin')
+                TextColumn::make("{$relacion}.fecha_fin")
                     ->label('Fecha fin')
                     ->date('d/m/Y')
                     ->placeholder('—'),
                 TextColumn::make('casos_count')
-                    ->label('N° de casos')
-                    ->counts('casos')
+                    ->label($soloCerrados ? 'N° de casos cerrados' : 'N° de casos')
+                    ->counts($soloCerrados
+                        ? ['casos' => fn (Builder $casos) => $casos->where('estado', \App\Enums\EstadoCaso::Cerrado)]
+                        : 'casos')
                     ->badge()
                     ->sortable(),
                 TextColumn::make('indicadores')
@@ -89,12 +105,18 @@ class ClientesTable
             ])
             ->modifyUngroupedRecordActionsUsing(fn ($action) => $action->button())
             ->recordActions([
-                EditAction::make()->label('Editar')->visible(fn () => auth()->user()?->puede('editar')),
+                // En "Casos cerrados": "Ver" abre la ficha con solo los procesos cerrados.
+                \Filament\Actions\Action::make('verCerrados')
+                    ->label('Ver')
+                    ->icon('heroicon-o-eye')
+                    ->visible($soloCerrados)
+                    ->url(fn (Cliente $record): string => \App\Filament\Admin\Resources\Clientes\ClienteResource::getUrl('edit', ['record' => $record]).'?cerrados=1&relation=0'),
+                EditAction::make()->label('Editar')->visible(fn () => ! $soloCerrados && auth()->user()?->puede('editar')),
                 // Borrado lógico (ver Cliente::booted()): sus casos pasan a
                 // "Casos eliminados" y se pueden restaurar desde ahí.
                 DeleteAction::make()
                     ->label('Eliminar')
-                    ->visible(fn () => auth()->user()?->puede('eliminar'))
+                    ->visible(fn () => ! $soloCerrados && auth()->user()?->puede('eliminar'))
                     ->modalHeading(fn (Cliente $record) => '¿Eliminar al cliente '.$record->nombre_completo.'?')
                     ->modalDescription(fn (Cliente $record) => ($n = $record->casos()->count()) > 0
                         ? 'Sus '.$n.' '.($n === 1 ? 'caso pasa' : 'casos pasan').' a "Casos eliminados", con sus pagos y documentos intactos. Se pueden restaurar desde ahí (el cliente vuelve con el caso).'

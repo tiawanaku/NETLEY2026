@@ -94,6 +94,7 @@ class ClienteResource extends Resource
     {
         return [
             'index' => ListClientes::route('/'),
+            'cerrados' => Pages\ListClientesCerrados::route('/cerrados'),
             'create' => CreateCliente::route('/create'),
             'edit' => EditCliente::route('/{record}/edit'),
         ];

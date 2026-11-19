@@ -494,3 +494,127 @@
     align-items: center;
 }
 
+
+
+/* ---------------------------------------------------------------------------
+ * Formulario de la consulta agendada ("Ver formulario", ver
+ * filament/admin/consultas/ficha-agendamiento.blade.php): tarjetas por
+ * sección, datos en cuadrícula y estados con color. Claro y oscuro.
+ * ------------------------------------------------------------------------- */
+.netley-ficha {
+    --nf-fondo: #ffffff;
+    --nf-borde: rgb(229 231 235);
+    --nf-suave: rgb(249 250 251);
+    --nf-texto: rgb(17 24 39);
+    --nf-tenue: rgb(107 114 128);
+    --nf-acento: rgb(35 63 148);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    color: var(--nf-texto);
+    font-size: .875rem;
+}
+.dark .netley-ficha {
+    --nf-fondo: rgb(24 24 27);
+    --nf-borde: rgb(255 255 255 / .1);
+    --nf-suave: rgb(255 255 255 / .04);
+    --nf-texto: rgb(244 244 245);
+    --nf-tenue: rgb(161 161 170);
+    --nf-acento: rgb(147 197 253);
+}
+/* Encabezado: tarjeta blanca (también en modo oscuro, por el logo) con la
+   franja azul / gris del logo abajo. */
+.netley-ficha-encabezado {
+    position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.5rem;
+    padding: 1.25rem 1.5rem 1.5rem; border-radius: .9rem; background: #fff; color: rgb(17 24 39);
+    border: 1px solid rgb(229 231 235); box-shadow: 0 4px 14px rgb(35 63 148 / .08); overflow: hidden;
+}
+.netley-ficha-encabezado::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 6px;
+    background: linear-gradient(90deg, rgb(35 63 148) 0 50%, rgb(133 134 134) 50% 100%);
+}
+.netley-ficha-logo { height: 5.25rem; width: auto; display: block; }
+.netley-ficha-cabecera { display: flex; flex-direction: column; gap: .2rem; padding-left: 1.5rem; border-left: 1px solid rgb(229 231 235); min-width: 0; }
+.netley-ficha-sobretitulo { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: rgb(133 134 134); }
+.netley-ficha-titulo {
+    margin: 0; font-family: 'Times New Roman', Georgia, serif; font-size: 1.6rem; font-weight: 400; line-height: 1.15;
+    letter-spacing: .03em; text-transform: uppercase; color: rgb(35 63 148);
+}
+.netley-ficha-subtitulo { font-size: .95rem; font-weight: 600; color: rgb(75 85 99); }
+/* Placa del N° de consulta. */
+.netley-ficha-numero {
+    display: flex; flex-direction: column; align-items: center; min-width: 9rem; padding: .7rem 1.1rem .65rem;
+    border-radius: .75rem; color: #fff; text-align: center;
+    background: linear-gradient(160deg, rgb(43 76 176), rgb(26 47 112));
+    box-shadow: 0 6px 16px rgb(35 63 148 / .35), inset 0 1px 0 rgb(255 255 255 / .18);
+}
+.netley-ficha-numero-etiqueta { font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .22em; opacity: .8; }
+.netley-ficha-numero-valor {
+    font-family: 'Times New Roman', Georgia, serif; font-size: 2.4rem; line-height: 1; letter-spacing: .04em;
+    font-variant-numeric: tabular-nums; margin: .2rem 0 .3rem; padding-bottom: .3rem; border-bottom: 1px solid rgb(255 255 255 / .3);
+}
+.netley-ficha-numero-valor small { font-size: .9rem; margin-right: .25rem; vertical-align: super; opacity: .8; letter-spacing: 0; }
+.netley-ficha-numero-pie { font-size: .7rem; letter-spacing: .06em; opacity: .85; }
+@media (max-width: 768px) {
+    .netley-ficha-encabezado { grid-template-columns: 1fr; text-align: center; justify-items: center; }
+    .netley-ficha-cabecera { border-left: 0; padding-left: 0; align-items: center; }
+}
+.netley-ficha-seccion {
+    background: var(--nf-fondo); border: 1px solid var(--nf-borde); border-radius: .75rem; padding: 1rem 1.25rem;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .04);
+}
+.netley-ficha-seccion > h3 {
+    margin: 0 0 .85rem; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--nf-acento); padding-bottom: .5rem; border-bottom: 1px solid var(--nf-borde);
+}
+.netley-ficha-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .85rem 1.5rem; margin: 0; }
+.netley-ficha-datos dt, .netley-ficha-cita-datos dt, .netley-ficha-etiqueta {
+    font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--nf-tenue); margin-bottom: .15rem; display: block;
+}
+.netley-ficha-datos dd, .netley-ficha-cita-datos dd { margin: 0; font-weight: 600; }
+.netley-ficha-ancho { grid-column: 1 / -1; }
+.netley-ficha-montos dd { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.netley-ficha-servicios { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1rem; }
+.netley-ficha-servicios .netley-ficha-etiqueta { margin: 0 .5rem 0 0; }
+.netley-ficha-chip {
+    padding: .2rem .7rem; border-radius: 999px; border: 1px solid var(--nf-borde); color: var(--nf-tenue); font-size: .8rem;
+}
+.netley-ficha-chip.is-activo { background: rgb(22 163 74 / .12); border-color: rgb(22 163 74 / .45); color: rgb(21 128 61); font-weight: 600; }
+.dark .netley-ficha-chip.is-activo { color: rgb(134 239 172); }
+.netley-ficha-nota { margin-top: 1rem; }
+.netley-ficha-nota p { margin: 0; padding: .6rem .8rem; border-radius: .5rem; background: var(--nf-suave); border: 1px solid var(--nf-borde); min-height: 2.5rem; }
+.netley-ficha-vacio { color: var(--nf-tenue); font-style: italic; font-weight: 400; }
+.netley-ficha-cita {
+    display: grid; grid-template-columns: 9.5rem 1fr 7.5rem; align-items: center; gap: .75rem 1rem;
+    padding: .75rem 1rem; border: 1px solid var(--nf-borde); border-radius: .6rem; background: var(--nf-suave);
+}
+.netley-ficha-cita + .netley-ficha-cita { margin-top: .6rem; }
+.netley-ficha-cita.is-anulada { opacity: .65; }
+.netley-ficha-cita.is-anulada .netley-ficha-cita-datos dd { text-decoration: line-through; }
+.netley-ficha-cita-tipo { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--nf-acento); }
+.netley-ficha-cita-datos { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: .5rem 1rem; margin: 0; }
+.netley-ficha-cita-estado { text-align: right; }
+.netley-ficha-cita-acciones { grid-column: 1 / -1; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: .4rem; }
+.netley-ficha-badge { display: inline-block; padding: .15rem .65rem; border-radius: 999px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.netley-ficha-badge.is-exito { background: rgb(22 163 74 / .14); color: rgb(21 128 61); }
+.netley-ficha-badge.is-aviso { background: rgb(234 179 8 / .16); color: rgb(161 98 7); }
+.netley-ficha-badge.is-peligro { background: rgb(220 38 38 / .14); color: rgb(185 28 28); }
+.dark .netley-ficha-badge.is-exito { color: rgb(134 239 172); }
+.dark .netley-ficha-badge.is-aviso { color: rgb(253 224 71); }
+.dark .netley-ficha-badge.is-peligro { color: rgb(252 165 165); }
+.netley-ficha-cierre { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 1rem; }
+.netley-ficha-campo { display: flex; flex-direction: column; }
+.netley-ficha-control {
+    width: 100%; font: inherit; padding: .5rem .65rem; border-radius: .5rem; border: 1px solid var(--nf-borde);
+    background: var(--nf-fondo); color: var(--nf-texto); resize: vertical;
+}
+.netley-ficha-control:focus { outline: 2px solid rgb(37 99 235 / .5); outline-offset: 1px; }
+.netley-ficha-valor { font-weight: 600; }
+.netley-ficha-pie { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+.netley-ficha-firma { display: flex; flex-direction: column; align-items: center; gap: .15rem; margin-top: .5rem; }
+.netley-ficha-firma-linea { width: 16rem; border-top: 1px solid var(--nf-tenue); margin-bottom: .35rem; }
+.netley-ficha-firma span { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--nf-tenue); }
+@media (max-width: 768px) {
+    .netley-ficha-cita, .netley-ficha-cierre { grid-template-columns: 1fr; }
+    .netley-ficha-cita-datos { grid-template-columns: 1fr 1fr; }
+}

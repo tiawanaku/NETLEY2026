@@ -102,7 +102,7 @@ class CasoResource extends Resource
 
         return match (true) {
             $caso?->trashed() => 'eliminados',
-            (bool) $caso?->estado?->esCerrado() => 'cerrados',
+            $caso?->estado === EstadoCaso::Cerrado => 'cerrados',
             default => null,
         };
     }

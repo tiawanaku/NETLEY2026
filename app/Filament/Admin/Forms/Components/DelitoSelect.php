@@ -38,6 +38,15 @@ class DelitoSelect
         string $delitoLabel = 'Delito / Materia específica',
         bool $required = true,
         bool $conOtros = false,
+        // Opcional: restringe los delitos del catálogo según el formulario,
+        // fn (Get $get): ?array => [nombres permitidos] o null (sin restricción).
+        ?\Closure $soloDelitos = null,
+        // Opcional: al cambiar el área, el delito que queda elegido,
+        // fn (Get $get, ?string $area): ?string => nombre del delito o null.
+        ?\Closure $delitoPorDefecto = null,
+        // Opcional: delitos del catálogo que NO se ofrecen,
+        // fn (Get $get): array => [nombres excluidos].
+        ?\Closure $sinDelitos = null,
     ): array {
         $esOtros = fn (Get $get): bool => $conOtros && $get($areaField) === self::OTROS;
         $esOtroDelito = fn (Get $get): bool => $conOtros && $get($delitoField) === self::OTROS;
@@ -51,7 +60,19 @@ class DelitoSelect
                 ->native(false)
                 ->live()
                 ->required($required)
-                ->afterStateUpdated(fn ($set, $state) => $set($delitoField, $conOtros && $state === self::OTROS ? self::OTROS : null))
+                ->afterStateUpdated(function ($set, $state, Get $get) use ($delitoField, $conOtros, $delitoPorDefecto): void {
+                    $nombre = $delitoPorDefecto ? $delitoPorDefecto($get, $state) : null;
+                    $id = filled($nombre) && $state !== self::OTROS
+                        ? Delito::query()->where('area', $state)->where('delito', $nombre)->value('id')
+                        : null;
+
+                    $set($delitoField, $id ? (string) $id : ($conOtros && $state === self::OTROS ? self::OTROS : null));
+
+                    // Materia "Otros" sin catálogo: el tipo se escribe (llega ya escrito).
+                    if ($conOtros && $state === self::OTROS && filled($nombre)) {
+                        $set('delito_texto', $nombre);
+                    }
+                })
                 ->extraAttributes(['data-enter-nav-field' => 'true', 'data-enter-nav-live' => 'true']),
 
             $conOtros
@@ -65,18 +86,25 @@ class DelitoSelect
 
             Select::make($delitoField)
                 ->label($delitoLabel)
-                ->options(function (Get $get) use ($areaField, $conOtros) {
+                ->options(function (Get $get) use ($areaField, $conOtros, $soloDelitos, $sinDelitos) {
                     $area = $get($areaField);
 
                     if (! $area) {
                         return [];
                     }
 
+                    $permitidos = $soloDelitos ? $soloDelitos($get) : null;
+                    $excluidos = $sinDelitos ? $sinDelitos($get) : [];
+
                     $opciones = $area === self::OTROS
                         ? []
-                        : Delito::query()->where('area', $area)->orderBy('delito')->pluck('delito', 'id')->all();
+                        : Delito::query()->where('area', $area)
+                            ->when($permitidos !== null, fn ($query) => $query->whereIn('delito', $permitidos))
+                            ->when($excluidos !== [], fn ($query) => $query->whereNotIn('delito', $excluidos))
+                            ->orderBy('delito')->pluck('delito', 'id')->all();
 
-                    return $conOtros ? $opciones + [self::OTROS => 'Otro'] : $opciones;
+                    // Restringido: sin "Otro" (salvo materia "Otros", que no tiene catálogo).
+                    return $conOtros && ($permitidos === null || $area === self::OTROS) ? $opciones + [self::OTROS => 'Otro'] : $opciones;
                 })
                 ->searchable()
                 ->native(false)

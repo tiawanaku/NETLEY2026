@@ -20,6 +20,9 @@ class CasosRelationManager extends RelationManager
 
     protected static string|\BackedEnum|null $icon = 'heroicon-o-briefcase';
 
+    /** Abierta desde "Casos cerrados": solo los procesos cerrados (ver EditCliente). */
+    public bool $soloCerrados = false;
+
     /**
      * Mismos campos que los pasos "Proceso" y "Pago y plan de cuotas" del
      * wizard de Cliente Ejecutivo (ClienteCasoWizard) — aquí en un solo
@@ -41,7 +44,15 @@ class CasosRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('id')
-            ->modifyQueryUsing(fn ($query) => $query->with(['personal', 'delito', 'delitosDenunciados', 'planesPago']))
+            ->modifyQueryUsing(fn ($query) => $query
+                ->with(['personal', 'delito', 'delitosDenunciados', 'planesPago', 'casosDerivados'])
+                // Desde "Casos cerrados": solo los cerrados; en la ficha normal,
+                // todos menos los cerrados (esos se ven en "Casos cerrados").
+                ->when(
+                    $this->soloCerrados,
+                    fn ($query) => $query->where('estado', \App\Enums\EstadoCaso::Cerrado),
+                    fn ($query) => $query->where('estado', '!=', \App\Enums\EstadoCaso::Cerrado),
+                ))
             // Orden pedido; mismas columnas que la lista de Clientes ejecutivos.
             ->columns([
                 // "Caso" y "Detalle" de Datos del proceso (NUREJ / CUD / otro).
@@ -97,6 +108,14 @@ class CasosRelationManager extends RelationManager
                     ->visible(fn (Caso $record): bool => $record->requiereCostasYCostos() && CasoResource::canCreate())
                     ->url(fn (Caso $record): string => ClienteResource::getUrl('edit', ['record' => $record->cliente_id])
                         .'?'.http_build_query(['action' => 'anadirCaso', 'actionArguments' => ['origen' => $record->getKey()]])),
+                // Ya iniciado: al lado de "Ver", lleva directo a su proceso de
+                // costas y costos (el más reciente, si hubiera más de uno).
+                Action::make('verCostas')
+                    ->label('Costas y costos')
+                    ->icon('heroicon-o-scale')
+                    ->color('success')
+                    ->visible(fn (Caso $record): bool => $record->casosDerivados->isNotEmpty())
+                    ->url(fn (Caso $record): string => CasoResource::getUrl('edit', ['record' => $record->casosDerivados->sortByDesc('id')->first()])),
             ]);
     }
 }

@@ -23,6 +23,15 @@ class EditCliente extends EditRecord
 
     protected function migas(): array
     {
+        // Desde "Casos cerrados": Cliente Ejecutivo › Casos cerrados › ID cliente.
+        if ($this->soloCerrados) {
+            return [
+                ['Cliente Ejecutivo'],
+                ['Casos cerrados', ClienteResource::getUrl('cerrados')],
+                [\App\Filament\Admin\Support\Migas::idCliente($this->getRecord())],
+            ];
+        }
+
         return \App\Filament\Admin\Support\Migas::clientes($this->getRecord());
     }
 
@@ -106,8 +115,14 @@ class EditCliente extends EditRecord
                     // de origen (iguala profesional = iguala Netley + patrocinio).
                     ...(($origen = $this->casoOrigenCostas($arguments))
                         ? [
+                            // Paso 2: materia legal y apersonamiento del caso de
+                            // origen; tipo de proceso según la materia.
+                            ...self::datosProcesoCostas($origen),
+                            // Paso 3: Costos = total del proceso anterior; Costas e
+                            // Iguala profesional se llenan; Total = la suma.
                             'monto_origen_costas' => self::montoOrigenCostas($origen),
-                            'monto_adicional_costas' => 0,
+                            'monto_costas' => null,
+                            'monto_iguala_costas' => null,
                             'iguala' => self::montoOrigenCostas($origen),
                             'patrocinio_hih' => (bool) $origen->patrocinio_hih,
                             'monto_patrocinio_hih' => $origen->patrocinio_hih ? (int) round((float) $origen->monto_patrocinio) : null,
@@ -143,10 +158,18 @@ class EditCliente extends EditRecord
 
                 $origen = $this->casoOrigenCostas($arguments);
 
-                // Costas y costos: monto = proceso original + adicional
-                // (se vuelve a calcular acá, no se confía en lo enviado).
+                // Costas y costos: Total = Costos (proceso anterior) + Costas +
+                // Iguala profesional (se vuelve a calcular acá, no se confía en lo enviado).
                 if ($origen) {
-                    $data['iguala'] = self::montoOrigenCostas($origen) + max((int) ($data['monto_adicional_costas'] ?? 0), 0);
+                    $costos = self::montoOrigenCostas($origen);
+                    $data['iguala'] = ClienteCasoWizard::totalCostas($costos, $data['monto_costas'] ?? 0, $data['monto_iguala_costas'] ?? 0);
+                    // Desglose del total en la nota del proceso.
+                    $data['descripcion'] = trim(($data['descripcion'] ?? '')."\n"
+                        .'Costos Bs. '.$costos.' + Costas Bs. '.max((int) ($data['monto_costas'] ?? 0), 0)
+                        .' + Iguala profesional Bs. '.max((int) ($data['monto_iguala_costas'] ?? 0), 0)
+                        .' = Total Bs. '.$data['iguala']);
+                    // El patrocinio HiH también se cobra (ver ClienteCasoWizard::plan()).
+                    $data['es_costas'] = true;
                 }
 
                 $nuevo = ClienteCasoWizard::crearParaCliente($cliente, $data)['caso'];
@@ -162,10 +185,37 @@ class EditCliente extends EditRecord
             });
     }
 
+    /**
+     * Paso 2 del proceso de costas y costos: misma materia legal y
+     * apersonamiento que el caso de origen, y el tipo de proceso que
+     * corresponde (del catálogo de esa materia; con materia "Otros", escrito).
+     *
+     * @return array<string, mixed>
+     */
+    protected static function datosProcesoCostas(\App\Models\Caso $origen): array
+    {
+        $area = $origen->especialidad?->value;
+        $tipo = ClienteCasoWizard::tipoCostas($area);
+        $delitoId = $area ? \App\Models\Delito::query()->where('area', $area)->where('delito', $tipo)->value('id') : null;
+
+        $apersonamiento = $origen->apersonamiento;
+        $enLista = blank($apersonamiento) || in_array($apersonamiento, ClienteCasoWizard::APERSONAMIENTOS, true);
+
+        return [
+            // Materia del catálogo o, si el origen era "Otros", la escrita a mano.
+            'especialidad' => $area ?? \App\Filament\Admin\Forms\Components\DelitoSelect::OTROS,
+            'materia_texto' => $area ? null : $origen->materia_texto,
+            'delito_id' => $delitoId ? (string) $delitoId : \App\Filament\Admin\Forms\Components\DelitoSelect::OTROS,
+            'delito_texto' => $delitoId ? null : $tipo,
+            'apersonamiento' => $enLista ? $apersonamiento : ClienteCasoWizard::APERSONAMIENTO_OTROS,
+            'apersonamiento_otro' => $enLista ? null : $apersonamiento,
+        ];
+    }
+
     /** Monto del proceso original: iguala profesional (iguala Netley + patrocinio HiH). */
     protected static function montoOrigenCostas(\App\Models\Caso $origen): int
     {
-        return (int) round((float) $origen->iguala + (float) ($origen->patrocinio_hih ? $origen->monto_patrocinio : 0));
+        return (int) round($origen->igualaProfesional());
     }
 
     /** Caso ganado de origen de "Iniciar costas y costos" (si sigue pendiente). */
@@ -215,11 +265,26 @@ class EditCliente extends EditRecord
      */
     public bool $editando = false;
 
+    /** Desde "Casos cerrados" (?cerrados=1): la lista de procesos muestra solo los cerrados. */
+    public bool $soloCerrados = false;
+
     public function mount(int|string $record): void
     {
         parent::mount($record);
 
         $this->editando = request()->boolean('editar') && auth()->user()?->puede('editar');
+        $this->soloCerrados = request()->boolean('cerrados');
+    }
+
+    /** La lista de procesos recibe si debe mostrar solo los cerrados. */
+    public function getRelationManagers(): array
+    {
+        return array_map(
+            fn ($manager) => $manager === \App\Filament\Admin\Resources\Clientes\RelationManagers\CasosRelationManager::class
+                ? $manager::make(['soloCerrados' => $this->soloCerrados])
+                : $manager,
+            parent::getRelationManagers(),
+        );
     }
 
     public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void

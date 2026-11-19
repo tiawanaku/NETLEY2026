@@ -222,6 +222,21 @@ class Caso extends Model
         return $this->hasMany(InformeCierreCaso::class);
     }
 
+    /**
+     * ¿Es un proceso de costas y costos? Ahí el patrocinio HiH también se
+     * cobra: iguala/saldo = Iguala Netley + patrocinio (ver ClienteCasoWizard::plan()).
+     */
+    public function esCostas(): bool
+    {
+        return filled($this->caso_origen_id);
+    }
+
+    /** Iguala profesional: en costas ya es la iguala; si no, iguala Netley + patrocinio. */
+    public function igualaProfesional(): float
+    {
+        return (float) $this->iguala + ($this->esCostas() || ! $this->patrocinio_hih ? 0.0 : (float) $this->monto_patrocinio);
+    }
+
     /** Caso ganado del que salió este proceso de costas y costos. */
     public function casoOrigen(): BelongsTo
     {
@@ -235,9 +250,8 @@ class Caso extends Model
     }
 
     /**
-     * Si este es un proceso de costas y costos: su caso de origen (ya
-     * cerrado) queda "Pendiente" mientras este siga activo, y "Cerrado"
-     * cuando este se cierra o se elimina. No toca un origen reactivado.
+     * Si este es un proceso de costas y costos: al crearlo (o eliminarlo /
+     * restaurarlo) vuelve a calcular el estado de su caso de origen.
      */
     public function sincronizarOrigenCostas(): void
     {
@@ -245,29 +259,36 @@ class Caso extends Model
             return;
         }
 
-        $origen = self::withTrashed()->find($this->caso_origen_id);
+        self::withTrashed()->find($this->caso_origen_id)?->actualizarEstadoCostas();
+    }
 
-        if (! $origen || ! $origen->estado?->esCerrado()) {
+    /**
+     * Caso ya cerrado: queda "Pendiente" mientras le falte iniciar costas y
+     * costos (ganado, con patrocinio HiH y sin proceso de costas) y pasa a
+     * "Cerrado" en cuanto se inicia. No toca un caso activo ni eliminado.
+     */
+    public function actualizarEstadoCostas(): void
+    {
+        if ($this->trashed() || ! $this->estado?->esCerrado()) {
             return;
         }
 
-        $estado = (! $this->trashed() && $this->estado === EstadoCaso::Activo)
-            ? EstadoCaso::Pendiente
-            : EstadoCaso::Cerrado;
+        $estado = $this->requiereCostasYCostos() ? EstadoCaso::Pendiente : EstadoCaso::Cerrado;
 
-        if ($origen->estado !== $estado) {
-            $origen->forceFill(['estado' => $estado])->saveQuietly();
+        if ($this->estado !== $estado) {
+            $this->forceFill(['estado' => $estado])->saveQuietly();
         }
     }
 
     /**
-     * ¿Falta iniciar costas y costos? Caso cerrado, ganado ("Se ganó el
-     * proceso" en el informe de cierre), con patrocinio HiH mayor a 0 y sin
-     * un proceso de costas ya iniciado (contando los eliminados).
+     * ¿Falta iniciar costas y costos? Caso cerrado (o pendiente), ganado
+     * ("Se ganó el proceso" en el informe de cierre), con patrocinio HiH
+     * mayor a 0 y sin un proceso de costas ya iniciado (contando los
+     * eliminados).
      */
     public function requiereCostasYCostos(): bool
     {
-        return $this->estado === EstadoCaso::Cerrado
+        return (bool) $this->estado?->esCerrado()
             && $this->patrocinio_hih
             && (float) $this->monto_patrocinio > 0
             && $this->informeCierre?->resultado === 'se_gano_proceso'

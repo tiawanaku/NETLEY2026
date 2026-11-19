@@ -9,9 +9,10 @@
     $fecha = fn ($f) => $f ? $f->format('d/m/Y') : '—';
     $cliente = $caso->cliente;
 
-    $igualaNetley = (float) $caso->iguala;
     $hih = (float) ($caso->monto_patrocinio ?? 0);
-    $igualaProfesional = $igualaNetley + ($caso->patrocinio_hih ? $hih : 0);
+    // Costas y costos: Caso.iguala ya incluye el patrocinio (lo que se cobra).
+    $igualaNetley = $caso->esCostas() ? (float) $caso->iguala - ($caso->patrocinio_hih ? $hih : 0) : (float) $caso->iguala;
+    $igualaProfesional = $caso->igualaProfesional();
 
     $servicios = collect([
         ['activo' => $caso->servicio_psicologia, 'nombre' => 'Psicología', 'monto' => $caso->monto_servicio_psicologia],

@@ -28,7 +28,13 @@
         <tr><td class="label">Fecha de cierre</td><td>{{ optional($informe->fecha_cierre)->format('d/m/Y') }}</td></tr>
         <tr><td class="label">Saldo pendiente</td><td>Bs. {{ number_format($informe->saldo, 2) }}</td></tr>
         <tr><td class="label">Pérdida</td><td>Bs. {{ number_format($informe->perdida, 2) }}</td></tr>
+        {{-- Con pérdida: monto y responsable por organización; si no, quién asume. --}}
+        @if ($informe->perdida_hih !== null || $informe->perdida_netley !== null)
+        <tr><td class="label">Pérdida HiH</td><td>Bs. {{ number_format((float) $informe->perdida_hih, 2) }} — Responsable: {{ $informe->responsable_hih ?: '-' }}</td></tr>
+        <tr><td class="label">Pérdida Netley</td><td>Bs. {{ number_format((float) $informe->perdida_netley, 2) }} — Responsable: {{ $informe->responsable_netley ?: '-' }}</td></tr>
+        @else
         <tr><td class="label">Asume saldo/pérdida</td><td>{{ $informe->asume ?: '-' }}</td></tr>
+        @endif
         {{-- Ya no se piden al cerrar; solo se ven en cierres anteriores que los tengan. --}}
         @if (filled($informe->seguimiento_responsable))
         <tr><td class="label">Responsable seguimiento</td><td>{{ $informe->seguimiento_responsable }}</td></tr>

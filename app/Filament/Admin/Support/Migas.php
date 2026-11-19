@@ -160,8 +160,9 @@ class Migas
             return [['Cliente Ejecutivo'], ['Casos eliminados', $base.'?tab=eliminados'], [$titulo]];
         }
 
-        if ($caso->estado?->esCerrado()) {
-            return [['Cliente Ejecutivo'], ['Casos cerrados', $base.'?tab=cerrados'], [$titulo]];
+        // "Pendiente" (falta iniciar costas y costos) va como un caso de la lista general.
+        if ($caso->estado === EstadoCaso::Cerrado) {
+            return [['Cliente Ejecutivo'], ['Casos cerrados', ClienteResource::getUrl('cerrados')], [$titulo]];
         }
 
         $escalones = [['Clientes ejecutivos', ClienteResource::getUrl('index')]];

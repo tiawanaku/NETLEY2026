@@ -12,10 +12,11 @@ use Filament\Support\Contracts\HasLabel;
  * Caso::booted() al eliminar el caso (va a "Casos eliminados") y al
  * restaurarlo vuelve a Activo.
  *
- * "Pendiente": caso cerrado (ganado) cuyo proceso de costas y costos sigue
- * abierto; vuelve a Cerrado cuando se cierra el de costas (ver
- * Caso::sincronizarOrigenCostas()). Cuenta como cerrado en listados y
- * contadores (ver cerrados()).
+ * "Pendiente": caso cerrado como ganado, con patrocinio HiH, al que todavía
+ * le falta iniciar costas y costos; pasa a Cerrado en cuanto se inicia (ver
+ * Caso::actualizarEstadoCostas()). Se ve en la lista general de casos, no
+ * en "Casos cerrados", pero cuenta como cerrado en contadores y acciones
+ * (ver cerrados()).
  */
 enum EstadoCaso: string implements HasColor, HasLabel
 {

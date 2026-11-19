@@ -32,6 +32,32 @@ class ListCasos extends ListRecords
 
     protected static string $resource = CasoResource::class;
 
+    /**
+     * "Casos cerrados" es ahora la tabla de clientes con casos cerrados
+     * (ClienteResource 'cerrados'): casos?tab=cerrados (menú) lleva allá.
+     */
+    public function mount(): void
+    {
+        parent::mount();
+
+        // activeTab ya viene de ?tab= (propiedad de URL).
+        if ($this->activeTab === 'cerrados' || request()->query('tab') === 'cerrados') {
+            $this->redirect(\App\Filament\Admin\Resources\Clientes\ClienteResource::getUrl('cerrados'));
+        }
+    }
+
+    /** Lo mismo al cambiar a la pestaña "Casos cerrados" sin recargar. */
+    public function updatedActiveTab(): void
+    {
+        if ($this->activeTab === 'cerrados') {
+            $this->redirect(\App\Filament\Admin\Resources\Clientes\ClienteResource::getUrl('cerrados'));
+
+            return;
+        }
+
+        parent::updatedActiveTab();
+    }
+
     public function getTitle(): string
     {
         return match ($this->activeTab) {
@@ -59,8 +85,10 @@ class ListCasos extends ListRecords
     {
         $tabs = [
             'todos' => Tab::make('Todos'),
+            // Solo "Cerrado": los "Pendiente" (ganados con patrocinio HiH que
+            // aún no iniciaron costas y costos) siguen en la lista general.
             'cerrados' => Tab::make('Casos cerrados')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('estado', EstadoCaso::cerrados())),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('estado', EstadoCaso::Cerrado)),
         ];
 
         if (auth()->user()?->puede('eliminar')) {

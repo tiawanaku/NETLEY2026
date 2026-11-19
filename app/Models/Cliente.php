@@ -110,6 +110,12 @@ class Cliente extends Model implements AuthenticatableContract
         return $this->hasOne(Caso::class)->latestOfMany();
     }
 
+    /** Caso cerrado más reciente (tabla de "Casos cerrados"). */
+    public function ultimoCasoCerrado(): HasOne
+    {
+        return $this->hasOne(Caso::class)->ofMany(['id' => 'max'], fn ($query) => $query->where('estado', \App\Enums\EstadoCaso::Cerrado));
+    }
+
     public function casos(): HasMany
     {
         return $this->hasMany(Caso::class);

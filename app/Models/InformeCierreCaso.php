@@ -35,6 +35,10 @@ class InformeCierreCaso extends Model
         'abogado_responsable',
         'saldo',
         'perdida',
+        'perdida_hih',
+        'responsable_hih',
+        'perdida_netley',
+        'responsable_netley',
         'asume',
         'seguimiento_responsable',
         'opciones',
@@ -48,6 +52,8 @@ class InformeCierreCaso extends Model
         return [
             'saldo' => 'decimal:2',
             'perdida' => 'decimal:2',
+            'perdida_hih' => 'decimal:2',
+            'perdida_netley' => 'decimal:2',
             'fecha_cierre' => 'date',
         ];
     }

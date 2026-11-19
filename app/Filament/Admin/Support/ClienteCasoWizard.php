@@ -43,6 +43,25 @@ class ClienteCasoWizard
 
     public const APERSONAMIENTO_OTROS = 'Otros';
 
+    /** Tipos de proceso de un proceso de costas y costos (en el catálogo de cada materia). */
+    public const TIPO_COSTAS_REGULARIZAR = 'Regularizar costas y costos';
+
+    public const TIPO_COSTAS_RESARCIMIENTO = 'Resarcimiento de cobro costas y costos';
+
+    public const TIPOS_COSTAS = [self::TIPO_COSTAS_REGULARIZAR, self::TIPO_COSTAS_RESARCIMIENTO];
+
+    /** Total del proceso de costas y costos: Costos (proceso anterior) + Costas + Iguala profesional. */
+    public static function totalCostas(mixed $costos, mixed $costas, mixed $igualaProfesional): int
+    {
+        return max((int) $costos, 0) + max((int) $costas, 0) + max((int) $igualaProfesional, 0);
+    }
+
+    /** Penal = resarcimiento de cobro; las demás materias = regularizar. */
+    public static function tipoCostas(?string $area): string
+    {
+        return $area === \App\Enums\Especialidad::Penal->value ? self::TIPO_COSTAS_RESARCIMIENTO : self::TIPO_COSTAS_REGULARIZAR;
+    }
+
     /** Opciones de "Género" del cliente (las mismas que en Personal). */
     public const GENEROS = ['Masculino' => 'Masculino', 'Femenino' => 'Femenino', 'Otro' => 'Otro'];
 
@@ -189,7 +208,17 @@ class ClienteCasoWizard
         return [
             // Materia legal y delito, por separado: primero se elige la
             // materia legal (área), que filtra las opciones de delito.
-            ...DelitoSelect::make(delitoLabel: 'Tipo de proceso', conOtros: true),
+            // En un proceso de costas y costos (monto_origen_costas, ver
+            // EditCliente::anadirCasoAction()) solo los dos tipos de costas,
+            // y al cambiar la materia se elige el que corresponde.
+            ...DelitoSelect::make(
+                delitoLabel: 'Tipo de proceso',
+                conOtros: true,
+                soloDelitos: fn (Get $get): ?array => filled($get('monto_origen_costas')) ? self::TIPOS_COSTAS : null,
+                delitoPorDefecto: fn (Get $get, ?string $area): ?string => filled($get('monto_origen_costas')) ? self::tipoCostas($area) : null,
+                // En un proceso normal no se ofrecen los dos tipos de costas.
+                sinDelitos: fn (Get $get): array => filled($get('monto_origen_costas')) ? [] : self::TIPOS_COSTAS,
+            ),
             // Fila propia: Apersonamiento (y su "especificar") a la
             // izquierda y "Servicios requeridos" al lado, sin importar
             // cuántos campos de materia/delito haya visibles arriba. En
@@ -258,32 +287,46 @@ class ClienteCasoWizard
     public static function camposPago(): array
     {
         // Proceso de costas y costos ("Iniciar costas y costos" de un caso
-        // ganado, ver EditCliente::anadirCasoAction()): llega con los montos
-        // del caso de origen y la iguala es el monto del proceso original
-        // más un monto adicional.
+        // ganado, ver EditCliente::anadirCasoAction()): Costos (el total del
+        // proceso anterior, ya cargado) + Costas + Iguala profesional (los
+        // dos se llenan) = Total, que es la iguala del proceso.
         $esCostas = fn (Get $get): bool => filled($get('monto_origen_costas'));
+        $sumar = fn (Get $get, $set) => $set('iguala', self::totalCostas($get('monto_origen_costas'), $get('monto_costas'), $get('monto_iguala_costas')));
 
         return [
             Hidden::make('monto_origen_costas')->dehydrated(false),
             Placeholder::make('monto_origen_costas_preview')
-                ->label('Monto del proceso original')
+                ->label('Costos')
                 ->content(fn (Get $get) => self::bs((int) $get('monto_origen_costas')))
                 ->visible($esCostas),
-            TextInput::make('monto_adicional_costas')
-                ->label('Monto adicional')
+            TextInput::make('monto_costas')
+                ->label('Costas')
                 ->numeric()->integer()->minValue(0)->prefix('Bs.')
+                ->required($esCostas)
                 ->live(onBlur: true)
-                ->afterStateUpdated(fn ($state, Get $get, $set) => $set('iguala', (int) $get('monto_origen_costas') + max((int) $state, 0)))
+                ->afterStateUpdated($sumar)
+                ->visible($esCostas)
+                ->extraInputAttributes(self::atributosEnterPago()),
+            TextInput::make('monto_iguala_costas')
+                ->label('Iguala profesional')
+                ->numeric()->integer()->minValue(0)->prefix('Bs.')
+                ->required($esCostas)
+                ->live(onBlur: true)
+                ->afterStateUpdated($sumar)
                 ->visible($esCostas)
                 ->extraInputAttributes(self::atributosEnterPago()),
             // Todos los montos en bolivianos enteros, sin centavos (->integer()).
-            // En costas y costos: proceso original + adicional, no se escribe.
+            // En costas y costos: Total = Costos + Costas + Iguala profesional, no se escribe.
             TextInput::make('iguala')
-                ->label(fn (Get $get): string => $esCostas($get) ? 'Monto costas y costos' : 'Iguala profesional')
+                ->label(fn (Get $get): string => $esCostas($get) ? 'Total' : 'Iguala profesional')
                 ->readOnly($esCostas)
                 ->numeric()->integer()->minValue(0)->prefix('Bs.')->required()->live(onBlur: true)
                 ->extraInputAttributes(self::atributosEnterPago()),
 
+            // Todo lo demás del paso (patrocinio, anticipo, comisión, cuotas,
+            // resumen y servicios extra) no va en un proceso de costas y
+            // costos: ahí el paso termina en el Total.
+            Group::make([
             Toggle::make('patrocinio_hih')
                 ->label('Patrocinio HiH')
                 ->default(false)
@@ -424,6 +467,9 @@ class ClienteCasoWizard
                         ])
                         ->columns(1),
                 ])
+                ->columnSpanFull(),
+            ])
+                ->visible(fn (Get $get): bool => ! $esCostas($get))
                 ->columnSpanFull(),
         ];
     }
@@ -669,7 +715,11 @@ class ClienteCasoWizard
             : 0;
         $porcentaje = ($patrocinio && $iguala > 0) ? round(min($montoPatrocinio / $iguala * 100, 100), 2) : 0.0;
 
-        $montoCliente = $iguala - $montoPatrocinio;
+        // Iguala Netley = iguala profesional menos el patrocinio HiH. En un
+        // proceso de costas y costos el patrocinio también se cobra: lo que
+        // se cobra (saldo, cuotas) es Iguala Netley + patrocinio.
+        $igualaNetley = $iguala - $montoPatrocinio;
+        $montoCliente = ($datos['es_costas'] ?? false) ? $iguala : $igualaNetley;
 
         $pagoHoy = min(max((int) round((float) ($datos['anticipo'] ?? 0)), 0), $montoCliente);
 
@@ -722,6 +772,8 @@ class ClienteCasoWizard
             'patrocinio' => $patrocinio,
             'porcentaje' => $porcentaje,
             'monto_patrocinio' => $montoPatrocinio,
+            'es_costas' => (bool) ($datos['es_costas'] ?? false),
+            'iguala_netley' => $igualaNetley,
             'monto_cliente' => $montoCliente,
             'pago_hoy' => $pagoHoy,
             'saldo_cliente' => $saldoCliente,
@@ -736,6 +788,8 @@ class ClienteCasoWizard
     {
         return collect(['iguala', 'patrocinio_hih', 'monto_patrocinio_hih', 'anticipo', 'duracion_meses', 'numero_cuotas', 'fecha_primera_cuota'])
             ->mapWithKeys(fn (string $campo) => [$campo => $get($campo)])
+            // Proceso de costas y costos: el patrocinio también se cobra (ver plan()).
+            ->put('es_costas', filled($get('monto_origen_costas')))
             ->all();
     }
 
@@ -806,12 +860,17 @@ class ClienteCasoWizard
         $hih = $caso->patrocinio_hih ? (float) $caso->monto_patrocinio : 0.0;
         $anticipo = (float) $caso->pagos()->where('tipo_pago', 'anticipo')->sum('monto');
         $cuotaAnticipo = $caso->pagos()->where('tipo_pago', 'anticipo')->value('nro_cuota');
+        // Caso.iguala es lo que se cobra: la Iguala Netley o, en costas y
+        // costos, Iguala Netley + patrocinio (ver plan()).
+        $esCostas = $caso->esCostas();
 
         return [
-            'iguala' => (float) $caso->iguala + $hih,
+            'iguala' => $esCostas ? (float) $caso->iguala : (float) $caso->iguala + $hih,
             'patrocinio' => (bool) $caso->patrocinio_hih,
             'porcentaje' => (float) $caso->porcentaje_patrocinio,
             'monto_patrocinio' => $hih,
+            'es_costas' => $esCostas,
+            'iguala_netley' => $esCostas ? (float) $caso->iguala - $hih : (float) $caso->iguala,
             'monto_cliente' => (float) $caso->iguala,
             'pago_hoy' => $anticipo,
             'saldo_cliente' => (float) $caso->iguala - $anticipo,
@@ -848,14 +907,26 @@ class ClienteCasoWizard
             .'<td style="'.$celda.'"></td><td style="'.$celda.'"></td></tr>';
 
         $html = '<table style="border-collapse:collapse;font-size:.875rem;"><tbody>';
-        $html .= $filaResumen('Iguala profesional', $bs($plan['iguala']));
+        $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
 
-        if ($plan['patrocinio']) {
-            $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
-            $html .= $filaResumen('Patrocinio HiH ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
+        if ($plan['es_costas'] ?? false) {
+            // Costas y costos: Total (Costos + Costas + Iguala profesional),
+            // que ya incluye el patrocinio HiH; todo se cobra.
+            $html .= $filaResumen('Total', $bs($plan['monto_cliente']), fuerte: true);
+
+            if ($plan['patrocinio']) {
+                $html .= $filaResumen('Patrocinio HiH (incluido)', $bs($plan['monto_patrocinio']));
+            }
+        } else {
+            $html .= $filaResumen('Iguala profesional', $bs($plan['iguala']));
+
+            if ($plan['patrocinio']) {
+                $html .= $filaResumen('Patrocinio HiH ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
+            }
+
+            $html .= $filaResumen('Iguala Netley', $bs($plan['monto_cliente']), fuerte: true);
         }
 
-        $html .= $filaResumen('Iguala Netley', $bs($plan['monto_cliente']), fuerte: true);
         $html .= $filaResumen('Anticipo', $bs($plan['pago_hoy']));
         $html .= $filaResumen('Saldo', $bs($plan['saldo_cliente']), fuerte: true);
 

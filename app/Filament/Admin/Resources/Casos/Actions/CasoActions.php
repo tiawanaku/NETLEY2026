@@ -60,8 +60,16 @@ class CasoActions
 
                 // Perdido / acuerdo / desistimiento / abandono: la pérdida es el
                 // saldo más el patrocinio Hand i Hand.
+                // Por organización: HiH = patrocinio, Netley = saldo, cada una
+                // con su responsable; sin pérdida no se guardan.
                 if (in_array($data['resultado'] ?? null, CierreCasoSchema::CON_PERDIDA, true)) {
                     $data['perdida'] = CierreCasoSchema::perdida($data['saldo'] ?? 0, $record);
+                    $data['perdida_hih'] = CierreCasoSchema::perdidaHih($record, $data['saldo'] ?? 0);
+                    $data['perdida_netley'] = CierreCasoSchema::perdidaNetley($data['saldo'] ?? 0, $record);
+                } else {
+                    // Sin pérdida (ganado u otro): ya no se carga a mano.
+                    $data['perdida'] = 0;
+                    $data['perdida_hih'] = $data['perdida_netley'] = $data['responsable_hih'] = $data['responsable_netley'] = null;
                 }
 
                 DB::transaction(function () use ($record, $data, $documentos): void {
@@ -71,6 +79,8 @@ class CasoActions
                         ...$data,
                     ]);
                     $record->update(['estado' => EstadoCaso::Cerrado]);
+                    // Ganado con patrocinio HiH y sin costas: queda "Pendiente".
+                    $record->fresh()->actualizarEstadoCostas();
 
                     // Documentos del cierre: a la pestaña Documentos del caso.
                     foreach ($documentos as $documento) {
@@ -175,7 +185,7 @@ class CasoActions
             ->label('Reactivar')
             ->icon('heroicon-o-arrow-path')
             ->color('warning')
-            ->visible(fn (Caso $record) => $record->estado === EstadoCaso::Cerrado)
+            ->visible(fn (Caso $record) => (bool) $record->estado?->esCerrado())
             ->requiresConfirmation()
             ->action(function (Caso $record): void {
                 $record->update(['estado' => EstadoCaso::Activo]);
