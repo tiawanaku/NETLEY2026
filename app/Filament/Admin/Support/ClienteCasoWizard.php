@@ -43,6 +43,9 @@ class ClienteCasoWizard
 
     public const APERSONAMIENTO_OTROS = 'Otros';
 
+    /** Opciones de "Género" del cliente (las mismas que en Personal). */
+    public const GENEROS = ['Masculino' => 'Masculino', 'Femenino' => 'Femenino', 'Otro' => 'Otro'];
+
     /**
      * @return array<int, Step>
      */
@@ -96,6 +99,13 @@ class ClienteCasoWizard
                         ->extraInputAttributes(['data-enter-nav' => 'true']),
                     CamposCi::make(),
                     DatePicker::make('fecha_nacimiento')->label('Fecha de nacimiento')->maxDate(now())->extraInputAttributes(['data-enter-nav' => 'true']),
+                    Select::make('genero')
+                        ->label('Género')
+                        ->options(self::GENEROS)
+                        ->native(false)
+                        ->placeholder('Seleccionar'),
+                    // Hueco a la derecha de Género: País empieza en la línea de abajo.
+                    Placeholder::make('genero_hueco')->hiddenLabel()->content(''),
                     ...CamposDomicilio::region(),
                     // Ver .netley-campo-ancho-alineado en admin-theme.css: sin
                     // esto, la etiqueta en línea queda tan ancha como el
@@ -485,6 +495,7 @@ class ClienteCasoWizard
             'whatsapp' => $data['whatsapp'] ?? null,
             'correo' => $data['correo'] ?? null,
             'fecha_nacimiento' => $data['fecha_nacimiento'] ?? null,
+            'genero' => $data['genero'] ?? null,
             'direccion' => $data['direccion'] ?? null,
             'pais' => $data['pais'] ?? null,
             'provincia' => $data['provincia'] ?? null,

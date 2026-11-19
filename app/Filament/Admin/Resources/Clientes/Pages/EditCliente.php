@@ -93,7 +93,7 @@ class EditCliente extends EditRecord
                     'id_cliente' => (string) ($cliente->nro_cliente ?? $cliente->getKey()),
                     ...$cliente->only([
                         'nombres', 'ap_paterno', 'ap_materno', 'telefono', 'whatsapp', 'correo',
-                        'ci', 'extension', 'fecha_nacimiento',
+                        'ci', 'extension', 'fecha_nacimiento', 'genero',
                     ]),
                     ...$cliente->only(CamposDomicilio::COLUMNAS),
                     'fecha_inicio' => now()->toDateString(),

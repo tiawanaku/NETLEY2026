@@ -34,6 +34,7 @@ class Cliente extends Model implements AuthenticatableContract
         'username',
         'password',
         'fecha_nacimiento',
+        'genero',
         'extension',
         'sucursal',
         'direccion',

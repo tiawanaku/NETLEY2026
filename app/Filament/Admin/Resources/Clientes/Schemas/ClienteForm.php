@@ -8,6 +8,7 @@ use App\Filament\Admin\Support\CamposTelefono;
 use App\Filament\Admin\Support\ReglasContacto;
 use App\Models\Cliente;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -38,6 +39,14 @@ class ClienteForm
                         TextInput::make('correo')->email()->disabled($isEditing)->rules([ReglasContacto::correo(Cliente::class, 'otro cliente')]),
                         CamposCi::make(bloqueado: $isEditing),
                         DatePicker::make('fecha_nacimiento')->label('Fecha de nacimiento')->maxDate(now())->disabled($isEditing),
+                        Select::make('genero')
+                            ->label('Género')
+                            ->options(\App\Filament\Admin\Support\ClienteCasoWizard::GENEROS)
+                            ->native(false)
+                            ->placeholder('Seleccionar')
+                            ->disabled($isEditing),
+                        // Hueco a la derecha de Género: País empieza en la línea de abajo (como en el paso 1).
+                        \Filament\Forms\Components\Placeholder::make('genero_hueco')->hiddenLabel()->content(''),
                         ...CamposDomicilio::region($isEditing),
                         // Ver .netley-campo-ancho-alineado en admin-theme.css
                         // (igual que en el paso 1).

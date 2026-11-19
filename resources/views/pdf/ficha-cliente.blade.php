@@ -64,6 +64,10 @@
             <td class="et">Correo</td><td class="va">{{ $v($cliente->correo) }}</td>
             <td class="et">Casos</td><td class="va">{{ $cliente->casos()->count() }}</td>
         </tr>
+        <tr>
+            <td class="et">Género</td><td class="va">{{ $v($cliente->genero) }}</td>
+            <td class="et"></td><td class="va"></td>
+        </tr>
     </table>
 
     <div class="seccion">Domicilio</div>
