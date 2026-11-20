@@ -49,8 +49,9 @@
         .check { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #233f94; }
         .cierre td { padding: 4px 6px 2px 0; font-size: 9.5px; }
 
-        .firma { margin-top: 26px; text-align: center; }
-        .firma .linea { border-top: 1px solid #9ca3af; width: 230px; margin: 0 auto 4px; }
+        /* Espacio amplio para firmar a mano sobre la línea. */
+        .firma { margin-top: 95px; text-align: center; }
+        .firma .linea { border-top: 1px solid #6b7280; width: 280px; margin: 0 auto 5px; }
         .firma .cargo { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: #6b7280; }
     </style>
 </head>
@@ -113,7 +114,7 @@
         <h3>Datos del cliente</h3>
         <table class="datos">
             <tr>
-                <td style="width:20%;"><span class="et">N° de cliente</span><span class="va">{{ $consulta->caso?->cliente?->nro_cliente ?? '—' }}</span></td>
+                <td style="width:20%;"><span class="et">ID cliente</span><span class="va">{{ $consulta->caso?->cliente?->nro_cliente ?? '—' }}</span></td>
                 <td style="width:27%;"><span class="et">Nombre</span><span class="va">{{ $consulta->nombres ?: '—' }}</span></td>
                 <td style="width:28%;"><span class="et">Apellido</span><span class="va">{{ trim($consulta->ap_paterno.' '.$consulta->ap_materno) ?: '—' }}</span></td>
                 <td style="width:25%;"><span class="et">Teléfono</span><span class="va">{{ \App\Support\Telefono::formatear($consulta->telefono) ?: '—' }}</span></td>
@@ -163,8 +164,6 @@
                             <span class="badge peligro">Anulada</span>
                         @elseif ($cita->confirmada)
                             <span class="badge exito">Confirmada</span>
-                        @else
-                            <span class="badge aviso">Por confirmar</span>
                         @endif
                     </td>
                 </tr>
@@ -178,12 +177,13 @@
         <h3>Cerrar caso</h3>
         <table class="cierre">
             <tr>
-                <td><span class="check">{{ $marca($consulta->caso_id !== null) }}</span> Cliente ejecutivo</td>
-                <td><span class="check">{{ $marca($reagendada) }}</span> Reagendar</td>
-                <td><span class="check">{{ $marca($estado === \App\Enums\EstadoConsulta::SoloConsulta) }}</span> Solo consulta</td>
-                <td><span class="check">{{ $marca(in_array($estado, [\App\Enums\EstadoConsulta::NoContesta, \App\Enums\EstadoConsulta::NoResponde], true)) }}</span> No contesta</td>
-                <td><span class="check">{{ $marca($estado === \App\Enums\EstadoConsulta::NoAsistio) }}</span> No asistió</td>
-                <td><span class="check">{{ $marca((bool) $vigente?->anulada || $estado === \App\Enums\EstadoConsulta::CitaAnulada) }}</span> Cita anulada</td>
+                {{-- Siempre vacías: se marcan a mano en el papel. --}}
+                <td><span class="check">☐</span> Cliente ejecutivo</td>
+                <td><span class="check">☐</span> Reagendar</td>
+                <td><span class="check">☐</span> Solo consulta</td>
+                <td><span class="check">☐</span> No contesta</td>
+                <td><span class="check">☐</span> No asistió</td>
+                <td><span class="check">☐</span> Cita anulada</td>
             </tr>
         </table>
     </div>

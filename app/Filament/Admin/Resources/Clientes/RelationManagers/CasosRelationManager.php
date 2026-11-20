@@ -95,7 +95,9 @@ class CasosRelationManager extends RelationManager
                 Action::make('ver')
                     ->label('Ver')
                     ->icon('heroicon-o-eye')
-                    ->visible(fn (Caso $record): bool => ! $record->requiereCostasYCostos())
+                    // Pendiente de costas: en su lugar va "Iniciar costas y costos";
+                    // cerrado sin costas: los dos.
+                    ->visible(fn (Caso $record): bool => ! $record->requiereCostasYCostos() || $record->estado === \App\Enums\EstadoCaso::Cerrado)
                     ->url(fn ($record) => CasoResource::getUrl('edit', ['record' => $record])),
                 // Caso cerrado y ganado con patrocinio HiH: en lugar de "Ver",
                 // mientras no se inicie, abre "Nuevo proceso" en la ficha del

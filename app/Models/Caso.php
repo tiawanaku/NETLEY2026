@@ -21,6 +21,8 @@ class Caso extends Model
     protected $fillable = [
         'cliente_id',
         'caso_origen_id',
+        'costas_cierre_fecha',
+        'costas_cierre_justificacion',
         'especialidad',
         'materia_texto',
         'delito_id',
@@ -114,6 +116,7 @@ class Caso extends Model
             'patrocinio_hih' => 'boolean',
             'documentos_pendientes' => 'boolean',
             'fecha_eliminacion' => 'date',
+            'costas_cierre_fecha' => 'date',
             'porcentaje_patrocinio' => 'decimal:2',
             'monto_patrocinio' => 'decimal:2',
             'comision_porcentaje' => 'decimal:2',
@@ -273,7 +276,11 @@ class Caso extends Model
             return;
         }
 
-        $estado = $this->requiereCostasYCostos() ? EstadoCaso::Pendiente : EstadoCaso::Cerrado;
+        // Cerrado sin costas ("Cerrar caso" del asistente de costas, con
+        // fecha y justificación): Cerrado, aunque todavía pueda iniciarlas.
+        $estado = $this->requiereCostasYCostos() && blank($this->costas_cierre_fecha)
+            ? EstadoCaso::Pendiente
+            : EstadoCaso::Cerrado;
 
         if ($this->estado !== $estado) {
             $this->forceFill(['estado' => $estado])->saveQuietly();

@@ -22,14 +22,11 @@
         $hih = $caso->patrocinio_hih ? (float) $caso->monto_patrocinio : 0;
         $porcentaje = rtrim(rtrim(number_format((float) $caso->porcentaje_patrocinio, 2), '0'), '.');
 
-        // Costas y costos: Total (ya incluye el patrocinio HiH, que también se cobra).
-        $filasMonto = array_values(array_filter($caso->esCostas() ? [
-            ['Total', $bs($caso->iguala), true],
-            $caso->patrocinio_hih ? ['Patrocinio HiH (incluido)', $bs($hih), false] : null,
-        ] : [
+        // Mismos nombres siempre; en costas y costos Caso.iguala ya incluye el patrocinio.
+        $filasMonto = array_values(array_filter([
             ['Iguala profesional', $bs($caso->igualaProfesional()), false],
             $caso->patrocinio_hih ? ['Patrocinio HiH ('.$porcentaje.'%)', $bs($hih), false] : null,
-            ['Iguala Netley', $bs($caso->iguala), true],
+            ['Iguala Netley', $bs($caso->esCostas() ? (float) $caso->iguala - $hih : $caso->iguala), true],
         ]));
         $filasMonto = array_values(array_filter([
             ...$filasMonto,

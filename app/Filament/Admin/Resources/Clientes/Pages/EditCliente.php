@@ -94,6 +94,15 @@ class EditCliente extends EditRecord
                 ? 'Costas y costos — caso N° '.$origen->id
                 : 'Nuevo proceso')
             ->modalWidth('5xl')
+            // Costas y costos: arriba del asistente, "Cerrar caso" cierra el
+            // caso de origen sin iniciar las costas (ver cerrarSinCostasAction()).
+            ->registerModalActions([$this->cerrarSinCostasAction()])
+            ->modalContent(fn (array $arguments, Action $action) => ($origen = $this->casoOrigenCostas($arguments)) && $origen->estado === \App\Enums\EstadoCaso::Pendiente
+                ? view('filament.admin.clientes.costas-cerrar-caso', [
+                    'origen' => $origen,
+                    'boton' => $action->getModalAction('cerrarSinCostas')->arguments(['origen' => $origen->id]),
+                ])
+                : null)
             ->fillForm(function (array $arguments): array {
                 /** @var Cliente $cliente */
                 $cliente = $this->getRecord();
@@ -133,7 +142,7 @@ class EditCliente extends EditRecord
                     ...($origen
                         ? ['descripcion' => 'Costas y costos del caso N° '.$origen->id.($origen->materia_legal ? ' ('.$origen->materia_legal.')' : '')
                             // Saldo y responsable indicados al cerrar el caso ganado.
-                            .($origen->informeCierre ? '. Saldo al cierre: Bs. '.number_format((float) $origen->informeCierre->saldo, 2, '.', '')
+                            .($origen->informeCierre ? '. Saldo al cierre: Bs. '.number_format((float) $origen->informeCierre->saldo, 0, '', '')
                                 .(filled($origen->informeCierre->asume) ? ' — responsable: '.$origen->informeCierre->asume : '') : '')]
                         : []),
                 ];
@@ -216,6 +225,55 @@ class EditCliente extends EditRecord
     protected static function montoOrigenCostas(\App\Models\Caso $origen): int
     {
         return (int) round($origen->igualaProfesional());
+    }
+
+    /**
+     * "Cerrar caso" del asistente de costas y costos: con fecha y
+     * justificación, el caso de origen pasa de Pendiente a Cerrado sin
+     * iniciar las costas. Sigue mostrando "Iniciar costas y costos" (en la
+     * lista de sus casos cerrados) para iniciarlas más adelante.
+     */
+    protected function cerrarSinCostasAction(): Action
+    {
+        return Action::make('cerrarSinCostas')
+            ->label('Cerrar caso')
+            ->icon('heroicon-o-archive-box')
+            ->color('danger')
+            ->modalHeading(fn (array $arguments): string => 'Cerrar caso N° '.($arguments['origen'] ?? '').' sin iniciar costas y costos')
+            ->modalDescription('El caso pasa a Casos cerrados. Las costas y costos se pueden iniciar después desde ahí.')
+            ->modalWidth('lg')
+            ->schema([
+                \Filament\Forms\Components\DatePicker::make('fecha')
+                    ->label('Fecha')
+                    ->default(now())
+                    ->maxDate(now())
+                    ->required(),
+                \Filament\Forms\Components\Textarea::make('justificacion')
+                    ->label('Justificación')
+                    ->rows(4)
+                    ->required(),
+            ])
+            ->modalSubmitActionLabel('Cerrar caso')
+            ->action(function (array $data, array $arguments): void {
+                $origen = $this->casoOrigenCostas($arguments);
+
+                if (! $origen) {
+                    Notification::make()->title('Ese caso ya no está pendiente de costas y costos')->warning()->send();
+
+                    return;
+                }
+
+                $origen->update([
+                    'costas_cierre_fecha' => $data['fecha'],
+                    'costas_cierre_justificacion' => trim($data['justificacion']),
+                ]);
+                $origen->fresh()->actualizarEstadoCostas();
+
+                Notification::make()->title('Caso cerrado')->body('Lo encuentras en Casos cerrados; ahí se pueden iniciar las costas y costos.')->success()->send();
+
+                // Ficha del cliente en "Casos cerrados" (solo sus procesos cerrados).
+                $this->redirect(ClienteResource::getUrl('edit', ['record' => $this->getRecord()]).'?cerrados=1&relation=0');
+            });
     }
 
     /** Caso ganado de origen de "Iniciar costas y costos" (si sigue pendiente). */

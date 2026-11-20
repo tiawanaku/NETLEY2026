@@ -79,7 +79,8 @@ class AscenderCasoAction
                     'fecha_inicio' => now()->toDateString(),
                     'fecha_primera_cuota' => now()->addMonth()->toDateString(),
                     'patrocinio_hih' => false,
-                    'anticipo' => 0,
+                    // Anticipo vacío (no 0): se llena a mano si hay anticipo.
+                    'anticipo' => null,
                     // Si la respuesta usó materia "Otro" (escrita a mano), se
                     // precarga como "Otros" con ese mismo texto.
                     'especialidad' => $ultimaRespuesta?->designacion?->value

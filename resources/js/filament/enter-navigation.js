@@ -109,8 +109,10 @@
         return !el.value || el.value.trim() === '';
     }
 
-    function clickCreateButton() {
-        var buttons = Array.from(document.querySelectorAll('button'));
+    // contexto: el modal (o formulario) donde está el campo, para no tomar el
+    // botón Guardar de la página de fondo cuando hay un modal abierto.
+    function findSubmitButton(contexto) {
+        var buttons = Array.from((contexto || document).querySelectorAll('button'));
 
         // data-enter-submit: marca fija en el botón de Crear/Guardar, puesta
         // vía ->extraAttributes() en la página (ver CreatePersonal/
@@ -134,9 +136,53 @@
             });
         }
 
-        if (submitBtn) {
-            submitBtn.click();
+        return submitBtn || null;
+    }
+
+    // Doble Enter (a pedido): cuando ya no queda ningún campo vacío, el
+    // primer Enter NO guarda ni avanza. Saca el foco del campo (así los
+    // ->live(onBlur) recalculan los valores automáticos: Iguala Netley,
+    // saldo, resumen…), espera a que Livewire termine y recién pone el foco
+    // en el botón Siguiente / Guardar, resaltado. El segundo Enter cae sobre
+    // ese botón con foco y el navegador lo presiona (comportamiento nativo
+    // de un <button> enfocado), así hay una pausa para revisar lo llenado.
+    var ESPERA_RECALCULO_MS = 700;
+
+    function prepararBotonFinal(campo) {
+        var contexto = (campo && campo.closest('.fi-modal-window')) || null;
+
+        if (document.activeElement && document.activeElement.blur) {
+            document.activeElement.blur();
         }
+
+        setTimeout(function () {
+            // El modal puede haberse re-renderizado: se vuelve a buscar el
+            // abierto si el de antes quedó desconectado.
+            if (contexto && !contexto.isConnected) {
+                contexto = Array.from(document.querySelectorAll('.fi-modal-window')).filter(function (m) {
+                    return m.offsetParent !== null;
+                }).pop() || null;
+            }
+
+            var boton = findSubmitButton(contexto) || findSubmitButton(null);
+
+            if (!boton) {
+                return;
+            }
+
+            document.querySelectorAll('.netley-enter-listo').forEach(function (b) {
+                b.classList.remove('netley-enter-listo');
+            });
+
+            boton.classList.add('netley-enter-listo');
+            boton.setAttribute('title', 'Revisa los datos y presiona Enter para continuar');
+            boton.focus();
+
+            boton.addEventListener('blur', function quitar() {
+                boton.classList.remove('netley-enter-listo');
+                boton.removeEventListener('blur', quitar);
+            });
+        }, ESPERA_RECALCULO_MS);
     }
 
     function closeAnyOpenCombobox() {
@@ -209,17 +255,15 @@
         }
 
         // data-enter-no-autosubmit: en un campo (o un contenedor ancestro,
-        // ej. "Datos del cobro de hoy") marcado así, no se dispara el
-        // guardado solo porque no quede nada vacío por delante. Sin esto,
-        // un paso con varios campos opcionales YA precargados con un valor
-        // por defecto (ej. "Pago y plan de cuotas": anticipo, N° de cuotas,
-        // fecha de la primera cuota) queda a un Enter de distancia de
-        // guardarse sin querer apenas se completa el primer campo vacío.
+        // ej. "Datos del cobro de hoy") marcado así, no se pasa al botón final
+        // solo porque no quede nada vacío por delante.
         if (sequence[idx].closest('[data-enter-no-autosubmit="true"]')) {
             return;
         }
 
-        clickCreateButton();
+        // Nada vacío por delante: primer Enter = recalcular y enfocar el
+        // botón (el segundo Enter, sobre el botón, avanza o guarda).
+        prepararBotonFinal(sequence[idx]);
     }
 
     document.addEventListener('keydown', function (e) {

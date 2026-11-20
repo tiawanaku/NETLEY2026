@@ -148,8 +148,11 @@ class VerAgendado extends EditRecord
                     ->native(false)
                     ->default(fn () => $this->motivoInicial())
                     ->live(),
+                // Campo propio: citas.observacion_cierre de la cita vigente
+                // (llega con lo ya guardado), ver guardarCierre().
                 Textarea::make('cierre_detalle')
                     ->label('Detalle')
+                    ->default(fn () => $this->citaVigente()?->observacion_cierre)
                     ->rows(3),
             ])
             ->footerActions([
@@ -233,14 +236,26 @@ class VerAgendado extends EditRecord
         $record = $this->getRecord();
         $observacion = trim((string) $detalle);
 
+        // El Detalle va a su campo propio: citas.observacion_cierre de la
+        // cita vigente (el mismo que la "Observación" de la ficha de
+        // agendamiento, ver FichaAgendamiento::guardarCierre()), con
+        // cualquier motivo — ya no se agrega a la nota interna.
+        $vigente = $this->citaVigente();
+
+        if ($vigente && $observacion !== '' && $vigente->observacion_cierre !== $observacion) {
+            $vigente->update(['observacion_cierre' => $observacion]);
+        }
+
         // En edición (?editar=1) este mismo Guardar guarda también todo lo
         // modificado en la ficha (ver getFormActions()); sin motivo elegido,
-        // solo eso.
+        // solo eso (y el Detalle, si se escribió).
         if (blank($motivoSeleccionado)) {
             if ($this->editando) {
                 $this->guardarEdicion();
                 Notification::make()->title('Guardado')->success()->send();
                 $this->redirect($this->urlFicha());
+            } elseif ($observacion !== '' && $vigente) {
+                Notification::make()->title('Detalle guardado')->success()->send();
             }
 
             return;
@@ -254,8 +269,6 @@ class VerAgendado extends EditRecord
         }
 
         if ($motivoSeleccionado === self::OPCION_REAGENDAR) {
-            $vigente = $this->citaVigente();
-
             if (! $vigente) {
                 Notification::make()->title('No hay ninguna cita vigente para reagendar')->warning()->send();
 
@@ -287,8 +300,6 @@ class VerAgendado extends EditRecord
         }
 
         if ($motivoSeleccionado === self::OPCION_CITA_ANULADA) {
-            $vigente = $this->citaVigente();
-
             if (! $vigente) {
                 Notification::make()->title('No hay ninguna cita vigente para anular')->warning()->send();
 
@@ -308,14 +319,10 @@ class VerAgendado extends EditRecord
             ]);
 
             // La consulta se cierra con estado "Cita Anulada" (pasa a
-            // Consultas cerradas, de donde se puede reactivar), y el motivo
-            // queda también en su nota interna, como el resto de cierres.
-            $nota = trim((string) $record->nota_interna);
-            $entrada = now()->format('d/m/Y H:i')." — Cierre (Cita anulada): {$observacion}";
-            $record->update([
-                'estado' => EstadoConsulta::CitaAnulada,
-                'nota_interna' => $nota !== '' ? "{$nota}\n{$entrada}" : $entrada,
-            ]);
+            // Consultas cerradas, de donde se puede reactivar). El motivo ya
+            // quedó en el Detalle (citas.observacion_cierre) y en el
+            // historial de la cita.
+            $record->update(['estado' => EstadoConsulta::CitaAnulada]);
 
             Notification::make()->title('Cita anulada y consulta cerrada')->success()->send();
 
@@ -328,15 +335,8 @@ class VerAgendado extends EditRecord
 
         if ($motivo && array_key_exists($motivo->value, self::opcionesMotivoCierre())) {
             $this->guardarEdicion();
-            $nota = trim((string) $record->nota_interna);
-
-            if ($observacion !== '') {
-                $etiqueta = self::opcionesMotivoCierre()[$motivo->value];
-                $entrada = now()->format('d/m/Y H:i')." — Cierre ({$etiqueta}): {$observacion}";
-                $nota = $nota !== '' ? "{$nota}\n{$entrada}" : $entrada;
-            }
-
-            $record->update(['estado' => $motivo, 'nota_interna' => $nota]);
+            // El Detalle ya quedó en citas.observacion_cierre (arriba).
+            $record->update(['estado' => $motivo]);
 
             Notification::make()->title('Consulta cerrada')->success()->send();
 

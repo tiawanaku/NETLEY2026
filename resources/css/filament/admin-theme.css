@@ -618,3 +618,19 @@
     .netley-ficha-cita, .netley-ficha-cierre { grid-template-columns: 1fr; }
     .netley-ficha-cita-datos { grid-template-columns: 1fr 1fr; }
 }
+
+/* Doble Enter (ver resources/js/filament/enter-navigation.js): el botón
+   Siguiente / Guardar queda resaltado tras el primer Enter, esperando el
+   segundo. */
+.netley-enter-listo {
+    outline: 3px solid rgb(35 63 148 / .55) !important;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px rgb(35 63 148 / .15) !important;
+    position: relative;
+}
+.netley-enter-listo::after {
+    content: 'Revisa y presiona Enter';
+    position: absolute; bottom: calc(100% + 8px); right: 0; white-space: nowrap;
+    font-size: .7rem; font-weight: 600; padding: .2rem .5rem; border-radius: .35rem;
+    background: rgb(35 63 148); color: #fff; pointer-events: none;
+}

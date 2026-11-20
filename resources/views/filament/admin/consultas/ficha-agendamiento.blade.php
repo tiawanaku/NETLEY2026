@@ -49,7 +49,7 @@
     <section class="netley-ficha-seccion">
         <h3>Datos del cliente</h3>
         <dl class="netley-ficha-datos">
-            <div><dt>N° de cliente</dt><dd>{{ $consulta->caso?->cliente?->nro_cliente ?? '—' }}</dd></div>
+            <div><dt>ID cliente</dt><dd>{{ $consulta->caso?->cliente?->nro_cliente ?? '—' }}</dd></div>
             <div><dt>Nombre</dt><dd>{{ $consulta->nombres ?: '—' }}</dd></div>
             <div><dt>Apellido</dt><dd>{{ trim($consulta->ap_paterno.' '.$consulta->ap_materno) ?: '—' }}</dd></div>
             <div><dt>Teléfono</dt><dd>{{ \App\Support\Telefono::formatear($consulta->telefono) ?: '—' }}</dd></div>
@@ -98,8 +98,6 @@
                         <span class="netley-ficha-badge is-peligro">Anulada</span>
                     @elseif ($cita->confirmada)
                         <span class="netley-ficha-badge is-exito">Confirmada</span>
-                    @else
-                        <span class="netley-ficha-badge is-aviso">Por confirmar</span>
                     @endif
                 </div>
                 @if ($puedeEditar && ! $cita->anulada)

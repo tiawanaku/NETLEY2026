@@ -50,6 +50,15 @@ class CasoActions
             ->color('danger')
             ->visible(fn (Caso $record) => ! $record->estado?->esCerrado())
             ->schema(CierreCasoSchema::make())
+            // Cabecera: ID del cliente y N° de proceso.
+            ->modalHeading(fn (Caso $record): string => 'Cerrar caso')
+            ->modalDescription(fn (Caso $record): \Illuminate\Support\HtmlString => new \Illuminate\Support\HtmlString(
+                '<span style="display:inline-flex;gap:.5rem;flex-wrap:wrap;margin-top:.25rem;">'
+                .'<span style="padding:.15rem .6rem;border-radius:999px;background:rgb(35 63 148 / .1);color:rgb(35 63 148);font-weight:600;">ID cliente '.e($record->cliente?->nro_cliente ?? $record->cliente_id).'</span>'
+                .'<span style="padding:.15rem .6rem;border-radius:999px;background:rgb(35 63 148 / .1);color:rgb(35 63 148);font-weight:600;">Proceso N° '.e($record->id).'</span>'
+                .($record->cliente ? '<span style="padding:.15rem 0;color:rgb(107 114 128);">'.e($record->cliente->nombre_completo).'</span>' : '')
+                .'</span>'
+            ))
             ->modalWidth('3xl')
             ->modalSubmitActionLabel('Guardar')
             ->modalCancelActionLabel('Cancelar')
@@ -66,6 +75,11 @@ class CasoActions
                     $data['perdida'] = CierreCasoSchema::perdida($data['saldo'] ?? 0, $record);
                     $data['perdida_hih'] = CierreCasoSchema::perdidaHih($record, $data['saldo'] ?? 0);
                     $data['perdida_netley'] = CierreCasoSchema::perdidaNetley($data['saldo'] ?? 0, $record);
+
+                    // Sin patrocinio HiH no hay fila de HiH (ni responsable).
+                    if (! CierreCasoSchema::tienePatrocinio($record)) {
+                        $data['perdida_hih'] = $data['responsable_hih'] = null;
+                    }
                 } else {
                     // Sin pérdida (ganado u otro): ya no se carga a mano.
                     $data['perdida'] = 0;

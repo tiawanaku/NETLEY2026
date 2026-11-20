@@ -909,23 +909,15 @@ class ClienteCasoWizard
         $html = '<table style="border-collapse:collapse;font-size:.875rem;"><tbody>';
         $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
 
-        if ($plan['es_costas'] ?? false) {
-            // Costas y costos: Total (Costos + Costas + Iguala profesional),
-            // que ya incluye el patrocinio HiH; todo se cobra.
-            $html .= $filaResumen('Total', $bs($plan['monto_cliente']), fuerte: true);
+        // Mismos nombres siempre (también en costas y costos, donde el
+        // saldo es Iguala Netley + patrocinio, ver plan()).
+        $html .= $filaResumen('Iguala profesional', $bs($plan['iguala']));
 
-            if ($plan['patrocinio']) {
-                $html .= $filaResumen('Patrocinio HiH (incluido)', $bs($plan['monto_patrocinio']));
-            }
-        } else {
-            $html .= $filaResumen('Iguala profesional', $bs($plan['iguala']));
-
-            if ($plan['patrocinio']) {
-                $html .= $filaResumen('Patrocinio HiH ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
-            }
-
-            $html .= $filaResumen('Iguala Netley', $bs($plan['monto_cliente']), fuerte: true);
+        if ($plan['patrocinio']) {
+            $html .= $filaResumen('Patrocinio HiH ('.$porcentaje.'%)', $bs($plan['monto_patrocinio']));
         }
+
+        $html .= $filaResumen('Iguala Netley', $bs($plan['iguala_netley'] ?? $plan['monto_cliente']), fuerte: true);
 
         $html .= $filaResumen('Anticipo', $bs($plan['pago_hoy']));
         $html .= $filaResumen('Saldo', $bs($plan['saldo_cliente']), fuerte: true);

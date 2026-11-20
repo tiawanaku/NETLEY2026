@@ -70,6 +70,12 @@ class CierreCasoSchema
         return $caso?->esCostas() ? min($hih, max((float) ($saldo ?? $caso->saldo), 0.0)) : $hih;
     }
 
+    /** ¿El caso tiene patrocinio Hand i Hand (mayor a 0)? */
+    public static function tienePatrocinio(?Caso $caso): bool
+    {
+        return (bool) $caso?->patrocinio_hih && (float) $caso->monto_patrocinio > 0;
+    }
+
     /** Parte de la pérdida de Netley: el saldo pendiente (en costas, sin la parte de HiH). */
     public static function perdidaNetley(mixed $saldo, ?Caso $caso): float
     {
@@ -173,25 +179,33 @@ class CierreCasoSchema
                 ->content(fn (Get $get, ?Caso $record): \Illuminate\Support\HtmlString => new \Illuminate\Support\HtmlString(
                     '<strong style="font-size:1.05rem;">'.e(self::bs(self::perdida($get('saldo'), $record))).'</strong>'
                 )),
-            // Organización | Monto pérdida | Responsable. HiH = patrocinio;
+            // Parte | Monto pérdida | Responsable. HiH = patrocinio;
             // Netley = saldo pendiente.
             Grid::make(3)
                 ->visible(fn (Get $get): bool => in_array($get('resultado'), self::CON_PERDIDA, true))
                 ->columnSpanFull()
                 ->extraAttributes(['class' => 'netley-perdida-organizaciones'])
                 ->schema([
-                    Placeholder::make('org_hih')->label('Organización')->inlineLabel(false)->content('HiH'),
+                    // Fila de HiH solo si el caso tiene patrocinio Hand i Hand;
+                    // sin ella, los títulos de las columnas pasan a la fila de Netley.
+                    Placeholder::make('org_hih')->label('Parte')->inlineLabel(false)->content('HiH')
+                        ->visible(fn (?Caso $record): bool => self::tienePatrocinio($record)),
                     Placeholder::make('monto_hih')->label('Monto pérdida')->inlineLabel(false)
+                        ->visible(fn (?Caso $record): bool => self::tienePatrocinio($record))
                         ->content(fn (Get $get, ?Caso $record): string => self::bs(self::perdidaHih($record, $get('saldo')))),
                     Select::make('responsable_hih')->label('Responsable')->inlineLabel(false)
+                        ->visible(fn (?Caso $record): bool => self::tienePatrocinio($record))
                         ->options(fn (Get $get, ?Caso $record): array => self::opcionesResponsable($get, $record))
                         ->default(fn (?Caso $record): ?string => self::abogadoDelCaso($record))
                         ->searchable()
                         ->native(false),
-                    Placeholder::make('org_netley')->hiddenLabel()->content('Netley'),
-                    Placeholder::make('monto_netley')->hiddenLabel()
+                    Placeholder::make('org_netley')->label('Parte')->inlineLabel(false)
+                        ->hiddenLabel(fn (?Caso $record): bool => self::tienePatrocinio($record))->content('Netley'),
+                    Placeholder::make('monto_netley')->label('Monto pérdida')->inlineLabel(false)
+                        ->hiddenLabel(fn (?Caso $record): bool => self::tienePatrocinio($record))
                         ->content(fn (Get $get, ?Caso $record): string => self::bs(self::perdidaNetley($get('saldo'), $record))),
-                    Select::make('responsable_netley')->hiddenLabel()
+                    Select::make('responsable_netley')->label('Responsable')->inlineLabel(false)
+                        ->hiddenLabel(fn (?Caso $record): bool => self::tienePatrocinio($record))
                         ->options(fn (Get $get, ?Caso $record): array => self::opcionesResponsable($get, $record))
                         ->default(fn (?Caso $record): ?string => self::abogadoDelCaso($record))
                         ->searchable()
