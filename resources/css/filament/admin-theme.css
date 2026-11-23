@@ -634,3 +634,39 @@
     font-size: .7rem; font-weight: 600; padding: .2rem .5rem; border-radius: .35rem;
     background: rgb(35 63 148); color: #fff; pointer-events: none;
 }
+
+/* Seguimiento del proceso (Datos judiciales): barra de etapas + resumen. */
+.netley-seg { padding: 1rem 1.25rem; border-bottom: 1px solid rgb(229 231 235); }
+.dark .netley-seg { border-bottom-color: rgb(255 255 255 / .1); }
+.netley-seg-etapas { display: flex; gap: .25rem; overflow-x: auto; padding-bottom: .5rem; }
+.netley-seg-etapa { flex: 1 1 0; min-width: 5.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .35rem; position: relative; }
+.netley-seg-etapa::before { content: ''; position: absolute; top: .8rem; left: calc(-50% + 1rem); right: calc(50% + 1rem); height: 3px; background: rgb(209 213 219); border-radius: 2px; }
+.netley-seg-etapa:first-child::before { display: none; }
+.netley-seg-punto { width: 1.6rem; height: 1.6rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; background: rgb(243 244 246); color: rgb(107 114 128); border: 2px solid rgb(209 213 219); z-index: 1; }
+.netley-seg-nombre { font-size: .7rem; line-height: 1.15; color: rgb(107 114 128); }
+.netley-seg-etapa--hecha .netley-seg-punto { background: rgb(35 63 148); border-color: rgb(35 63 148); color: #fff; }
+.netley-seg-etapa--hecha::before, .netley-seg-etapa--actual::before { background: rgb(35 63 148); }
+.netley-seg-etapa--actual .netley-seg-punto { background: #fff; border-color: rgb(35 63 148); color: rgb(35 63 148); box-shadow: 0 0 0 4px rgb(35 63 148 / .2); }
+.netley-seg-etapa--actual .netley-seg-nombre { color: rgb(35 63 148); font-weight: 700; }
+.netley-seg-etapa--hecha .netley-seg-nombre { color: rgb(55 65 81); }
+.dark .netley-seg-punto { background: rgb(55 65 81); border-color: rgb(75 85 99); color: rgb(209 213 219); }
+.dark .netley-seg-etapa::before { background: rgb(75 85 99); }
+.dark .netley-seg-etapa--hecha .netley-seg-punto { background: rgb(96 125 220); border-color: rgb(96 125 220); color: #fff; }
+.dark .netley-seg-etapa--hecha::before, .dark .netley-seg-etapa--actual::before { background: rgb(96 125 220); }
+.dark .netley-seg-etapa--actual .netley-seg-punto { background: rgb(17 24 39); border-color: rgb(129 153 230); color: rgb(165 185 240); box-shadow: 0 0 0 4px rgb(96 125 220 / .3); }
+.dark .netley-seg-etapa--actual .netley-seg-nombre { color: rgb(165 185 240); }
+.dark .netley-seg-nombre, .dark .netley-seg-etapa--hecha .netley-seg-nombre { color: rgb(209 213 219); }
+.netley-seg-nota { font-size: .8rem; margin: .25rem 0 0; color: rgb(75 85 99); }
+.dark .netley-seg-nota { color: rgb(209 213 219); }
+.netley-seg-tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .75rem; margin-top: .75rem; }
+.netley-seg-tarjeta { display: flex; flex-direction: column; gap: .2rem; padding: .65rem .85rem; border-radius: .6rem; border: 1px solid rgb(229 231 235); border-left: 4px solid rgb(35 63 148); background: rgb(249 250 251); font-size: .85rem; color: rgb(17 24 39); }
+.netley-seg-titulo { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; color: rgb(107 114 128); }
+.netley-seg-sub { font-size: .75rem; color: rgb(107 114 128); }
+.netley-seg-tarjeta--pronto { border-left-color: rgb(217 119 6); background: rgb(255 251 235); }
+.netley-seg-tarjeta--vencida { border-left-color: rgb(220 38 38); background: rgb(254 242 242); }
+.netley-seg-tarjeta--vencida .netley-seg-sub { color: rgb(185 28 28); font-weight: 600; }
+.dark .netley-seg-tarjeta { background: rgb(255 255 255 / .04); border-color: rgb(255 255 255 / .1); border-left-color: rgb(96 125 220); color: rgb(243 244 246); }
+.dark .netley-seg-titulo, .dark .netley-seg-sub { color: rgb(156 163 175); }
+.dark .netley-seg-tarjeta--pronto { border-left-color: rgb(245 158 11); background: rgb(245 158 11 / .1); }
+.dark .netley-seg-tarjeta--vencida { border-left-color: rgb(239 68 68); background: rgb(239 68 68 / .12); }
+.dark .netley-seg-tarjeta--vencida .netley-seg-sub { color: rgb(252 165 165); }

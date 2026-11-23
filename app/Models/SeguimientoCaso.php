@@ -14,21 +14,38 @@ class SeguimientoCaso extends Model
 
     protected $fillable = [
         'caso_id',
+        'personal_id',
         'fecha_seguimiento',
         'responsable',
         'etapa_proceso',
+        'instancia',
+        'tipo_actuacion',
         'observaciones',
+        'proxima_fecha',
+        'proxima_actuacion',
     ];
 
     protected function casts(): array
     {
         return [
             'fecha_seguimiento' => 'datetime',
+            'proxima_fecha' => 'date',
         ];
     }
 
     public function caso(): BelongsTo
     {
         return $this->belongsTo(Caso::class);
+    }
+
+    public function personal(): BelongsTo
+    {
+        return $this->belongsTo(Personal::class);
+    }
+
+    /** Nombre del abogado: el del personal vinculado o el texto antiguo. */
+    public function getAbogadoNombreAttribute(): ?string
+    {
+        return $this->personal?->nombre_completo ?: $this->responsable;
     }
 }
