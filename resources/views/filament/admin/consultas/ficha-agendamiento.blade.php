@@ -3,7 +3,7 @@
     // estilo del panel: tarjetas por sección (ver .netley-ficha en admin-theme.css).
     $reagendada = $citas->count() > 1;
     $vigente = $citas->where('anulada', false)->last() ?? $citas->last();
-    $bs = fn ($monto) => $monto !== null ? 'Bs. '.number_format((float) $monto, fmod((float) $monto, 1.0) == 0.0 ? 0 : 2, '.', '') : '—';
+    $bs = fn ($monto) => $monto !== null ? 'Bs. '.number_format((float) $monto, 0, '.', '') : '—';
     $porcentaje = fn ($valor) => $valor !== null ? rtrim(rtrim(number_format((float) $valor, 2, '.', ''), '0'), '.').' %' : '—';
     $tipoProceso = $consulta->delito?->delito ?? $consulta->delito_texto;
     $nota = collect([$vigente?->detalle, $consulta->nota_interna])->filter(fn ($texto) => filled($texto))->unique()->join("\n");

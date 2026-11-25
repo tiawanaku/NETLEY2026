@@ -27,8 +27,8 @@ class PagosTable
                 TextColumn::make('caso_id')->label('Caso')->formatStateUsing(fn ($state) => "#{$state}"),
                 TextColumn::make('caso.especialidad')->label('Materia')->badge(),
                 TextColumn::make('nro_cuota')->label('Cuota #'),
-                TextColumn::make('monto')->money('BOB')->summarize(
-                    Sum::make()->label('Total')->money('BOB')
+                TextColumn::make('monto')->money('BOB', decimalPlaces: 0)->summarize(
+                    Sum::make()->label('Total')->money('BOB', decimalPlaces: 0)
                 ),
                 TextColumn::make('fecha_pago')->date()->sortable(),
                 TextColumn::make('sucursal')->badge(),

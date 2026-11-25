@@ -47,7 +47,7 @@ class PlanPagoRecalculo
      */
     public static function vistaPrevia(PlanPago $cuota, float $monto): array
     {
-        $saldo = max(round((float) $cuota->caso->fresh()->saldo - $monto, 2), 0);
+        $saldo = max(round((float) $cuota->caso->fresh()->saldo - $monto), 0);
         $restantes = PlanPago::where('caso_id', $cuota->caso_id)
             ->where('estado', EstadoCuota::Pendiente)
             ->where('id', '!=', $cuota->id)
@@ -57,7 +57,7 @@ class PlanPagoRecalculo
         return [
             'restantes' => $restantes,
             'monto_cuota' => $montoCuota,
-            'ultima' => $restantes > 0 ? round($saldo - $montoCuota * ($restantes - 1), 2) : 0,
+            'ultima' => $restantes > 0 ? round($saldo - $montoCuota * ($restantes - 1)) : 0,
             'saldo' => $saldo,
         ];
     }
@@ -132,7 +132,7 @@ class PlanPagoRecalculo
             $caso = $pago->caso()->lockForUpdate()->first();
             $montoAnterior = (float) $pago->monto;
             $montoNuevo = (float) $datos['monto'];
-            $diferencia = round($montoNuevo - $montoAnterior, 2);
+            $diferencia = round($montoNuevo - $montoAnterior);
 
             if ($montoNuevo <= 0) {
                 throw ValidationException::withMessages(['monto' => 'El monto debe ser mayor a 0.']);
@@ -195,7 +195,7 @@ class PlanPagoRecalculo
      */
     public static function recalcular(Caso $caso): void
     {
-        $saldo = max(round((float) $caso->saldo, 2), 0);
+        $saldo = max(round((float) $caso->saldo), 0);
         $pendientes = $caso->planesPago()->where('estado', EstadoCuota::Pendiente)->orderBy('numero')->get();
 
         if ($saldo <= 0) {
@@ -220,8 +220,8 @@ class PlanPagoRecalculo
             $restante = $saldo;
 
             foreach ($pendientes->values() as $indice => $plan) {
-                $monto = $indice === $cantidad - 1 ? round($restante, 2) : $montoCuota;
-                $restante = round($restante - $monto, 2);
+                $monto = $indice === $cantidad - 1 ? round($restante) : $montoCuota;
+                $restante = round($restante - $monto);
                 $plan->update(['monto' => $monto]);
             }
         }
@@ -231,7 +231,7 @@ class PlanPagoRecalculo
         $corriente = (float) $caso->iguala;
 
         foreach ($caso->planesPago()->orderBy('numero')->get() as $plan) {
-            $corriente = round($corriente - (float) $plan->monto, 2);
+            $corriente = round($corriente - (float) $plan->monto);
             $plan->update(['nuevo_saldo' => max($corriente, 0)]);
         }
     }
@@ -244,6 +244,6 @@ class PlanPagoRecalculo
 
     public static function bs(float $monto): string
     {
-        return fmod($monto, 1.0) == 0.0 ? number_format($monto, 0, '.', '') : number_format($monto, 2, '.', '');
+        return number_format($monto, 0, '.', '');
     }
 }

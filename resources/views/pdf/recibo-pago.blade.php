@@ -1,5 +1,5 @@
 @php
-    $bs = fn ($valor) => 'Bs. '.number_format((float) $valor, 2);
+    $bs = fn ($valor) => 'Bs. '.number_format((float) $valor, 0);
     $monto = $bs($pago->monto);
     $tipo = $pago->tipo_pago;
     $forma = $pago->forma_pago;
@@ -47,14 +47,21 @@
     <meta charset="utf-8">
     <title>Recibo N° {{ $numero }}</title>
     <style>
-        @page { size: A4 portrait; margin: 7mm 9mm; }
+        @page { size: A4 portrait; margin: 0; }
         body { font-family: Helvetica, Arial, sans-serif; font-size: 10px; color: #1f2937; margin: 0; }
         table { border-collapse: collapse; width: 100%; }
         td { vertical-align: top; }
 
+        /* Cada copia ocupa exactamente media hoja A4 (148,5 mm) y su marco
+           tiene alto fijo: las dos copias quedan idénticas y la línea de
+           corte cae justo al medio de la hoja. */
+        .mitad { position: absolute; left: 10mm; right: 10mm; }
         .marco { border: 2px solid {{ $azul }}; border-radius: 8px; padding: 10px 14px; }
+        /* Alto fijo de la parte superior (datos): las firmas siempre quedan a la misma altura. */
+        .cuerpo { height: 90mm; vertical-align: top; }
         .copia { text-align: right; font-size: 8.5px; font-weight: bold; letter-spacing: 2px; color: #6b7280; margin-bottom: 3px; }
-        .corte { border-top: 1px dashed #9ca3af; margin: 9px 0 7px; text-align: center; font-size: 7.5px; color: #9ca3af; }
+        .corte { position: absolute; left: 0; right: 0; top: 148.5mm; border-top: 1px dashed #9ca3af; text-align: center; font-size: 7.5px; color: #9ca3af; }
+        .corte span { position: relative; top: -6px; background: #ffffff; padding: 0 8px; }
         .info { font-size: 8px; line-height: 1.4; color: #4b5563; }
 
         .logo-nombre { font-family: 'Times New Roman', serif; font-size: 36px; letter-spacing: 2px; color: {{ $azul }}; margin: 0; line-height: 1; }
@@ -87,12 +94,12 @@
 <body>
     {{-- Dos copias en la misma hoja: una se entrega al cliente y la otra
          se archiva (se cortan por la línea punteada). --}}
+    <div class="corte"><span>cortar aquí</span></div>
     @foreach (['ORIGINAL — CLIENTE', 'COPIA — ARCHIVO'] as $copia)
-        @if (! $loop->first)
-            <div class="corte">cortar aquí</div>
-        @endif
-        <div style="page-break-inside: avoid; height: 136mm;">
+        <div class="mitad" style="top: {{ $loop->first ? '11mm' : '159.5mm' }};">
         <div class="copia">{{ $copia }}</div>
+        <div class="marco">
+        <table><tr><td class="cuerpo">
         {{-- Recibo anulado (ver Contabilidad › Recibos anulados): marca bien visible. --}}
         @if ($pago->anulado)
             <div style="border: 2px solid #dc2626; color: #dc2626; text-align: center; font-weight: bold; font-size: 12px; letter-spacing: 3px; padding: 3px; margin-bottom: 4px;">
@@ -102,7 +109,6 @@
                 </div>
             </div>
         @endif
-        <div class="marco">
             <table>
                 <tr>
                     <td style="width: 27%;">
@@ -182,7 +188,10 @@
                 </tr>
             </table>
 
-            <table style="margin-top: 8px;">
+        </td></tr></table>
+
+            {{-- Forma de pago y firmas: siempre al pie del marco. --}}
+            <table>
                 <tr>
                     <td style="width: 36%; padding-right: 14px;">
                         <div class="pago-titulo">FORMA DE PAGO</div>

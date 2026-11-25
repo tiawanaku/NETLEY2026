@@ -63,9 +63,9 @@ class LlamadaForm
 
                 Section::make('Datos económicos')
                     ->schema([
-                        TextInput::make('iguala')->numeric()->prefix('Bs.')->default(0),
-                        TextInput::make('anticipo')->numeric()->prefix('Bs.')->default(0),
-                        TextInput::make('comision_bs')->label('Comisión (Bs.)')->numeric()->default(0),
+                        TextInput::make('iguala')->numeric()->integer()->prefix('Bs.')->default(0),
+                        TextInput::make('anticipo')->numeric()->integer()->prefix('Bs.')->default(0),
+                        TextInput::make('comision_bs')->label('Comisión (Bs.)')->numeric()->integer()->default(0),
                         TextInput::make('comision_pct')->label('Comisión (%)')->numeric()->default(0),
                     ]),
             ]);

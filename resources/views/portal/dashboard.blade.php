@@ -145,7 +145,7 @@
                                             </div>
                                         </div>
                                         <div style="font-size:14px;font-weight:700;color:#1a2537;">
-                                            Bs. {{ number_format((float) $cuota->monto, 2) }}
+                                            Bs. {{ number_format((float) $cuota->monto, 0) }}
                                         </div>
                                     </div>
                                 @endforeach

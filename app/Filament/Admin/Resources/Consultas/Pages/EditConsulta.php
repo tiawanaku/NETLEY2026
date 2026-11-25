@@ -11,7 +11,11 @@ use App\Filament\Admin\Resources\Consultas\Schemas\ConsultaForm;
 use App\Models\Consulta;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 
 class EditConsulta extends EditRecord
 {
@@ -51,6 +55,55 @@ class EditConsulta extends EditRecord
     public function getTitle(): string
     {
         return 'N° '.$this->getRecord()->getKey();
+    }
+
+    /**
+     * Consulta cerrada: en lugar de "Seguimiento" se muestra la sección
+     * "Cerrar consulta" (la misma de Agendados) con lo que se registró al
+     * cerrarla — motivo y nota —, solo de lectura.
+     */
+    public function form(Schema $schema): Schema
+    {
+        if (in_array($this->getRecord()->estado, EstadoConsulta::abiertos(), true)) {
+            return parent::form($schema);
+        }
+
+        return ConsultaForm::configure($schema, after: [$this->cierreConsultaSection()], conSeguimiento: false);
+    }
+
+    protected function cierreConsultaSection(): Section
+    {
+        $record = $this->getRecord();
+        $estado = $record->estado;
+        $opciones = VerAgendado::opcionesMotivoCierre();
+
+        if ($estado && ! array_key_exists($estado->value, $opciones)) {
+            $opciones[$estado->value] = $estado->getLabel();
+        }
+
+        // La nota de cierre vive en la cita (citas.observacion_cierre): la
+        // más reciente que la tenga, esté anulada o no.
+        $nota = $record->citas()->whereNotNull('observacion_cierre')->where('observacion_cierre', '!=', '')
+            ->orderByDesc('fecha')->orderByDesc('hora')->value('observacion_cierre');
+
+        return Section::make('Cerrar consulta')
+            ->columns(1)
+            ->schema([
+                Select::make('cierre_motivo')
+                    ->label('Motivo')
+                    ->options($opciones)
+                    ->native(false)
+                    ->dehydrated(false)
+                    ->afterStateHydrated(fn (Select $component) => $component->state($estado?->value))
+                    ->disabled(),
+                Textarea::make('cierre_nota')
+                    ->label('Nota')
+                    ->placeholder('Sin nota')
+                    ->rows(3)
+                    ->dehydrated(false)
+                    ->afterStateHydrated(fn (Textarea $component) => $component->state($nota))
+                    ->disabled(),
+            ]);
     }
 
     /** Si se eligió "Agendar" al editar, ver mutateFormDataBeforeSave(). */

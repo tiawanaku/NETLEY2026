@@ -100,11 +100,11 @@ class Pago extends Model
 
     public function montoEnLetras(): string
     {
-        $entero = (int) floor((float) $this->monto);
-        $centavos = (int) round(((float) $this->monto - $entero) * 100);
+        $entero = (int) round((float) $this->monto);
+        $centavos = 0; // Montos sin centavos en todo el sistema.
 
         if (! extension_loaded('intl')) {
-            return number_format((float) $this->monto, 2, '.', ',').' Bolivianos';
+            return number_format((float) $this->monto, 0, '.', ',').' Bolivianos';
         }
 
         $letras = (new \NumberFormatter('es', \NumberFormatter::SPELLOUT))->format($entero);

@@ -80,7 +80,7 @@ class RecibosAnulados extends Page implements HasTable
                 TextColumn::make('concepto')->label('Concepto'),
                 TextColumn::make('monto')
                     ->label('Monto Bs.')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, fmod((float) $state, 1.0) == 0.0 ? 0 : 2, '.', '')),
+                    ->formatStateUsing(fn ($state) => number_format((float) $state, 0, '.', '')),
                 TextColumn::make('anulado_at')->label('Anulado el')->dateTime('d/m/Y H:i')->sortable(),
                 TextColumn::make('motivo_anulacion')->label('Motivo')->wrap()->limit(80)->placeholder('—'),
                 TextColumn::make('reemplazadoPor.nro_recibo')

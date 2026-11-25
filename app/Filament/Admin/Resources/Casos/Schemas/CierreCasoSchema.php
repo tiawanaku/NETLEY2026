@@ -55,7 +55,7 @@ class CierreCasoSchema
      */
     public static function perdida(mixed $saldo, ?Caso $caso): float
     {
-        return round(self::perdidaNetley($saldo, $caso) + self::perdidaHih($caso, $saldo), 2);
+        return round(self::perdidaNetley($saldo, $caso) + self::perdidaHih($caso, $saldo));
     }
 
     /**
@@ -65,7 +65,7 @@ class CierreCasoSchema
      */
     public static function perdidaHih(?Caso $caso, mixed $saldo = null): float
     {
-        $hih = $caso?->patrocinio_hih ? round((float) $caso->monto_patrocinio, 2) : 0.0;
+        $hih = $caso?->patrocinio_hih ? round((float) $caso->monto_patrocinio) : 0.0;
 
         return $caso?->esCostas() ? min($hih, max((float) ($saldo ?? $caso->saldo), 0.0)) : $hih;
     }
@@ -81,7 +81,7 @@ class CierreCasoSchema
     {
         $saldo = max((float) $saldo, 0.0);
 
-        return round($caso?->esCostas() ? $saldo - self::perdidaHih($caso, $saldo) : $saldo, 2);
+        return round($caso?->esCostas() ? $saldo - self::perdidaHih($caso, $saldo) : $saldo);
     }
 
     /**
@@ -108,7 +108,7 @@ class CierreCasoSchema
 
     protected static function bs(float $monto): string
     {
-        return 'Bs. '.number_format($monto, fmod($monto, 1.0) == 0.0 ? 0 : 2, '.', '');
+        return 'Bs. '.number_format($monto, 0, '.', '');
     }
 
     /** ¿Este cierre sigue como costas y costos? Ganado y con patrocinio HiH mayor a 0. */

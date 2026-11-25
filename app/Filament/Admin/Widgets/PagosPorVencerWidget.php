@@ -34,7 +34,7 @@ class PagosPorVencerWidget extends TableWidget
                 TextColumn::make('caso.descripcion')->label('Descripción')->limit(40),
                 TextColumn::make('numero')->label('N° cuota'),
                 TextColumn::make('fecha')->date(),
-                TextColumn::make('monto')->money('BOB')->badge()->color('success'),
+                TextColumn::make('monto')->money('BOB', decimalPlaces: 0)->badge()->color('success'),
             ])
             ->paginated(false)
             ->emptyStateHeading('No hay pagos por vencer en 2 días')

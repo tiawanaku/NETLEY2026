@@ -27,9 +27,7 @@ class CronologiaCaso
         ]);
 
         $eventos = collect();
-        $bs = fn ($monto): string => 'Bs. '.(fmod((float) $monto, 1.0) == 0.0
-            ? number_format((float) $monto, 0, '.', '')
-            : number_format((float) $monto, 2, '.', ''));
+        $bs = fn ($monto): string => 'Bs. '.number_format((float) $monto, 0, '.', '');
         $agregar = function (?Carbon $fecha, string $tipo, string $titulo, ?string $detalle = null, ?string $hora = null) use ($eventos): void {
             if (! $fecha) {
                 return;

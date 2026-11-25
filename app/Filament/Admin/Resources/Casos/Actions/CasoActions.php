@@ -321,17 +321,17 @@ class CasoActions
                         ->orderBy('numero')
                         ->get()
                         ->mapWithKeys(fn (PlanPago $p) => [
-                            $p->id => 'Cuota '.$p->numero.' — Bs. '.number_format($p->monto, 2).' — '.$p->fecha->format('d/m/Y'),
+                            $p->id => 'Cuota '.$p->numero.' — Bs. '.number_format($p->monto, 0).' — '.$p->fecha->format('d/m/Y'),
                         ]))
                     ->default(fn (Caso $record) => $record->planesPago()->where('estado', 'pendiente')->orderBy('numero')->value('id'))
                     ->required()
                     ->live()
                     ->afterStateUpdated(fn ($state, $set) => $set('monto', PlanPago::find($state)?->monto)),
                 TextInput::make('monto')
-                    ->numeric()
+                    ->numeric()->integer()
                     ->prefix('Bs.')
                     ->required()
-                    ->minValue(0.01)
+                    ->minValue(1)
                     ->maxValue(fn (Caso $record) => (float) $record->saldo)
                     ->validationMessages(['max' => 'No puede pagar más del saldo pendiente (Bs. :max).'])
                     ->default(fn (Caso $record) => $record->planesPago()->where('estado', 'pendiente')->orderBy('numero')->value('monto')),

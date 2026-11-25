@@ -62,7 +62,7 @@
         // Montos, servicios y nota: los de la cita vigente (la última no anulada).
         $vigente = $citas->where('anulada', false)->last() ?? $citas->last();
         $anio = ($consulta->created_at ?? now())->format('Y');
-        $bs = fn ($monto) => $monto !== null ? 'Bs. '.number_format((float) $monto, fmod((float) $monto, 1.0) == 0.0 ? 0 : 2, '.', '') : '—';
+        $bs = fn ($monto) => $monto !== null ? 'Bs. '.number_format((float) $monto, 0, '.', '') : '—';
         $tipoProceso = $consulta->delito?->delito ?? $consulta->delito_texto;
         $nota = collect([$vigente?->detalle, $consulta->nota_interna])->filter(fn ($texto) => filled($texto))->unique()->join("\n");
         $estado = $consulta->estado;

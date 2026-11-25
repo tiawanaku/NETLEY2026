@@ -27,11 +27,11 @@
                     </div>
                     <div>
                         <div style="font-size:12px;opacity:.6;margin-bottom:2px;">Bs. Iguala</div>
-                        <div>{{ $cita->bs_iguala !== null ? 'Bs. '.number_format((float) $cita->bs_iguala, 2) : '—' }}</div>
+                        <div>{{ $cita->bs_iguala !== null ? 'Bs. '.number_format((float) $cita->bs_iguala, 0) : '—' }}</div>
                     </div>
                     <div>
                         <div style="font-size:12px;opacity:.6;margin-bottom:2px;">Bs. Anticipo</div>
-                        <div>{{ $cita->bs_anticipo !== null ? 'Bs. '.number_format((float) $cita->bs_anticipo, 2) : '—' }}</div>
+                        <div>{{ $cita->bs_anticipo !== null ? 'Bs. '.number_format((float) $cita->bs_anticipo, 0) : '—' }}</div>
                     </div>
                     <div>
                         <div style="font-size:12px;opacity:.6;margin-bottom:2px;">% Comisión</div>
@@ -39,7 +39,7 @@
                     </div>
                     <div>
                         <div style="font-size:12px;opacity:.6;margin-bottom:2px;">Bs. Comisión</div>
-                        <div>{{ $cita->bs_comision !== null ? 'Bs. '.number_format((float) $cita->bs_comision, 2) : '—' }}</div>
+                        <div>{{ $cita->bs_comision !== null ? 'Bs. '.number_format((float) $cita->bs_comision, 0) : '—' }}</div>
                     </div>
                 </div>
 

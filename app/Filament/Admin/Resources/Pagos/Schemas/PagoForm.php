@@ -46,7 +46,7 @@ class PagoForm
                     ->disabled(fn (Get $get) => blank($get('cliente_id')))
                     ->required(),
 
-                TextInput::make('monto')->numeric()->prefix('Bs.')->required(),
+                TextInput::make('monto')->numeric()->integer()->prefix('Bs.')->required(),
                 ...CamposPago::components(),
                 DatePicker::make('fecha_pago')->default(now())->required(),
                 Select::make('sucursal')

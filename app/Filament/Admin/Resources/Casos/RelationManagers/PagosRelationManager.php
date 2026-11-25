@@ -25,7 +25,7 @@ class PagosRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         return $schema->inlineLabel()->columns(1)->components([
-            TextInput::make('monto')->numeric()->prefix('Bs.')->required(),
+            TextInput::make('monto')->numeric()->integer()->prefix('Bs.')->required(),
             ...CamposPago::components(),
             DatePicker::make('fecha_pago')->default(now())->required(),
             Select::make('sucursal')
@@ -46,7 +46,7 @@ class PagosRelationManager extends RelationManager
                     ->label('Concepto')
                     ->badge()
                     ->color(fn (Pago $record) => $record->tipo_pago === 'anticipo' ? 'success' : 'gray'),
-                TextColumn::make('monto')->money('BOB'),
+                TextColumn::make('monto')->money('BOB', decimalPlaces: 0),
                 TextColumn::make('fecha_pago')->date(),
                 TextColumn::make('registrado_por'),
             ])

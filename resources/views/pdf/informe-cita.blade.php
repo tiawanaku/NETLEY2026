@@ -27,8 +27,8 @@
         <tr><td class="label">Colegio (si aplica)</td><td>{{ $informe->nombre_colegio ?: '-' }}</td></tr>
         <tr><td class="label">Responsable</td><td>{{ $informe->responsable ?: '-' }}</td></tr>
         <tr><td class="label">Acciones</td><td>{{ $informe->acciones ?: '-' }}</td></tr>
-        <tr><td class="label">Anticipo</td><td>Bs. {{ number_format($informe->anticipo, 2) }}</td></tr>
-        <tr><td class="label">Iguala</td><td>Bs. {{ number_format($informe->iguala, 2) }}</td></tr>
+        <tr><td class="label">Anticipo</td><td>Bs. {{ number_format($informe->anticipo, 0) }}</td></tr>
+        <tr><td class="label">Iguala</td><td>Bs. {{ number_format($informe->iguala, 0) }}</td></tr>
         <tr><td class="label">Detalle</td><td>{{ $informe->detalle ?: '-' }}</td></tr>
     </table>
 

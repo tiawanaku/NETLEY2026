@@ -4,7 +4,7 @@
     $bs = function ($valor): string {
         $valor = (float) $valor;
 
-        return 'Bs. '.(fmod($valor, 1.0) == 0.0 ? number_format($valor, 0, '.', '') : number_format($valor, 2, '.', ''));
+        return 'Bs. '.number_format($valor, 0, '.', '');
     };
     $fecha = fn ($f) => $f ? $f->format('d/m/Y') : '—';
     $cliente = $caso->cliente;

@@ -38,8 +38,8 @@ class PlanesPagoRelationManager extends RelationManager
         return $schema->inlineLabel()->columns(1)->components([
             TextInput::make('numero')->label('N° de cuota')->numeric()->required(),
             DatePicker::make('fecha')->required(),
-            TextInput::make('monto')->numeric()->prefix('Bs.')->required(),
-            TextInput::make('nuevo_saldo')->numeric()->prefix('Bs.')->label('Saldo tras esta cuota'),
+            TextInput::make('monto')->numeric()->integer()->prefix('Bs.')->required(),
+            TextInput::make('nuevo_saldo')->numeric()->integer()->prefix('Bs.')->label('Saldo tras esta cuota'),
             Select::make('estado')->options(EstadoCuota::class)->default(EstadoCuota::Pendiente)->required(),
         ]);
     }
@@ -72,9 +72,7 @@ class PlanesPagoRelationManager extends RelationManager
     {
         /** @var Caso $caso */
         $caso = $this->getOwnerRecord()->refresh();
-        $bs = fn ($monto): string => 'Bs. '.(fmod((float) $monto, 1.0) == 0.0
-            ? number_format((float) $monto, 0, '.', '')
-            : number_format((float) $monto, 2, '.', ''));
+        $bs = fn ($monto): string => 'Bs. '.number_format((float) $monto, 0, '.', '');
 
         // Sin la lista de cuotas: ya está en la tabla del Plan de pagos de abajo.
         $plan = \App\Filament\Admin\Support\ClienteCasoWizard::planDeCaso($caso);
@@ -378,7 +376,7 @@ class PlanesPagoRelationManager extends RelationManager
                             ->schema([
                                 TextInput::make('monto')
                                     ->label('Monto')
-                                    ->numeric()
+                                    ->numeric()->integer()
                                     ->prefix('Bs.')
                                     ->required()
                                     ->minValue(1)

@@ -151,7 +151,7 @@ class VerAgendado extends EditRecord
                 // Campo propio: citas.observacion_cierre de la cita vigente
                 // (llega con lo ya guardado), ver guardarCierre().
                 Textarea::make('cierre_detalle')
-                    ->label('Detalle')
+                    ->label('Nota')
                     ->default(fn () => $this->citaVigente()?->observacion_cierre)
                     ->rows(3),
             ])
@@ -255,7 +255,7 @@ class VerAgendado extends EditRecord
                 Notification::make()->title('Guardado')->success()->send();
                 $this->redirect($this->urlFicha());
             } elseif ($observacion !== '' && $vigente) {
-                Notification::make()->title('Detalle guardado')->success()->send();
+                Notification::make()->title('Nota guardada')->success()->send();
             }
 
             return;
@@ -307,7 +307,7 @@ class VerAgendado extends EditRecord
             }
 
             if ($observacion === '') {
-                Notification::make()->title('Escribe en Detalle el motivo de la anulación antes de guardar')->warning()->send();
+                Notification::make()->title('Escribe en Nota el motivo de la anulación antes de guardar')->warning()->send();
 
                 return;
             }

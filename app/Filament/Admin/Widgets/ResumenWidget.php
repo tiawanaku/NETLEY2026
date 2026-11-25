@@ -38,7 +38,7 @@ class ResumenWidget extends StatsOverviewWidget
                 ->color('danger'),
             Stat::make('Consultas pendientes', Consulta::whereIn('estado', array_map(fn ($e) => $e->value, EstadoConsulta::abiertos()))->count())
                 ->color('warning'),
-            Stat::make('Ingresos del mes', 'Bs. '.number_format(Pago::whereMonth('fecha_pago', now()->month)->whereYear('fecha_pago', now()->year)->sum('monto'), 2))
+            Stat::make('Ingresos del mes', 'Bs. '.number_format(Pago::whereMonth('fecha_pago', now()->month)->whereYear('fecha_pago', now()->year)->sum('monto'), 0))
                 ->color('success'),
         ];
     }

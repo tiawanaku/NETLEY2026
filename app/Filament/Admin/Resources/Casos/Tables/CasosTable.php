@@ -41,7 +41,7 @@ class CasosTable
                     ->color(fn (bool $state) => $state ? 'warning' : 'gray')
                     ->tooltip(fn (bool $state) => $state ? 'Falta subir el documento del expediente' : 'Documento subido')
                     ->toggleable(),
-                TextColumn::make('saldo')->money('BOB')->sortable(),
+                TextColumn::make('saldo')->money('BOB', decimalPlaces: 0)->sortable(),
                 TextColumn::make('personal.nombres')
                     ->label('Abogado(s)')
                     ->listWithLineBreaks()

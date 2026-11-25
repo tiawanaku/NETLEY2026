@@ -26,7 +26,7 @@ class ClientesEnMoraWidget extends TableWidget
             ->columns([
                 TextColumn::make('cliente.nombre_completo')->label('Cliente'),
                 TextColumn::make('cuotas_vencidas')->label('Cuotas vencidas')->badge()->color('danger'),
-                TextColumn::make('saldo')->money('BOB'),
+                TextColumn::make('saldo')->money('BOB', decimalPlaces: 0),
             ])
             ->paginated(false);
     }

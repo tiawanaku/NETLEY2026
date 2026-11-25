@@ -29,8 +29,8 @@
         <tr><td class="label">Nombre</td><td>{{ $caso->cliente->nombre_completo ?? '-' }}</td></tr>
         <tr><td class="label">Carnet de identidad</td><td>{{ $caso->cliente->ci ?? '-' }}</td></tr>
         <tr><td class="label">Materia legal</td><td>{{ $caso->materia_legal }}</td></tr>
-        <tr><td class="label">Iguala</td><td>Bs. {{ number_format($caso->iguala, 2) }}</td></tr>
-        <tr><td class="label">Saldo actual</td><td>Bs. {{ number_format($caso->saldo, 2) }}</td></tr>
+        <tr><td class="label">Iguala</td><td>Bs. {{ number_format($caso->iguala, 0) }}</td></tr>
+        <tr><td class="label">Saldo actual</td><td>Bs. {{ number_format($caso->saldo, 0) }}</td></tr>
     </table>
 
     <div class="seccion">Cuotas</div>
@@ -49,8 +49,8 @@
                 <tr>
                     <td>{{ $plan->numero === 0 ? 'Anticipo' : $plan->numero }}</td>
                     <td>{{ $plan->fecha->format('d/m/Y') }}</td>
-                    <td>Bs. {{ number_format($plan->monto, 2) }}</td>
-                    <td>Bs. {{ number_format($plan->nuevo_saldo, 2) }}</td>
+                    <td>Bs. {{ number_format($plan->monto, 0) }}</td>
+                    <td>Bs. {{ number_format($plan->nuevo_saldo, 0) }}</td>
                     <td>{{ $plan->estado->getLabel() }}</td>
                 </tr>
             @empty
@@ -61,7 +61,7 @@
             <tfoot>
                 <tr>
                     <td colspan="2">Total</td>
-                    <td>Bs. {{ number_format($planes->sum('monto'), 2) }}</td>
+                    <td>Bs. {{ number_format($planes->sum('monto'), 0) }}</td>
                     <td colspan="2"></td>
                 </tr>
             </tfoot>

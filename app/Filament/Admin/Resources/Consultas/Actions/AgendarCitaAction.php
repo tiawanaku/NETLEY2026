@@ -105,10 +105,10 @@ class AgendarCitaAction
                 CamposServicios::make(),
                 Textarea::make('detalle')->label('Nota')->rows(3)->extraInputAttributes(['data-enter-nav' => 'true']),
                 // Datos de comisión del formulario de papel "Consultas directas".
-                TextInput::make('bs_iguala')->label('Bs. Iguala')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
-                TextInput::make('bs_anticipo')->label('Bs. Anticipo')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('bs_iguala')->label('Bs. Iguala')->numeric()->integer()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('bs_anticipo')->label('Bs. Anticipo')->numeric()->integer()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
                 TextInput::make('porcentaje_comision')->label('% Comisión')->numeric()->prefix('%')->extraInputAttributes(['data-enter-nav' => 'true']),
-                TextInput::make('bs_comision')->label('Bs. Comisión')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('bs_comision')->label('Bs. Comisión')->numeric()->integer()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
                 Repeater::make('documentos')
                     ->label('Adjuntar documentos')
                     // -ancha: la descripción llega hasta el borde (admin-theme.css).

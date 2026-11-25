@@ -29,8 +29,8 @@
         <tr><td class="label">Nombre</td><td>{{ $caso->cliente->nombre_completo ?? '-' }}</td></tr>
         <tr><td class="label">Carnet de identidad</td><td>{{ $caso->cliente->ci ?? '-' }}</td></tr>
         <tr><td class="label">Materia legal</td><td>{{ $caso->materia_legal }}</td></tr>
-        <tr><td class="label">Iguala</td><td>Bs. {{ number_format($caso->iguala, 2) }}</td></tr>
-        <tr><td class="label">Saldo actual</td><td>Bs. {{ number_format($caso->saldo, 2) }}</td></tr>
+        <tr><td class="label">Iguala</td><td>Bs. {{ number_format($caso->iguala, 0) }}</td></tr>
+        <tr><td class="label">Saldo actual</td><td>Bs. {{ number_format($caso->saldo, 0) }}</td></tr>
     </table>
 
     <div class="seccion">Pagos registrados</div>
@@ -53,7 +53,7 @@
                     <td>{{ $pago->fecha_pago->format('d/m/Y') }}</td>
                     <td>{{ $pago->sucursal }}</td>
                     <td>{{ $pago->registrado_por ?? '-' }}</td>
-                    <td>Bs. {{ number_format($pago->monto, 2) }}</td>
+                    <td>Bs. {{ number_format($pago->monto, 0) }}</td>
                 </tr>
             @empty
                 <tr><td colspan="6">Sin pagos registrados.</td></tr>
@@ -63,7 +63,7 @@
             <tfoot>
                 <tr>
                     <td colspan="5">Total pagado</td>
-                    <td>Bs. {{ number_format($pagos->sum('monto'), 2) }}</td>
+                    <td>Bs. {{ number_format($pagos->sum('monto'), 0) }}</td>
                 </tr>
             </tfoot>
         @endif

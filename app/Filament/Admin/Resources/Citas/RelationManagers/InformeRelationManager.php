@@ -30,8 +30,8 @@ class InformeRelationManager extends RelationManager
             TextInput::make('nombre_colegio')->label('Colegio (si es taller)'),
             TextInput::make('responsable'),
             TextInput::make('acciones'),
-            TextInput::make('anticipo')->numeric()->prefix('Bs.')->default(0),
-            TextInput::make('iguala')->numeric()->prefix('Bs.')->default(0),
+            TextInput::make('anticipo')->numeric()->integer()->prefix('Bs.')->default(0),
+            TextInput::make('iguala')->numeric()->integer()->prefix('Bs.')->default(0),
             Textarea::make('detalle'),
             Textarea::make('redaccion')->label('Redacción / informe completo'),
         ]);

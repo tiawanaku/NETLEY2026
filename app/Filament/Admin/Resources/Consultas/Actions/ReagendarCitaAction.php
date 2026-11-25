@@ -25,10 +25,10 @@ class ReagendarCitaAction
                 DatePicker::make('fecha')->required()->extraInputAttributes(['data-enter-nav' => 'true']),
                 CampoHora::make('hora')->label('Hora')->required(),
                 CamposServicios::make(),
-                TextInput::make('bs_iguala')->label('Bs. Iguala')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
-                TextInput::make('bs_anticipo')->label('Bs. Anticipo')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('bs_iguala')->label('Bs. Iguala')->numeric()->integer()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('bs_anticipo')->label('Bs. Anticipo')->numeric()->integer()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
                 TextInput::make('porcentaje_comision')->label('% Comisión')->numeric()->prefix('%')->extraInputAttributes(['data-enter-nav' => 'true']),
-                TextInput::make('bs_comision')->label('Bs. Comisión')->numeric()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
+                TextInput::make('bs_comision')->label('Bs. Comisión')->numeric()->integer()->prefix('Bs.')->extraInputAttributes(['data-enter-nav' => 'true']),
                 Toggle::make('confirmada')->label('Cita confirmada'),
                 Textarea::make('observacion')
                     ->label('Nota de justificación')

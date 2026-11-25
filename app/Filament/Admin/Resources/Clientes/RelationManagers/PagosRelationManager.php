@@ -20,7 +20,7 @@ class PagosRelationManager extends RelationManager
                 TextColumn::make('nro_recibo')->label('Recibo #'),
                 TextColumn::make('caso_id')->label('Caso #'),
                 TextColumn::make('nro_cuota')->label('Cuota #'),
-                TextColumn::make('monto')->money('BOB'),
+                TextColumn::make('monto')->money('BOB', decimalPlaces: 0),
                 TextColumn::make('fecha_pago')->date(),
                 TextColumn::make('registrado_por'),
             ])

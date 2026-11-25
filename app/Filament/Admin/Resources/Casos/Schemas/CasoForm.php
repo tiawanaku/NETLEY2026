@@ -224,9 +224,9 @@ class CasoForm
                 Section::make('Finanzas')
                     ->visible(fn (string $operation): bool => $operation === 'create')
                     ->schema([
-                        TextInput::make('iguala')->numeric()->prefix('Bs.')->default(0)->required()->disabled($isEditing),
-                        TextInput::make('saldo')->numeric()->prefix('Bs.')->default(0)->required()->disabled($isEditing),
-                        TextInput::make('pagado')->numeric()->prefix('Bs.')->default(0)->required()->disabled($isEditing),
+                        TextInput::make('iguala')->numeric()->integer()->prefix('Bs.')->default(0)->required()->disabled($isEditing),
+                        TextInput::make('saldo')->numeric()->integer()->prefix('Bs.')->default(0)->required()->disabled($isEditing),
+                        TextInput::make('pagado')->numeric()->integer()->prefix('Bs.')->default(0)->required()->disabled($isEditing),
                     ]),
             ]);
     }
