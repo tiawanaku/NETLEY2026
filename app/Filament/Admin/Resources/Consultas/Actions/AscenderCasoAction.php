@@ -40,6 +40,13 @@ class AscenderCasoAction
                 // capturarlos manualmente en el paso "Proceso".
                 $ultimaRespuesta = $record->respuestas()->latest('fecha_respuesta')->first();
 
+                // Materia y tipo de proceso: de la última respuesta si los
+                // tiene; si no (lo normal en Agendados, que no pasan por
+                // "Responder"), los que se cargaron en la propia consulta.
+                $origen = $ultimaRespuesta && ($ultimaRespuesta->designacion || $ultimaRespuesta->materia_texto || $ultimaRespuesta->delito_id || $ultimaRespuesta->delito_texto)
+                    ? $ultimaRespuesta
+                    : $record;
+
                 // Cita vigente de la consulta: sus "Servicios requeridos" y su
                 // Nota pasan al paso "Proceso" (interruptores y Descripción).
                 $cita = $record->citas()->where('anulada', false)->orderByDesc('fecha')->orderByDesc('hora')->first();
@@ -79,20 +86,24 @@ class AscenderCasoAction
                     'fecha_inicio' => now()->toDateString(),
                     'fecha_primera_cuota' => now()->addMonth()->toDateString(),
                     'patrocinio_hih' => false,
-                    // Anticipo vacío (no 0): se llena a mano si hay anticipo.
-                    'anticipo' => null,
-                    // Si la respuesta usó materia "Otro" (escrita a mano), se
-                    // precarga como "Otros" con ese mismo texto.
-                    'especialidad' => $ultimaRespuesta?->designacion?->value
-                        ?? ($ultimaRespuesta?->materia_texto ? DelitoSelect::OTROS : null),
-                    'materia_texto' => $ultimaRespuesta?->designacion ? null : $ultimaRespuesta?->materia_texto,
+                    // Montos que se cargaron al agendar la cita (paso 3).
+                    // Anticipo vacío (no 0) si no hay: un anticipo de 0 no vale.
+                    'iguala' => $cita?->bs_iguala > 0 ? (int) round($cita->bs_iguala) : null,
+                    'anticipo' => $cita?->bs_anticipo > 0 ? (int) round($cita->bs_anticipo) : null,
+                    'comision_porcentaje' => $cita?->porcentaje_comision > 0 ? (float) $cita->porcentaje_comision : null,
+                    'comision_monto' => $cita?->bs_comision > 0 ? (int) round($cita->bs_comision) : null,
+                    // Si se usó materia "Otro" (escrita a mano), se precarga
+                    // como "Otros" con ese mismo texto.
+                    'especialidad' => $origen->designacion?->value
+                        ?? ($origen->materia_texto ? DelitoSelect::OTROS : null),
+                    'materia_texto' => $origen->designacion ? null : $origen->materia_texto,
                     // Sin delito del catálogo pero con delito o materia
                     // escritos, "Otro" (ver DelitoSelect::make()).
-                    'delito_id' => $ultimaRespuesta?->delito_id
-                        ?? ($ultimaRespuesta?->delito_texto || (! $ultimaRespuesta?->designacion && $ultimaRespuesta?->materia_texto)
+                    'delito_id' => $origen->delito_id
+                        ?? ($origen->delito_texto || (! $origen->designacion && $origen->materia_texto)
                             ? DelitoSelect::OTROS
                             : null),
-                    'delito_texto' => $ultimaRespuesta?->delito_id ? null : $ultimaRespuesta?->delito_texto,
+                    'delito_texto' => $origen->delito_id ? null : $origen->delito_texto,
                     'personal' => $personalIds->unique()->values()->all(),
                     ...CamposServicios::desde($cita),
                     'descripcion' => $cita?->detalle,

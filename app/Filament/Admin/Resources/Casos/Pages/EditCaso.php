@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Casos\Pages;
 
 use App\Filament\Admin\Resources\Casos\Actions\CasoActions;
 use App\Filament\Admin\Resources\Casos\CasoResource;
+use App\Filament\Admin\Support\DatosInstancia;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\EditRecord;
 use App\Support\CronologiaCaso;
@@ -50,6 +51,29 @@ class EditCaso extends EditRecord
     public function getContentTabIcon(): string
     {
         return 'heroicon-o-scale';
+    }
+
+    /** Datos de la fiscalía / juzgado vigentes (ver Support\DatosInstancia). */
+    protected ?array $datosInstancia = null;
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data[DatosInstancia::CAMPO] = DatosInstancia::cargar($this->getRecord());
+
+        return $data;
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $this->datosInstancia = $data[DatosInstancia::CAMPO] ?? null;
+        unset($data[DatosInstancia::CAMPO]);
+
+        return $data;
+    }
+
+    protected function afterSave(): void
+    {
+        DatosInstancia::guardar($this->getRecord(), $this->datosInstancia);
     }
 
     public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void

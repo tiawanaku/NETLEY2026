@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Casos\Pages;
 
 use App\Filament\Admin\Resources\Casos\CasoResource;
+use App\Filament\Admin\Support\DatosInstancia;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateCaso extends CreateRecord
@@ -16,4 +17,20 @@ class CreateCaso extends CreateRecord
     }
 
     protected static string $resource = CasoResource::class;
+
+    /** Datos de la fiscalía / juzgado (ver Support\DatosInstancia). */
+    protected ?array $datosInstancia = null;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $this->datosInstancia = $data[DatosInstancia::CAMPO] ?? null;
+        unset($data[DatosInstancia::CAMPO]);
+
+        return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        DatosInstancia::guardar($this->getRecord(), $this->datosInstancia);
+    }
 }

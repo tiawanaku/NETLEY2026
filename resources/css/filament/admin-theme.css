@@ -670,3 +670,14 @@
 .dark .netley-seg-tarjeta--pronto { border-left-color: rgb(245 158 11); background: rgb(245 158 11 / .1); }
 .dark .netley-seg-tarjeta--vencida { border-left-color: rgb(239 68 68); background: rgb(239 68 68 / .12); }
 .dark .netley-seg-tarjeta--vencida .netley-seg-sub { color: rgb(252 165 165); }
+
+/* Datos del proceso: los campos de ancho completo (Ministerio Publico,
+   Organo judicial / Juzgado) con la misma columna de etiqueta que los de
+   media fila (Fiscal, Juez...), para que todas las casillas arranquen
+   alineadas. Media fila = (100% - 24px gap) / 2; su etiqueta = 1/3 de eso
+   menos los 2 gaps de 16px. */
+@media (min-width: 1024px) {
+    .netley-fila-completa.fi-fo-field-has-inline-label {
+        grid-template-columns: calc(((100% - 24px) / 2 - 32px) / 3) 1fr 1fr;
+    }
+}

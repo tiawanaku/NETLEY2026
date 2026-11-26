@@ -897,7 +897,10 @@ class ClienteCasoWizard
         // filas del resumen usan las 2 primeras (las otras 2 quedan vacías)
         // y las cuotas las 4 — así resumen y cuotas comparten columnas y
         // quedan parejos.
-        $celda = 'padding:4px 8px;text-align:left;';
+        // nowrap: un monto ("Bs. 200") o una fecha nunca se parten en dos
+        // líneas, aunque la etiqueta de la cuota 1 sea larga; si no entra,
+        // la tabla se desplaza de lado (overflow-x en el contenedor).
+        $celda = 'padding:4px 8px;text-align:left;white-space:nowrap;';
         $fila = fn (array $valores, string $estilo = ''): string => '<tr>'
             .implode('', array_map(fn (string $valor) => '<td style="'.$celda.$estilo.'">'.e($valor).'</td>', array_pad($valores, 4, '')))
             .'</tr>';
@@ -906,7 +909,7 @@ class ClienteCasoWizard
             .'<td style="'.$celda.($fuerte ? 'font-weight:bold;' : '').'">'.e($valor).'</td>'
             .'<td style="'.$celda.'"></td><td style="'.$celda.'"></td></tr>';
 
-        $html = '<table style="border-collapse:collapse;font-size:.875rem;"><tbody>';
+        $html = '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:.875rem;"><tbody>';
         $porcentaje = rtrim(rtrim(number_format($plan['porcentaje'], 2), '0'), '.');
 
         // Mismos nombres siempre (también en costas y costos, donde el
@@ -936,7 +939,7 @@ class ClienteCasoWizard
             }
         }
 
-        return new HtmlString($html.'</tbody></table>');
+        return new HtmlString($html.'</tbody></table></div>');
     }
 
     /**

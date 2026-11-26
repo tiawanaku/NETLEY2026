@@ -20,8 +20,10 @@ class Fiscalia extends Model
         'fiscalia_num',
         'nombre_fiscal',
         'telefono_fiscal',
+        'secretaria',
         'investigador',
         'telefono_investigador',
+        'otro_funcionario',
         'auxiliar',
         'telefono_auxiliar',
     ];

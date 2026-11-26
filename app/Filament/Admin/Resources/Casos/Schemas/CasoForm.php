@@ -7,6 +7,7 @@ use App\Filament\Admin\Forms\Components\DelitoSelect;
 use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\CamposServicios;
 use App\Filament\Admin\Support\ClienteCasoWizard;
+use App\Filament\Admin\Support\DatosInstancia;
 use App\Models\Caso;
 use App\Support\Telefono;
 use Filament\Forms\Components\DatePicker;
@@ -119,6 +120,9 @@ class CasoForm
                             ->required()
                             ->visibleOn('create')
                             ->columnSpanFull(),
+                        // Fiscalía / juzgado que lleva el caso, según la
+                        // materia (ver Support\DatosInstancia).
+                        DatosInstancia::campos($isEditing),
                         // Lo primero: código que identifica al proceso (NUREJ,
                         // CUD u otro escrito a mano) y su detalle. En su propia
                         // grilla para que "Especificar" no corra los campos de abajo.
