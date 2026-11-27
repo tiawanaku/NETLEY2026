@@ -46,7 +46,8 @@ class PagosTable
                         : $query),
                 SelectFilter::make('personal')
                     ->label('Abogado')
-                    ->options(fn () => Personal::query()->pluck('nombres', 'id'))
+                    ->options(fn () => Personal::query()->orderBy('nombres')->get()->mapWithKeys(fn (Personal $p) => [$p->id => $p->nombre_completo]))
+                    ->searchable()
                     ->query(fn (Builder $query, array $data) => $data['value']
                         ? $query->whereHas('caso.personal', fn ($q) => $q->where('personal.id', $data['value']))
                         : $query),

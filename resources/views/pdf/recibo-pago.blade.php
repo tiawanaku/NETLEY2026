@@ -100,7 +100,7 @@
         <div class="copia">{{ $copia }}</div>
         <div class="marco">
         <table><tr><td class="cuerpo">
-        {{-- Recibo anulado (ver Contabilidad › Recibos anulados): marca bien visible. --}}
+        {{-- Recibo anulado (ver Pagos › Recibos anulados): marca bien visible. --}}
         @if ($pago->anulado)
             <div style="border: 2px solid #dc2626; color: #dc2626; text-align: center; font-weight: bold; font-size: 12px; letter-spacing: 3px; padding: 3px; margin-bottom: 4px;">
                 RECIBO ANULADO

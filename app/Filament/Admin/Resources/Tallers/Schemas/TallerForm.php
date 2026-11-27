@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Tallers\Schemas;
 
+use App\Filament\Admin\Forms\Components\CampoCiudad;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
 use App\Filament\Admin\Support\CampoHora;
 use App\Filament\Admin\Support\CamposTelefono;
@@ -25,7 +26,7 @@ class TallerForm
                         TextInput::make('ap_materno')->label('Apellido materno'),
                         CamposTelefono::make('telefono'),
                         CamposTelefono::make('whatsapp'),
-                        TextInput::make('ciudad'),
+                        CampoCiudad::make('ciudad'),
                         TextInput::make('numero_consulta')->label('N° de consulta'),
                         TextInput::make('origen')->helperText('Ej. "taller colegio: San Calixto"'),
                     ]),

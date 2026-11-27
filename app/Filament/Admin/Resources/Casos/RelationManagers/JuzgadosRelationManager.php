@@ -36,6 +36,7 @@ class JuzgadosRelationManager extends RelationManager
         return [
             Toggle::make('vigente')->default(true),
             TextInput::make('num_caso')->label('N° de caso')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            TextInput::make('fojas')->label('Fojas (Fs.)')->numeric()->integer()->minValue(0)->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             TextInput::make('juzgado_num')->label('Juzgado')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             TextInput::make('nombre_juez')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             CamposTelefono::make('telefono_juez', deshabilitado: $lockOthers),

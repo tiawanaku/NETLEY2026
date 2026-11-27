@@ -36,6 +36,7 @@ class FiscaliasRelationManager extends RelationManager
         return [
             Toggle::make('vigente')->default(true),
             TextInput::make('num_caso')->label('N° de caso (Ministerio Público)')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
+            TextInput::make('fojas')->label('Fojas (Fs.)')->numeric()->integer()->minValue(0)->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             TextInput::make('fiscalia_num')->label('Fiscalía (Ministerio Público)')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             TextInput::make('nombre_fiscal')->disabled($lockOthers)->extraInputAttributes(['data-enter-nav' => 'true']),
             CamposTelefono::make('telefono_fiscal', deshabilitado: $lockOthers),

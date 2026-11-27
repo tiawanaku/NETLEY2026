@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Casos\Schemas;
 
 use App\Enums\EstadoCaso;
+use App\Filament\Admin\Forms\Components\CampoCiudad;
 use App\Filament\Admin\Forms\Components\DelitoSelect;
 use App\Filament\Admin\Support\CamposDenuncia;
 use App\Filament\Admin\Support\CamposServicios;
@@ -216,7 +217,7 @@ class CasoForm
                             ->default(EstadoCaso::Activo)
                             ->required()
                             ->disabled($isEditing),
-                        TextInput::make('ciudad')->disabled($isEditing),
+                        CampoCiudad::make('ciudad')->disabled($isEditing),
                         CamposDenuncia::denunciado()->disabled($isEditing),
                         CamposDenuncia::denuncias(conRelacion: true)->disabled($isEditing),
                     ])

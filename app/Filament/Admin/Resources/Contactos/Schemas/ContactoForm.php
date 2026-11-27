@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Contactos\Schemas;
 
+use App\Filament\Admin\Forms\Components\CampoCiudad;
 use App\Filament\Admin\Support\CamposTelefono;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -39,7 +40,7 @@ class ContactoForm
                     ->default(null),
                 TextInput::make('zona')
                     ->default(null),
-                TextInput::make('ciudad')
+                CampoCiudad::make('ciudad')
                     ->default(null),
                 TextInput::make('correo')
                     ->default(null),

@@ -15,7 +15,6 @@ class ListPersonals extends ListRecords
 {
     // Ruta de navegación por secciones, sin el título repetido (ver Support\Migas).
     use \App\Filament\Admin\Concerns\MigasDeNavegacion;
-
     protected function migas(): array
     {
         return \App\Filament\Admin\Support\Migas::personal($this->activeTab ?: 'vigentes');

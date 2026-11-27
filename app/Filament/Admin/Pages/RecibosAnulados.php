@@ -18,7 +18,7 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 
 /**
- * Contabilidad › Recibos anulados: los recibos que quedaron anulados al
+ * Pagos › Recibos anulados: los recibos que quedaron anulados al
  * corregir un pago ("Editar pago" en el Plan de pagos, ver
  * PlanPagoRecalculo::corregirPago()), con el recibo nuevo que los reemplazó
  * y el motivo. Solo consulta: no cuentan en ningún total.
@@ -32,11 +32,11 @@ class RecibosAnulados extends Page implements HasTable
 
     protected static ?string $navigationLabel = 'Recibos anulados';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Contabilidad';
+    protected static \UnitEnum|string|null $navigationGroup = 'Pagos';
 
-    protected static ?int $navigationSort = 60;
+    protected static ?int $navigationSort = 42; // Pagos: Nuevo pago (40), Resumen de pagos (41), Recibos anulados.
 
-    protected static ?string $slug = 'contabilidad/recibos-anulados';
+    protected static ?string $slug = 'pagos/recibos-anulados';
 
     public static function canAccess(): bool
     {
@@ -50,7 +50,7 @@ class RecibosAnulados extends Page implements HasTable
 
     protected function migas(): array
     {
-        return [['Contabilidad'], ['Recibos anulados']];
+        return [['Pagos'], ['Recibos anulados']];
     }
 
     public function content(Schema $schema): Schema

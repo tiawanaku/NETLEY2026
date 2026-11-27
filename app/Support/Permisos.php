@@ -24,6 +24,7 @@ class Permisos
             'clientes' => 'Clientes',
             'casos' => 'Casos',
             'seguimiento_diario' => 'Seguimiento diario',
+            'cambiar_etapa' => 'Cambiar la etapa del proceso (procuradoras)',
             'pagos' => 'Pagos',
             'agenda' => 'Agenda / Citas',
             'llamadas' => 'Llamadas',

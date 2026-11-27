@@ -292,7 +292,7 @@ class PlanesPagoRelationManager extends RelationManager
                             "recibo-{$pago->nro_recibo}.pdf"
                         );
                     }),
-                // Recibos anulados de la cuota (también en Contabilidad ›
+                // Recibos anulados de la cuota (también en Pagos ›
                 // Recibos anulados). Con más de uno, se elige cuál.
                 Action::make('imprimirAnulado')
                     ->label('Imprimir anulado')
@@ -405,7 +405,7 @@ class PlanesPagoRelationManager extends RelationManager
 
                         Notification::make()
                             ->title('Recibo corregido')
-                            ->body('El recibo anterior quedó anulado (Contabilidad › Recibos anulados) y se emitió uno nuevo.')
+                            ->body('El recibo anterior quedó anulado (Pagos › Recibos anulados) y se emitió uno nuevo.')
                             ->success()
                             ->send();
                     }),

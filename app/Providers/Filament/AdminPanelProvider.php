@@ -59,6 +59,12 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_END,
                 fn (): HtmlString => new HtmlString('<script>'.File::get(resource_path('js/filament/enter-navigation.js')).'</script>'),
             )
+            // Lista desplegable del campo Ciudad (CampoCiudad): en el <head>
+            // para quedar registrada antes de que arranque Alpine.
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): HtmlString => new HtmlString('<script>'.File::get(resource_path('js/filament/campo-ciudad.js')).'</script>'),
+            )
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_FOOTER,
                 function (): HtmlString {

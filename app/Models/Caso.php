@@ -326,4 +326,10 @@ class Caso extends Model
     {
         return $this->hasMany(SeguimientoAgendado::class);
     }
+
+    /** Actuados del seguimiento del proceso (ver ActuadoCaso). */
+    public function actuados(): HasMany
+    {
+        return $this->hasMany(ActuadoCaso::class);
+    }
 }

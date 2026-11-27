@@ -35,6 +35,41 @@ class EditCaso extends EditRecord
 
         // Un caso eliminado se puede ver, pero no editar (primero se restaura).
         $this->editando = request()->boolean('editar') && auth()->user()?->puede('editar') && ! $this->getRecord()->trashed();
+
+        $this->abrirSeguimiento(request()->query('seguimiento'));
+    }
+
+    /**
+     * "Ver" de Seguimiento diario (?seguimiento=realizar) o de Informe
+     * seguimiento diario (?seguimiento=informe): abre en Datos judiciales el
+     * formulario que corresponde. La tabla de esa pestaña carga después que
+     * la página, así que el navegador espera a que esté lista; el argumento
+     * "volver" hace que al guardar se regrese a la lista.
+     */
+    protected function abrirSeguimiento(?string $modo): void
+    {
+        $accion = match ($modo) {
+            'realizar' => ['registrarSeguimiento', 'diario'],
+            'informe' => ['registrarInforme', 'informe'],
+            default => null,
+        };
+
+        if (! $accion || $this->getRecord()->trashed()) {
+            return;
+        }
+
+        [$nombre, $volver] = $accion;
+
+        $this->js(<<<JS
+            (function intentar(veces) {
+                const c = window.Livewire?.all().find((c) => c.name.endsWith('SeguimientosRelationManager') && c.el.querySelector('.netley-seg'));
+                if (c) {
+                    c.\$wire.mountAction('{$nombre}', { volver: '{$volver}' }, { table: true });
+                } else if (veces > 0) {
+                    setTimeout(() => intentar(veces - 1), 300);
+                }
+            })(40);
+            JS);
     }
 
     /** El formulario va como primera pestaña, junto a Pagos / Documentación / Seguimiento. */

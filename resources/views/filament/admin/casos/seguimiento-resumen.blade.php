@@ -2,16 +2,21 @@
     /** @var array<int, string> $etapas */
     $actual = $ultimo?->etapa_proceso;
     $indice = $actual !== null ? array_search($actual, $etapas, true) : false;
-    $vencido = $proximo?->proxima_fecha && $proximo->proxima_fecha->isPast() && ! $proximo->proxima_fecha->isToday();
-    $hoy = $proximo?->proxima_fecha?->isToday();
-    $dias = $proximo?->proxima_fecha ? (int) now()->startOfDay()->diffInDays($proximo->proxima_fecha, false) : null;
+    // $pendientes: actuados no concluidos (ActuadoCaso), el más próximo primero.
+    // Alarma: el próximo actuado pendiente CON alarma (fecha más cercana o más atrasada).
+    $proximo = $pendientes->first(fn ($a) => $a->alarma && $a->fecha) ?? $pendientes->first(fn ($a) => $a->alarma);
+    $vencido = $proximo?->fecha && $proximo->fecha->isPast() && ! $proximo->fecha->isToday();
+    $hoy = $proximo?->fecha?->isToday();
+    $dias = $proximo?->fecha ? (int) now()->startOfDay()->diffInDays($proximo->fecha, false) : null;
+    $vencidas = $pendientes->filter(fn ($a) => $a->vencido)->count();
+    $fs = fn ($n) => $n === null ? null : number_format((int) $n, 0, '.', '.');
 @endphp
 
 {{-- Un encabezado propio reemplaza al de la tabla: título y botón van aquí. --}}
 <div class="fi-ta-header fi-ta-header-adaptive-actions-position">
     <div>
         <h3 class="fi-ta-header-heading">Seguimiento del proceso</h3>
-        <p class="fi-ta-header-description">En qué etapa está el caso, qué se hizo y qué sigue.</p>
+        <p class="fi-ta-header-description">Actuados a realizar y actuados realizados del caso.</p>
     </div>
     @if (count($acciones))
         <div class="fi-ta-actions fi-align-start fi-wrapped">
@@ -40,36 +45,58 @@
         <p class="netley-seg-nota">Etapa registrada: <strong>{{ $actual }}</strong></p>
     @endif
 
+    {{-- Fojas: campo "Fojas (Fs.)" de la fiscalía / el juzgado vigentes (Datos del proceso o sus pestañas). --}}
     <div class="netley-seg-tarjetas">
-        <div class="netley-seg-tarjeta">
-            <span class="netley-seg-titulo">Etapa actual</span>
-            <strong>{{ $actual ?? 'Sin registrar' }}</strong>
+        <div class="netley-seg-tarjeta {{ $vencidas ? 'netley-seg-tarjeta--vencida' : '' }}">
+            <span class="netley-seg-titulo">Informes pendientes</span>
+            <strong class="netley-seg-numero">{{ $pendientes->count() }}</strong>
+            <span class="netley-seg-sub">
+                @if ($pendientes->isEmpty())
+                    Nada por hacer
+                @elseif ($vencidas)
+                    {{ $vencidas }} {{ $vencidas === 1 ? 'vencida' : 'vencidas' }} · regístralas en "Actuados realizados"
+                @else
+                    {{ $pendientes->count() === 1 ? 'Actuado por realizar' : 'Actuados por realizar' }}
+                @endif
+            </span>
         </div>
         <div class="netley-seg-tarjeta">
-            <span class="netley-seg-titulo">Instancia vigente</span>
-            <strong>{{ $instancia ?? ($ultimo?->instancia ?? 'Sin registrar') }}</strong>
-        </div>
-        <div class="netley-seg-tarjeta">
-            <span class="netley-seg-titulo">Último movimiento</span>
-            @if ($ultimo)
-                <strong>{{ $ultimo->fecha_seguimiento->format('d/m/Y') }} · {{ $ultimo->tipo_actuacion ?? 'Seguimiento' }}</strong>
-                <span class="netley-seg-sub">{{ $ultimo->abogado_nombre ?? '—' }} · hace {{ $ultimo->fecha_seguimiento->startOfDay()->diffForHumans(now()->startOfDay(), ['syntax' => \Carbon\CarbonInterface::DIFF_ABSOLUTE]) }}</span>
+            <span class="netley-seg-titulo">Fs. Ministerio Público</span>
+            @if (! $esPenal && ! $fiscalia)
+                <strong>No aplica</strong>
+                <span class="netley-seg-sub">Sin Ministerio Público en esta materia</span>
+            @elseif ($fiscalia?->fojas !== null)
+                <strong class="netley-seg-numero">{{ $fs($fiscalia->fojas) }} <small>fs.</small></strong>
+                <span class="netley-seg-sub">{{ $fiscalia->fiscalia_num ?: 'Fiscalía vigente' }}</span>
             @else
-                <strong>Sin seguimientos</strong>
+                <strong>Sin registrar</strong>
+                <span class="netley-seg-sub">{{ $fiscalia ? ($fiscalia->fiscalia_num ?: 'Fiscalía vigente').' · falta cargar las fojas' : 'Sin fiscalía vigente' }}</span>
             @endif
         </div>
-        <div class="netley-seg-tarjeta {{ $vencido ? 'netley-seg-tarjeta--vencida' : ($hoy || ($dias !== null && $dias <= 3) ? 'netley-seg-tarjeta--pronto' : '') }}">
-            <span class="netley-seg-titulo">Próxima actuación</span>
+        <div class="netley-seg-tarjeta">
+            <span class="netley-seg-titulo">Fs. Juzgado</span>
+            @if ($juzgado?->fojas !== null)
+                <strong class="netley-seg-numero">{{ $fs($juzgado->fojas) }} <small>fs.</small></strong>
+                <span class="netley-seg-sub">{{ $juzgado->juzgado_num ?: 'Juzgado vigente' }}</span>
+            @else
+                <strong>Sin registrar</strong>
+                <span class="netley-seg-sub">{{ $juzgado ? ($juzgado->juzgado_num ?: 'Juzgado vigente').' · falta cargar las fojas' : 'Sin juzgado vigente' }}</span>
+            @endif
+        </div>
+        <div class="netley-seg-tarjeta {{ $vencido ? 'netley-seg-tarjeta--vencida' : ($proximo && ($hoy || ($dias !== null && $dias <= 3)) ? 'netley-seg-tarjeta--pronto' : '') }}">
+            <span class="netley-seg-titulo">Alarma</span>
             @if ($proximo)
-                <strong>{{ $proximo->proxima_fecha->format('d/m/Y') }} · {{ $proximo->proxima_actuacion }}</strong>
+                <strong>{{ $proximo->cuando ?? 'Sin fecha' }} · {{ $proximo->tipo }}{{ $proximo->detalle ? ': '.\Illuminate\Support\Str::limit($proximo->detalle, 60) : '' }}</strong>
                 <span class="netley-seg-sub">
                     @if ($vencido) Vencida hace {{ abs($dias) }} {{ abs($dias) === 1 ? 'día' : 'días' }}
                     @elseif ($hoy) Es hoy
+                    @elseif ($dias === null) Sin fecha
                     @else Faltan {{ $dias }} {{ $dias === 1 ? 'día' : 'días' }}
                     @endif
                 </span>
             @else
-                <strong>Nada pendiente</strong>
+                <strong>Sin alarmas</strong>
+                <span class="netley-seg-sub">Ningún actuado pendiente con alarma</span>
             @endif
         </div>
     </div>

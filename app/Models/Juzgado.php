@@ -17,6 +17,7 @@ class Juzgado extends Model
         'fecha_fin',
         'vigente',
         'num_caso',
+        'fojas',
         'juzgado_num',
         'nombre_juez',
         'telefono_juez',

@@ -149,7 +149,20 @@ class EditCliente extends EditRecord
             })
             // Mismo asistente que Cliente ejecutivo: Guardar solo en el paso
             // 4 y sin Cancelar (se cierra con la X), ver AscenderCasoAction.
-            ->steps(ClienteCasoWizard::steps())
+            // "Imprimir recibo" del paso 3 guarda el proceso + anticipo (no
+            // aparece en costas y costos, ver ClienteCasoWizard::botonImprimirRecibo()).
+            ->steps(fn (): array => ClienteCasoWizard::steps(function (array $data) {
+                /** @var Cliente $cliente */
+                $cliente = $this->getRecord();
+
+                if (Cliente::withTrashed()->where('ci', $data['ci'])->whereKeyNot($cliente->getKey())->exists()) {
+                    Notification::make()->title('Esa CI ya pertenece a otro cliente')->body('Revisa el carnet de identidad en el paso 1.')->danger()->send();
+
+                    throw new \Filament\Support\Exceptions\Halt;
+                }
+
+                return ClienteCasoWizard::crearParaCliente($cliente, $data)['caso'];
+            }))
             ->modifyWizardUsing(fn (Wizard $wizard): Wizard => $wizard
                 ->nextAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true'])))
             ->modalCancelAction(false)
@@ -158,6 +171,15 @@ class EditCliente extends EditRecord
             ->action(function (array $data, array $arguments, Action $action): void {
                 /** @var Cliente $cliente */
                 $cliente = $this->getRecord();
+
+                // Ya guardado con "Imprimir recibo" (paso 3): solo los documentos.
+                if ($caso = ClienteCasoWizard::casoYaGuardado($data)) {
+                    ClienteCasoWizard::adjuntarDocumentos($caso, $data['documentos'] ?? []);
+                    Notification::make()->title('Caso creado')->success()->send();
+                    $this->redirect(ClienteResource::getUrl('edit', ['record' => $cliente]).'?relation=0');
+
+                    return;
+                }
 
                 // La CI es única: si se cambió por la de otro cliente, no se guarda.
                 if (Cliente::withTrashed()->where('ci', $data['ci'])->whereKeyNot($cliente->getKey())->exists()) {

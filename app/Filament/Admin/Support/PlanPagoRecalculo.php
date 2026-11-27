@@ -118,7 +118,7 @@ class PlanPagoRecalculo
 
     /**
      * Corrige un pago ya registrado: el recibo original queda ANULADO (con
-     * fecha, motivo y quién lo anuló; ver Contabilidad › Recibos anulados) y
+     * fecha, motivo y quién lo anuló; ver Pagos › Recibos anulados) y
      * se emite un recibo NUEVO, con otro número, con los datos corregidos.
      * Queda también el historial de la corrección (PagoCorreccion), el
      * pagado/saldo del caso pasa del monto viejo al nuevo y se recalcula el

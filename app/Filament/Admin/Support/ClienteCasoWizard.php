@@ -11,6 +11,9 @@ use App\Models\Cliente;
 use App\Models\DocumentoCliente;
 use App\Models\Pago;
 use App\Support\PersonalEspecialidades;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Closure;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
@@ -20,11 +23,17 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Enums\Alignment;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
@@ -65,13 +74,26 @@ class ClienteCasoWizard
     /** Opciones de "Género" del cliente (las mismas que en Personal). */
     public const GENEROS = ['Masculino' => 'Masculino', 'Femenino' => 'Femenino', 'Otro' => 'Otro'];
 
+    /** Caso ya guardado con "Imprimir recibo" del paso 3 (ver botonImprimirRecibo()). */
+    public const GUARDADO = 'guardado_caso_id';
+
     /**
+     * Con $guardarPasos (fn (array $data): Caso), el paso 3 suma el botón
+     * "Imprimir recibo": confirma, guarda los pasos 1 a 3 con esa función,
+     * descarga el recibo del anticipo y pasa al paso 4. Desde ahí los pasos
+     * 1 a 3 quedan bloqueados y "Guardar" solo adjunta los documentos (ver
+     * casoYaGuardado() / adjuntarDocumentos()). No se ofrece en un proceso
+     * de costas y costos.
+     *
      * @return array<int, Step>
      */
-    public static function steps(): array
+    public static function steps(?Closure $guardarPasos = null): array
     {
+        $bloqueado = fn (Get $get): bool => filled($get(self::GUARDADO));
+
         return [
             Step::make('Validación de datos')
+                ->disabled($bloqueado)
                 ->schema([
                     // Solo con un cliente ya registrado ("Nuevo proceso" desde
                     // su ficha): su ID, en la primera línea y sin poder cambiarse.
@@ -141,13 +163,20 @@ class ClienteCasoWizard
                 ->inlineLabel(),
 
             Step::make('Proceso')
+                ->disabled($bloqueado)
                 ->schema(self::camposProceso())
                 ->columns(2)
                 ->inlineLabel(),
 
             Step::make('Pago y plan de cuotas')
                 ->label(fn (Get $get): string => filled($get('monto_origen_costas')) ? 'Monto costas y costos' : 'Pago y plan de cuotas')
-                ->schema(self::camposPago())
+                ->schema([
+                    ...array_map(fn ($c) => $c->disabled($bloqueado), self::camposPago()),
+                    // Se guarda aunque el paso esté bloqueado: indica que el
+                    // caso ya existe y "Guardar" solo adjunta documentos.
+                    Hidden::make(self::GUARDADO)->dehydrated(),
+                    ...($guardarPasos ? [self::botonImprimirRecibo($guardarPasos)] : []),
+                ])
                 ->columns(1)
                 ->inlineLabel(),
 
@@ -193,6 +222,85 @@ class ClienteCasoWizard
                 ])
                 ->columns(1),
         ];
+    }
+
+    /**
+     * "Imprimir recibo" (paso 3): con "Sí" guarda cliente + proceso + pago
+     * del anticipo (pasos 1 a 3, validados), descarga el recibo con su N°
+     * definitivo y pasa al paso 4. Solo con anticipo y fuera de costas y costos.
+     */
+    protected static function botonImprimirRecibo(Closure $guardarPasos): Actions
+    {
+        return Actions::make([
+            Action::make('imprimirReciboAnticipo')
+                ->label('Imprimir recibo')
+                ->icon('heroicon-o-printer')
+                ->color('success')
+                ->requiresConfirmation()
+                ->modalIcon('heroicon-o-printer')
+                ->modalHeading('¿Guardar e imprimir el recibo?')
+                // Sin texto (a pedido): vacío, para que Filament no ponga su "¿Está segura/o…?".
+                ->modalDescription(new HtmlString('&#8203;'))
+                ->modalSubmitActionLabel('Sí')
+                ->modalCancelActionLabel('No')
+                // Centrado (lo normal en confirmaciones) Filament pone "No"
+                // primero; así "Sí" va primero.
+                ->modalFooterActionsAlignment(Alignment::Start)
+                ->action(function (Component $component, Set $set) use ($guardarPasos) {
+                    $wizard = $component;
+
+                    while ($wizard && ! $wizard instanceof Wizard) {
+                        $wizard = $wizard->getContainer()->getParentComponent();
+                    }
+
+                    // Valida y toma todo lo cargado (pasos 1 a 3; el 4 aún vacío).
+                    $data = $component->getRootContainer()->getState();
+                    $data['documentos'] = [];
+
+                    /** @var Caso $caso */
+                    $caso = $guardarPasos($data);
+
+                    $set(self::GUARDADO, $caso->id);
+                    Notification::make()->title('Datos guardados')->body('Ahora puedes adjuntar los documentos (opcional) y presionar Guardar.')->success()->send();
+
+                    // Al paso 4 ("Adjuntar documentos").
+                    $wizard?->nextStep(2);
+
+                    return self::descargarReciboAnticipo($caso);
+                }),
+        ])
+            ->key('imprimir-recibo-paso-3')
+            ->alignEnd()
+            ->visible(fn (Get $get): bool => blank($get('monto_origen_costas'))
+                && blank($get(self::GUARDADO))
+                && (int) $get('anticipo') > 0);
+    }
+
+    /** PDF del recibo del anticipo de un caso recién creado. */
+    public static function descargarReciboAnticipo(Caso $caso): ?\Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $pago = Pago::where('caso_id', $caso->id)->orderBy('id')->first();
+
+        if (! $pago) {
+            return null;
+        }
+
+        return response()->streamDownload(
+            fn () => print (Pdf::loadView('pdf.recibo-pago', ['pago' => $pago->load(['cliente', 'caso'])])->output()),
+            "recibo-{$pago->nro_recibo}.pdf"
+        );
+    }
+
+    /** El caso que ya se guardó con "Imprimir recibo" (o null si aún no). */
+    public static function casoYaGuardado(array $data): ?Caso
+    {
+        return filled($data[self::GUARDADO] ?? null) ? Caso::find($data[self::GUARDADO]) : null;
+    }
+
+    /** "Guardar" del paso 4 cuando el caso ya existía: solo los documentos. */
+    public static function adjuntarDocumentos(Caso $caso, array $documentos): void
+    {
+        self::guardarDocumentos($caso->cliente, $caso, $documentos);
     }
 
     /**

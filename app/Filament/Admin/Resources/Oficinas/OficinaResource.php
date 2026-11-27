@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Oficinas;
 
+use App\Filament\Admin\Forms\Components\CampoCiudad;
 use App\Filament\Admin\Resources\Oficinas\Pages\ManageOficinas;
 use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Oficina;
@@ -46,7 +47,7 @@ class OficinaResource extends Resource
             ->inlineLabel()
             ->columns(1)
             ->components([
-                TextInput::make('ciudad')
+                CampoCiudad::make('ciudad')
                     ->required(),
                 TextInput::make('oficina')
                     ->required(),

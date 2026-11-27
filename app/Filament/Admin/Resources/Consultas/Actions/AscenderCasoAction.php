@@ -113,7 +113,14 @@ class AscenderCasoAction
             // del formulario): así el botón Guardar va dentro del asistente y
             // solo aparece en el último paso (4, "Adjuntar documentos"), y no
             // hay botón Cancelar (se cierra con la X del encabezado).
-            ->steps(ClienteCasoWizard::steps())
+            // "Imprimir recibo" del paso 3 guarda cliente + caso + anticipo y
+            // ya deja la consulta como Caso iniciado (por si no se llega a "Guardar").
+            ->steps(fn (Consulta $record): array => ClienteCasoWizard::steps(function (array $data) use ($record) {
+                $caso = ClienteCasoWizard::crear($data)['caso'];
+                $record->update(['caso_id' => $caso->id, 'estado' => EstadoConsulta::CasoIniciado]);
+
+                return $caso;
+            }))
             // Marca compartida con el botón de guardar (más abajo): la
             // navegación con Enter hace clic en el que esté visible —
             // "Siguiente" en los pasos 1 a 3 y Guardar en el 4.
@@ -123,12 +130,17 @@ class AscenderCasoAction
             ->modalSubmitActionLabel('Guardar')
             ->modalSubmitAction(fn (Action $action): Action => $action->extraAttributes(['data-enter-submit' => 'true']))
             ->action(function (Consulta $record, array $data, $livewire): void {
-                $resultado = ClienteCasoWizard::crear($data);
+                if ($caso = ClienteCasoWizard::casoYaGuardado($data)) {
+                    // Ya guardado con "Imprimir recibo" (paso 3): solo los documentos.
+                    ClienteCasoWizard::adjuntarDocumentos($caso, $data['documentos'] ?? []);
+                } else {
+                    $resultado = ClienteCasoWizard::crear($data);
 
-                $record->update([
-                    'caso_id' => $resultado['caso']->id,
-                    'estado' => EstadoConsulta::CasoIniciado,
-                ]);
+                    $record->update([
+                        'caso_id' => $resultado['caso']->id,
+                        'estado' => EstadoConsulta::CasoIniciado,
+                    ]);
+                }
 
                 Notification::make()->title('Consulta ascendida a caso')->success()->send();
 

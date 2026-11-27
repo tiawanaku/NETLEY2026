@@ -681,3 +681,147 @@
         grid-template-columns: calc(((100% - 24px) / 2 - 32px) / 3) 1fr 1fr;
     }
 }
+
+/* Paginacion compacta (todas las tablas): botones a los extremos, texto y pagina al centro. */
+.fi-pagination.netley-pag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    flex-wrap: nowrap;
+}
+.netley-pag-lado { display: flex; gap: .25rem; flex-shrink: 0; }
+.netley-pag-centro {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: .5rem 1.25rem;
+    font-size: .875rem;
+    color: rgb(75 85 99);
+    text-align: center;
+}
+.dark .netley-pag-centro { color: rgb(209 213 219); }
+.netley-pag-texto { font-weight: 600; white-space: nowrap; }
+.netley-pag-pagina { display: inline-flex; align-items: center; gap: .4rem; white-space: nowrap; }
+.netley-pag-input {
+    width: 4rem;
+    padding: .25rem .4rem;
+    text-align: center;
+    border: 1px solid rgb(209 213 219);
+    border-radius: .5rem;
+    background: #fff;
+    font-size: .875rem;
+}
+.dark .netley-pag-input { background: rgb(255 255 255 / .05); border-color: rgb(255 255 255 / .15); color: #fff; }
+.netley-pag-input:focus { outline: 2px solid var(--primary-500, #3b82f6); outline-offset: 0; }
+.netley-pag-por-pagina { width: 9.5rem; }
+
+/* Pagos > Nuevo pago: titulo de cada caso sobre su plan de pagos. */
+.netley-pago-caso { display: flex; flex-direction: column; gap: .5rem; }
+.netley-pago-caso-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; font-size: 1rem; }
+.netley-pago-caso-titulo a { font-weight: 700; color: var(--primary-600, #2563eb); }
+.netley-pago-caso-titulo a:hover { text-decoration: underline; }
+.netley-pago-caso-titulo span { color: rgb(75 85 99); }
+.dark .netley-pago-caso-titulo span { color: rgb(209 213 219); }
+.netley-pago-caso-titulo .netley-pago-caso-estado { font-size: .75rem; font-weight: 600; padding: .1rem .5rem; border-radius: 9999px; background: rgb(243 244 246); }
+.dark .netley-pago-caso-titulo .netley-pago-caso-estado { background: rgb(255 255 255 / .1); }
+
+/* Pagos > Nuevo pago: cuadro de busqueda, resultados y cliente elegido. */
+.netley-pago-buscar { display: flex; flex-direction: column; gap: .4rem; }
+.netley-pago-buscar-etiqueta { font-size: .875rem; font-weight: 600; }
+.netley-pago-aviso { margin: 0; color: rgb(107 114 128); }
+.netley-pago-resultados { display: flex; flex-direction: column; border: 1px solid rgb(229 231 235); border-radius: .75rem; overflow: hidden; background: #fff; }
+.dark .netley-pago-resultados { background: rgb(24 24 27); border-color: rgb(255 255 255 / .1); }
+.netley-pago-resultado { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .75rem; padding: .7rem 1rem; text-align: left; border-bottom: 1px solid rgb(229 231 235); cursor: pointer; }
+.netley-pago-resultado:last-child { border-bottom: 0; }
+.netley-pago-resultado:hover, .netley-pago-resultado:focus { background: rgb(239 246 255); outline: none; }
+.dark .netley-pago-resultado { border-color: rgb(255 255 255 / .1); }
+.dark .netley-pago-resultado:hover, .dark .netley-pago-resultado:focus { background: rgb(255 255 255 / .05); }
+.netley-pago-resultado span { font-size: .8rem; color: rgb(107 114 128); }
+.netley-pago-elegido { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding: .85rem 1rem; border: 1px solid rgb(229 231 235); border-radius: .75rem; background: #fff; }
+.dark .netley-pago-elegido { background: rgb(24 24 27); border-color: rgb(255 255 255 / .1); }
+.netley-pago-elegido > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .75rem; }
+.netley-pago-elegido-etiqueta { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: rgb(107 114 128); }
+.netley-pago-elegido-datos { font-size: .85rem; color: rgb(107 114 128); }
+
+/* Pagos > Resumen de pagos: secciones una debajo de otra (gestion, mes, abogado). */
+.netley-res { display: flex; flex-direction: column; gap: 1rem; }
+.netley-res-card { background: #fff; border: 1px solid rgb(229 231 235); border-radius: .75rem; overflow: hidden; }
+.dark .netley-res-card { background: rgb(24 24 27); border-color: rgb(255 255 255 / .1); }
+.netley-res-card header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .75rem 1rem; border-bottom: 1px solid rgb(229 231 235); }
+.dark .netley-res-card header { border-color: rgb(255 255 255 / .1); }
+.netley-res-card h3 { margin: 0; font-size: .95rem; font-weight: 600; }
+.netley-res-card table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.netley-res-card th { text-align: left; padding: .45rem 1rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: rgb(107 114 128); font-weight: 600; }
+.netley-res-card td { padding: .45rem 1rem; border-top: 1px solid rgb(243 244 246); white-space: nowrap; }
+.dark .netley-res-card td { border-color: rgb(255 255 255 / .06); }
+.netley-res-card th:not(:first-child), .netley-res-card td:not(:first-child) { text-align: right; }
+.netley-res-card td:first-child { white-space: normal; }
+.netley-res-monto { font-variant-numeric: tabular-nums; }
+.netley-res-fila { cursor: pointer; }
+.netley-res-fila:hover { background: rgb(239 246 255); }
+.dark .netley-res-fila:hover { background: rgb(255 255 255 / .05); }
+.netley-res-fila--elegida, .netley-res-fila--elegida:hover { background: rgb(219 234 254); font-weight: 600; }
+.dark .netley-res-fila--elegida { background: rgb(59 130 246 / .2); }
+.netley-res-fila--vacia { color: rgb(156 163 175); }
+.netley-res-fila--actual td:first-child::after { content: " (actual)"; font-size: .72rem; color: rgb(107 114 128); }
+.netley-res-card tfoot td { font-weight: 700; border-top: 2px solid rgb(229 231 235); }
+.dark .netley-res-card tfoot td { border-color: rgb(255 255 255 / .15); }
+.netley-res-vacio { text-align: center !important; color: rgb(156 163 175); padding: 1rem !important; }
+.netley-res-nota { margin: 0; padding: .5rem 1rem .75rem; font-size: .72rem; color: rgb(156 163 175); }
+.netley-res-link { font-size: .78rem; color: var(--primary-600, #2563eb); font-weight: 600; }
+.netley-res-link:hover { text-decoration: underline; }
+
+/* Datos judiciales: numero grande en las fichas (Informes pendientes, Fs.). */
+.netley-seg-numero { font-size: 1.5rem; line-height: 1.2; }
+.netley-seg-numero small { font-size: .8rem; font-weight: 500; color: rgb(107 114 128); }
+
+/* Ruta de navegacion (Clientes ejecutivos > ID 52 > Proceso N 95) siempre en
+   una sola fila: si no entra junto a los botones, ocupa su propia fila y los
+   botones bajan; si ni asi entra (celular), se desliza de lado. */
+.fi-header { flex-wrap: wrap; }
+.fi-header > div:has(> .fi-breadcrumbs) { flex: 1 0 auto; width: max-content; max-width: 100%; min-width: 0; }
+.fi-breadcrumbs ol { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.fi-breadcrumbs ol::-webkit-scrollbar { display: none; }
+.fi-breadcrumbs ol li { flex-shrink: 0; white-space: nowrap; }
+
+/* Campo Ciudad (CampoCiudad): lista desplegable de departamentos bajo el cuadro. */
+.netley-combo { position: relative; }
+.netley-combo .fi-input-wrp-suffix { cursor: pointer; }
+.netley-combo-lista { position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 4px); max-height: 15rem; overflow-y: auto; margin: 0; padding: .25rem; list-style: none; background: #fff; border: 1px solid rgb(229 231 235); border-radius: .5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / .1), 0 4px 6px -4px rgb(0 0 0 / .1); }
+.dark .netley-combo-lista { background: rgb(24 24 27); border-color: rgb(255 255 255 / .1); }
+.netley-combo-lista li { padding: .45rem .65rem; border-radius: .375rem; font-size: .875rem; cursor: pointer; }
+.netley-combo-lista li.netley-combo-activa { background: rgb(239 246 255); color: rgb(29 78 216); }
+.dark .netley-combo-lista li.netley-combo-activa { background: rgb(255 255 255 / .08); color: #fff; }
+
+/* Seguimiento del proceso: lista de actuados en cada registro. */
+.netley-actuados { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
+.netley-actuado-marca { display: inline-block; width: 1rem; color: rgb(107 114 128); }
+.netley-actuado--hecho .netley-actuado-marca { color: rgb(22 163 74); font-weight: 700; }
+.netley-actuado--vencido { color: rgb(185 28 28); }
+.netley-actuado-cuando { color: rgb(107 114 128); font-size: .78rem; white-space: nowrap; }
+
+/* Seguimiento diario / Informe seguimiento diario: lista de clientes. */
+.netley-lseg-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+.netley-lseg-barra p { margin: 0; font-size: .875rem; color: rgb(75 85 99); }
+.dark .netley-lseg-barra p { color: rgb(209 213 219); }
+.netley-lseg-botones { display: flex; gap: .5rem; }
+.netley-lseg-tabla { background: #fff; border: 1px solid rgb(229 231 235); border-radius: .75rem; overflow-x: auto; }
+.dark .netley-lseg-tabla { background: rgb(24 24 27); border-color: rgb(255 255 255 / .1); }
+.netley-lseg-tabla table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: .875rem; }
+.netley-lseg-tabla th { text-align: left; padding: .7rem 1rem; background: #1a2537; color: #fff; font-weight: 600; white-space: nowrap; }
+.netley-lseg-tabla td { padding: .65rem 1rem; border-top: 1px solid rgb(243 244 246); vertical-align: middle; }
+.dark .netley-lseg-tabla td { border-color: rgb(255 255 255 / .06); }
+.netley-lseg-check { width: 2.5rem; }
+.netley-lseg-check input { width: 1rem; height: 1rem; }
+.netley-lseg-id { white-space: nowrap; font-weight: 600; }
+.netley-lseg-id span { display: block; font-size: .72rem; font-weight: 400; color: rgb(107 114 128); }
+.netley-lseg-ver { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.netley-lseg-info { font-size: .78rem; color: rgb(107 114 128); }
+.netley-lseg-vencido { color: rgb(185 28 28); }
+.netley-lseg-ok { color: rgb(22 163 74); margin-left: .25rem; }
+.netley-lseg-hecho td { background: rgb(240 253 244); }
+.dark .netley-lseg-hecho td { background: rgb(22 163 74 / .08); }
+.netley-lseg-vacio { padding: 2.5rem; text-align: center; color: rgb(107 114 128); margin: 0; }
+.netley-lseg-nota { margin: 0; font-size: .8rem; color: rgb(107 114 128); }

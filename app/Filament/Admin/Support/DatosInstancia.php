@@ -24,9 +24,9 @@ class DatosInstancia
 {
     public const CAMPO = 'datos_instancia';
 
-    private const FISCALIA = ['fiscalia_num', 'nombre_fiscal', 'secretaria', 'investigador', 'otro_funcionario'];
+    private const FISCALIA = ['fiscalia_num', 'nombre_fiscal', 'secretaria', 'investigador', 'otro_funcionario', 'fojas'];
 
-    private const JUZGADO = ['juzgado_num', 'nombre_juez', 'secretaria'];
+    private const JUZGADO = ['juzgado_num', 'nombre_juez', 'secretaria', 'fojas'];
 
     public static function esPenal(Get $get): bool
     {
@@ -40,6 +40,9 @@ class DatosInstancia
         $conMateria = fn (Get $get) => filled($get('especialidad'));
         $texto = fn (string $nombre, string $label) => TextInput::make($nombre)->label($label)->maxLength(150)
             ->disabled($deshabilitado)->extraInputAttributes(['data-enter-nav' => 'true']);
+        // Fojas del cuaderno (fichas "FS. Ministerio Público" / "FS. Juzgado" de Datos judiciales).
+        $fojas = fn (string $nombre) => TextInput::make($nombre)->label('Fojas (Fs.)')->numeric()->integer()->minValue(0)
+            ->disabled($deshabilitado)->extraInputAttributes(['data-enter-nav' => 'true']);
 
         return Group::make([
             Group::make([
@@ -50,6 +53,7 @@ class DatosInstancia
                 $texto(self::CAMPO.'.fiscalia.secretaria', 'Secretaria'),
                 $texto(self::CAMPO.'.fiscalia.investigador', 'Investigador'),
                 $texto(self::CAMPO.'.fiscalia.otro_funcionario', 'Otro funcionario'),
+                $fojas(self::CAMPO.'.fiscalia.fojas'),
             ])->columns(['default' => 1, 'lg' => 2])->columnSpanFull()->visible($penal),
             Group::make([
                 $texto(self::CAMPO.'.juzgado.juzgado_num', 'Juzgado')
@@ -58,6 +62,7 @@ class DatosInstancia
                     ->columnSpanFull()->extraFieldWrapperAttributes(['class' => 'netley-fila-completa']),
                 $texto(self::CAMPO.'.juzgado.nombre_juez', 'Juez'),
                 $texto(self::CAMPO.'.juzgado.secretaria', 'Secretaria'),
+                $fojas(self::CAMPO.'.juzgado.fojas'),
             ])->columns(['default' => 1, 'lg' => 2])->columnSpanFull(),
         ])
             ->columns(['default' => 1, 'lg' => 2])
@@ -105,7 +110,7 @@ class DatosInstancia
 
     private static function guardarEn($registro, \Closure $relacion, array $columnas, array $datos): void
     {
-        $valores = collect($columnas)->mapWithKeys(fn ($c) => [$c => filled($datos[$c] ?? null) ? trim($datos[$c]) : null])->all();
+        $valores = collect($columnas)->mapWithKeys(fn ($c) => [$c => filled($datos[$c] ?? null) ? trim((string) $datos[$c]) : null])->all();
 
         if ($registro) {
             $registro->update($valores);

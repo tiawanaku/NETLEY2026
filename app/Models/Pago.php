@@ -34,7 +34,7 @@ class Pago extends Model
     /**
      * Los recibos anulados (ver PlanPagoRecalculo::corregirPago()) quedan
      * fuera de todas las consultas — totales, plan de pagos, historial,
-     * cronología… — salvo en Contabilidad › Recibos anulados, que los busca
+     * cronología… — salvo en Pagos › Recibos anulados, que los busca
      * con withoutGlobalScope('vigentes').
      */
     protected static function booted(): void

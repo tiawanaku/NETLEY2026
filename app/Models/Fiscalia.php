@@ -17,6 +17,7 @@ class Fiscalia extends Model
         'fecha_fin',
         'vigente',
         'num_caso',
+        'fojas',
         'fiscalia_num',
         'nombre_fiscal',
         'telefono_fiscal',

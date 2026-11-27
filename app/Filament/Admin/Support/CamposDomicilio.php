@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Support;
 
 use Afsakar\LeafletMapPicker\LeafletMapPicker;
+use App\Filament\Admin\Forms\Components\CampoCiudad;
 use App\Support\PaisesCiudades;
 use Closure;
 use Filament\Forms\Components\Textarea;
@@ -59,8 +60,10 @@ class CamposDomicilio
                 ->regex('/^[^0-9]*$/')
                 ->disabled($bloqueado)
                 ->extraInputAttributes(self::atributosSoloLetras()),
-            TextInput::make('ciudad')
-                ->datalist(fn (Get $get) => PaisesCiudades::ciudades($get('pais'), $get('provincia')))
+            // Departamentos de Bolivia + ciudades de la provincia; o a mano.
+            CampoCiudad::make('ciudad')
+                ->conDepartamentos(fn (Get $get) => blank($get('pais')) || mb_strtolower(trim((string) $get('pais'))) === 'bolivia')
+                ->sugerencias(fn (Get $get) => PaisesCiudades::ciudades($get('pais'), $get('provincia')))
                 ->regex('/^[^0-9]*$/')
                 ->disabled($bloqueado)
                 ->extraInputAttributes(self::atributosSoloLetras()),

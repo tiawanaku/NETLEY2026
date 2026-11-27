@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Municipios;
 
+use App\Filament\Admin\Forms\Components\CampoCiudad;
 use App\Filament\Admin\Resources\Municipios\Pages\ManageMunicipios;
 use App\Filament\Admin\Support\ModoMenu;
 use App\Models\Municipio;
@@ -46,7 +47,7 @@ class MunicipioResource extends Resource
             ->inlineLabel()
             ->columns(1)
             ->components([
-                TextInput::make('ciudad')
+                CampoCiudad::make('ciudad')
                     ->required(),
                 TextInput::make('municipio')
                     ->required(),

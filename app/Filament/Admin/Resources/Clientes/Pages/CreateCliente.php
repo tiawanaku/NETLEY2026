@@ -30,7 +30,8 @@ class CreateCliente extends CreateRecord
     public function form(Schema $schema): Schema
     {
         return $schema->components([
-            Wizard::make(ClienteCasoWizard::steps())
+            // "Imprimir recibo" del paso 3 guarda cliente + caso + anticipo.
+            Wizard::make(ClienteCasoWizard::steps(fn (array $data) => ClienteCasoWizard::crear($data)['caso']))
                 ->nextAction(fn ($action) => $action->extraAttributes(['data-enter-submit' => 'true']))
                 ->submitAction($this->getCreateFormAction()->label('Guardar'))
                 ->columnSpanFull(),
@@ -39,6 +40,13 @@ class CreateCliente extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
+        // Ya guardado con "Imprimir recibo" (paso 3): solo los documentos.
+        if ($caso = ClienteCasoWizard::casoYaGuardado($data)) {
+            ClienteCasoWizard::adjuntarDocumentos($caso, $data['documentos'] ?? []);
+
+            return $caso->cliente;
+        }
+
         return ClienteCasoWizard::crear($data)['cliente'];
     }
 
